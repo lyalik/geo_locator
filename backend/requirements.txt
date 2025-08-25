@@ -1,0 +1,17 @@
+flask==3.0.3
+celery==5.4.0
+redis==5.0.8
+sqlalchemy==2.0.32
+psycopg2-binary==2.9.9
+geoalchemy2==0.15.2
+requests==2.32.3
+tenacity==9.0.0
+google-generativeai==0.7.2
+sentinelhub==3.10.3
+opencv-python==4.10.0.84
+stitching==0.5.1
+ffmpeg-python==0.2.0
+python-dotenv==1.0.1
+pgvector==0.3.0
+torch==2.4.0
+transformers==4.44.0
