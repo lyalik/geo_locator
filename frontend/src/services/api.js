@@ -79,14 +79,49 @@ export const search = {
   getHistory: () => api.get('/search/history'),
 };
 
+import { MAP_CONFIG, DEFAULT_MAP_CENTER, DEFAULT_ZOOM } from '../config/maps';
+
 // Maps API
 export const maps = {
-  getYandexMap: (center, zoom = 12) => {
-    return `https://maps-rc.yandex.ru/1.1/?ll=${center[1]},${center[0]}&z=${zoom}&l=map`;
+  getYandexMap: (center = DEFAULT_MAP_CENTER, zoom = DEFAULT_ZOOM) => {
+    const [lat, lon] = center;
+    const { apiKey } = MAP_CONFIG.yandex;
+    return `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU&ll=${lon},${lat}&z=${zoom}&l=map`;
   },
-  get2GISMap: (center, zoom = 12) => {
-    return `https://2gis.ru/?q=${center[0]},${center[1]}&zoom=${zoom}`;
+  
+  get2GISMap: (center = DEFAULT_MAP_CENTER, zoom = DEFAULT_ZOOM) => {
+    const [lat, lon] = center;
+    const { apiKey } = MAP_CONFIG.dgis;
+    return `https://maps.2gis.com/?l=map&pt=${lon},${lat}&z=${zoom}&key=${apiKey}`;
   },
+  
+  // Geocoding service
+  geocode: async (address) => {
+    try {
+      const response = await fetch(
+        `https://geocode-maps.yandex.ru/1.x/?apikey=${MAP_CONFIG.yandex.apiKey}&format=json&geocode=${encodeURIComponent(address)}`
+      );
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      throw error;
+    }
+  },
+  
+  // Reverse geocoding service
+  reverseGeocode: async (lat, lon) => {
+    try {
+      const response = await fetch(
+        `https://geocode-maps.yandex.ru/1.x/?apikey=${MAP_CONFIG.yandex.apiKey}&format=json&geocode=${lon},${lat}`
+      );
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      throw error;
+    }
+  }
 };
 
 export default api;
