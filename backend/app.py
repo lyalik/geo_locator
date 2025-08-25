@@ -2,7 +2,10 @@ from flask import Flask, request, jsonify
 from celery import Celery
 from config import Config
 from models import SessionLocal, init_db
+from routes.maps import init_app as init_maps_routes
 import os
+import asyncio
+import aiohttp
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -19,8 +22,9 @@ def make_celery(app):
 
 celery = make_celery(app)
 
-# Инициализация БД
+# Initialize database and routes
 init_db()
+init_maps_routes(app)
 
 # Эндпоинты
 @app.route('/upload', methods=['POST'])
@@ -72,5 +76,13 @@ def api_coords():
     task = process_media.delay(file_paths, text, mode)
     return jsonify({'task_id': task.id})
 
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    """Close database session on app teardown"""
+    db_session = SessionLocal()
+    db_session.close()
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Create uploads directory if it doesn't exist
+    os.makedirs('uploads', exist_ok=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
