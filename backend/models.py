@@ -1,55 +1,33 @@
-from datetime import datetime
-from . import db
+from sqlalchemy import Column, Integer, String, Float, JSON, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from geoalchemy2 import Geometry
+from config import Config
+import pgvector.sqlalchemy  # Для векторных полей
 
-class User(db.Model):
-    __tablename__ = 'users'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    search_requests = db.relationship('SearchRequest', backref='user', lazy=True)
+Base = declarative_base()
 
-class SearchRequest(db.Model):
-    __tablename__ = 'search_requests'
+class Photo(Base):
+    __tablename__ = 'photos'
     
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    search_type = db.Column(db.String(50), nullable=False)  # 'text', 'image', 'video', 'panorama'
-    query = db.Column(db.Text, nullable=True)  # For text search
-    file_path = db.Column(db.String(255), nullable=True)  # For media uploads
-    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    completed_at = db.Column(db.DateTime, nullable=True)
-    
-    # Results
-    yandex_result = db.Column(db.JSON, nullable=True)
-    dgis_result = db.Column(db.JSON, nullable=True)
-    sentinel_result = db.Column(db.JSON, nullable=True)
-    gemini_analysis = db.Column(db.Text, nullable=True)
-    
-    # Location data
-    latitude = db.Column(db.Float, nullable=True)
-    longitude = db.Column(db.Float, nullable=True)
-    address = db.Column(db.String(255), nullable=True)
-    
-    # Relationships
-    comparisons = db.relationship('Comparison', backref='search_request', lazy=True)
+    id = Column(Integer, primary_key=True)
+    file_path = Column(String, nullable=False)  # Путь к файлу
+    lat = Column(Float)  # Широта
+    lon = Column(Float)  # Долгота
+    embedding = Column(pgvector.sqlalchemy.Vector(512))  # Векторный эмбеддинг (e.g., от CLIP, размер 512)
+    metadata = Column(JSON)  # Дополнительные данные (e.g., объект, нарушение)
+    geom = Column(Geometry(geometry_type='POINT', srid=4326))  # PostGIS для geo-индекса
 
-class Comparison(db.Model):
-    __tablename__ = 'comparisons'
+class Task(Base):
+    __tablename__ = 'tasks'
     
-    id = db.Column(db.Integer, primary_key=True)
-    request_id = db.Column(db.Integer, db.ForeignKey('search_requests.id'), nullable=False)
-    source = db.Column(db.String(50), nullable=False)  # 'yandex', '2gis', 'sentinel', 'composite'
-    confidence = db.Column(db.Float, nullable=True)
-    result_data = db.Column(db.JSON, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Location data
-    latitude = db.Column(db.Float, nullable=True)
-    longitude = db.Column(db.Float, nullable=True)
-    address = db.Column(db.String(255), nullable=True)
+    id = Column(String, primary_key=True)  # Celery task_id
+    status = Column(String)  # PENDING, STARTED, SUCCESS, FAILURE
+    result = Column(JSON)  # Результат (координаты, сравнение)
+
+# Инициализация БД (вызвать в app.py)
+engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def init_db():
+    Base.metadata.create_all(bind=engine)

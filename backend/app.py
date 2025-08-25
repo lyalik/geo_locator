@@ -1,53 +1,76 @@
 from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_cors import CORS
-from config import config
+from celery import Celery
+from config import Config
+from models import SessionLocal, init_db
 import os
-from datetime import datetime
 
-# Initialize extensions
-db = SQLAlchemy()
-migrate = Migrate()
+app = Flask(__name__)
+app.config.from_object(Config)
 
-def create_app(config_name='default'):
-    app = Flask(__name__)
-    
-    # Load configuration
-    app.config.from_object(config[config_name])
-    
-    # Initialize extensions
-    db.init_app(app)
-    migrate.init_app(app, db)
-    CORS(app)
-    
-    # Ensure upload folder exists
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    
-    # Import models here to avoid circular imports
-    from . import models
-    
-    # Register blueprints
-    from .api import api_bp
-    app.register_blueprint(api_bp, url_prefix='/api/v1')
-    
-    # Error handlers
-    @app.errorhandler(404)
-    def not_found(error):
-        return jsonify({'error': 'Not found'}), 404
-    
-    @app.errorhandler(500)
-    def internal_error(error):
-        return jsonify({'error': 'Internal server error'}), 500
-    
-    return app
+# Celery
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend=app.config['CELERY_RESULT_BACKEND'],
+        broker=app.config['CELERY_BROKER_URL']
+    )
+    celery.conf.update(app.config)
+    return celery
 
-# Create app instance
-app = create_app()
+celery = make_celery(app)
 
-# Import and register blueprints after app creation to avoid circular imports
-from .api.routes import api_bp
-app.register_blueprint(api_bp, url_prefix='/api/v1')
+# Инициализация БД
+init_db()
+
+# Эндпоинты
+@app.route('/upload', methods=['POST'])
+def upload():
+    files = request.files.getlist('files')  # 1-5 файлов
+    text = request.form.get('text', '')  # Текстовый контекст
+    mode = request.form.get('mode', 'normal')  # normal, panorama, video
+    
+    if not files or len(files) > 5:
+        return jsonify({'error': 'Invalid files'}), 400
+    
+    # Сохраняем файлы временно
+    upload_dir = 'uploads'
+    os.makedirs(upload_dir, exist_ok=True)
+    file_paths = []
+    for file in files:
+        if file.filename.split('.')[-1].lower() not in ['jpeg', 'jpg', 'png', 'mp4', 'mov']:
+            return jsonify({'error': 'Unsupported format'}), 400
+        path = os.path.join(upload_dir, file.filename)
+        file.save(path)
+        file_paths.append(path)
+    
+    # Запускаем Celery таску
+    task = process_media.delay(file_paths, text, mode)
+    
+    return jsonify({'task_id': task.id}), 202
+
+@app.route('/status/<task_id>', methods=['GET'])
+def get_status(task_id):
+    task = celery.AsyncResult(task_id)
+    return jsonify({'status': task.status})
+
+@app.route('/result/<task_id>', methods=['GET'])
+def get_result(task_id):
+    task = celery.AsyncResult(task_id)
+    if task.status == 'SUCCESS':
+        return jsonify(task.result)
+    return jsonify({'status': task.status}), 202
+
+# Для внешней интеграции (e.g., от ИНС системы)
+@app.route('/api/coords', methods=['POST'])
+def api_coords():
+    # Аналогично upload, но для интеграции
+    data = request.json
+    file_paths = data.get('file_paths')  # Или URL к фото от внешней системы
+    text = data.get('text')
+    mode = data.get('mode', 'normal')
+    # ... (обработка)
+    task = process_media.delay(file_paths, text, mode)
+    return jsonify({'task_id': task.id})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
+    app.run(debug=True)

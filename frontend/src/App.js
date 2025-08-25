@@ -1,0 +1,138 @@
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Box from '@mui/material/Box';
+import Container from '@mui/material/Container';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import MenuIcon from '@mui/icons-material/Menu';
+import { useAuth } from './contexts/AuthContext';
+import HomePage from './pages/HomePage';
+import SearchPage from './pages/SearchPage';
+import HistoryPage from './pages/HistoryPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import './App.css';
+
+// Create a theme instance
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+    background: {
+      default: '#f5f5f5',
+    },
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 500,
+    },
+    h2: {
+      fontWeight: 500,
+    },
+    h3: {
+      fontWeight: 500,
+    },
+  },
+});
+
+function App() {
+  const { currentUser, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Failed to log out', error);
+    }
+  };
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
+        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+          <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+            <Toolbar>
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ mr: 2, display: { sm: 'none' } }}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                Geo Locator
+              </Typography>
+              {currentUser ? (
+                <Button color="inherit" onClick={handleLogout}>
+                  Logout
+                </Button>
+              ) : (
+                <>
+                  <Button color="inherit" href="/login">
+                    Login
+                  </Button>
+                  <Button color="inherit" href="/register">
+                    Register
+                  </Button>
+                </>
+              )}
+            </Toolbar>
+          </AppBar>
+
+          <Box
+            component="main"
+            sx={{
+              flexGrow: 1,
+              p: 3,
+              width: { sm: `calc(100% - 240px)` },
+              ml: { sm: '240px' },
+              mt: 8,
+            }}
+          >
+            <Container maxWidth="lg">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route
+                  path="/search"
+                  element={currentUser ? <SearchPage /> : <Navigate to="/login" />}
+                />
+                <Route
+                  path="/history"
+                  element={currentUser ? <HistoryPage /> : <Navigate to="/login" />}
+                />
+                <Route
+                  path="/login"
+                  element={!currentUser ? <LoginPage /> : <Navigate to="/" />}
+                />
+                <Route
+                  path="/register"
+                  element={!currentUser ? <RegisterPage /> : <Navigate to="/" />}
+                />
+              </Routes>
+            </Container>
+          </Box>
+        </Box>
+      </Router>
+    </ThemeProvider>
+  );
+}
+
+export default App;
