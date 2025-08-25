@@ -1,7 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from ..services.maps import map_aggregator
 import asyncio
 import logging
+from io import BytesIO
+from PIL import Image
 
 bp = Blueprint('maps', __name__, url_prefix='/api/maps')
 
@@ -55,6 +57,51 @@ async def reverse_geocode():
         return jsonify({'error': 'Invalid parameter values'}), 400
     except Exception as e:
         logging.error(f"Error in reverse_geocode: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@bp.route('/satellite', methods=['GET'])
+async def get_satellite_image():
+    """
+    Get satellite image for given coordinates
+    Query parameters:
+    - lat: Latitude (required)
+    - lon: Longitude (required)
+    - zoom: Zoom level (optional, default=17)
+    - width: Image width (optional, default=600)
+    - height: Image height (optional, default=400)
+    """
+    try:
+        lat = float(request.args.get('lat'))
+        lon = float(request.args.get('lon'))
+        zoom = int(request.args.get('zoom', 17))
+        width = int(request.args.get('width', 600))
+        height = int(request.args.get('height', 400))
+        
+        if lat is None or lon is None:
+            return jsonify({'error': 'Missing required parameters'}), 400
+            
+        # Get the best available satellite image
+        result = await map_aggregator.get_satellite_image(lat, lon, zoom, width, height)
+        
+        if 'error' in result:
+            return jsonify(result), 500
+            
+        # Return the image directly
+        return Response(
+            result['image'],
+            mimetype=result.get('content_type', 'image/jpeg'),
+            headers={
+                'X-Provider': result.get('provider', 'unknown'),
+                'X-Latitude': str(result.get('lat', lat)),
+                'X-Longitude': str(result.get('lon', lon)),
+                'X-Zoom': str(result.get('zoom', zoom))
+            }
+        )
+        
+    except ValueError as e:
+        return jsonify({'error': 'Invalid parameter values'}), 400
+    except Exception as e:
+        logging.error(f"Error in get_satellite_image: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 def init_app(app):

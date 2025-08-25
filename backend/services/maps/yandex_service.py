@@ -11,6 +11,7 @@ class YandexMapsService:
     
     BASE_URL = "https://search-maps.yandex.ru/v1/"
     GEOCODE_URL = "https://geocode-maps.yandex.ru/1.x/"
+    STATIC_MAPS_URL = "https://static-maps.yandex.ru/1.x/"  # For satellite imagery
     
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -47,6 +48,26 @@ class YandexMapsService:
             logger.error(f"Yandex Maps API error: {e}")
             return {'error': str(e)}
     
+    async def get_satellite_image(self, lat: float, lon: float, zoom: int = 17, width: int = 600, height: int = 400) -> bytes:
+        """Get satellite image for given coordinates"""
+        params = {
+            'll': f'{lon},{lat}',
+            'z': zoom,
+            'l': 'sat',  # Satellite layer
+            'size': f'{width},{height}',
+            'pt': f'{lon},{lat},pm2rdl',  # Add marker at the center
+            'lang': 'ru_RU'
+        }
+        
+        session = await self._get_session()
+        try:
+            async with session.get(self.STATIC_MAPS_URL, params=params) as response:
+                response.raise_for_status()
+                return await response.read()
+        except Exception as e:
+            logger.error(f"Yandex Static Maps API error: {e}")
+            return None
+
     async def reverse_geocode(self, lat: float, lon: float) -> Dict:
         """Get address from coordinates"""
         params = {

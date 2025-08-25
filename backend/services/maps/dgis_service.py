@@ -10,6 +10,7 @@ class DGisService:
     
     BASE_URL = "https://catalog.api.2gis.com/3.0/items"
     GEOCODE_URL = "https://catalog.api.2gis.com/3.0/geo/geocode"
+    STATIC_MAPS_URL = "https://static.maps.2gis.com/1.0"  # For satellite imagery
     
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -43,6 +44,25 @@ class DGisService:
             logger.error(f"2GIS API error: {e}")
             return {'error': str(e)}
     
+    async def get_satellite_image(self, lat: float, lon: float, zoom: int = 17, width: int = 600, height: int = 400) -> bytes:
+        """Get satellite image for given coordinates using 2GIS API"""
+        params = {
+            'center': f'{lon},{lat}',
+            'zoom': zoom,
+            'size': f'{width},{height}',
+            'markers': f'{lon},{lat}',
+            'key': self.api_key
+        }
+        
+        session = await self._get_session()
+        try:
+            async with session.get(f"{self.STATIC_MAPS_URL}/satellite", params=params) as response:
+                response.raise_for_status()
+                return await response.read()
+        except Exception as e:
+            logger.error(f"2GIS Static Maps API error: {e}")
+            return None
+
     async def reverse_geocode(self, lat: float, lon: float) -> Dict:
         """Get address from coordinates using 2GIS API"""
         params = {
