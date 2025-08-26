@@ -6,6 +6,9 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from PIL import Image
 import numpy as np
+import cv2
+import asyncio
+from ..maps import map_aggregator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -82,8 +85,70 @@ class GeoLocationService:
             logger.error(f"Error in reverse geocoding: {e}")
             return None
     
-    def process_image(self, image_path: str) -> Dict[str, Any]:
-        """Process an image to extract location information."""
+    def process_image(self, image_path: str, location_hint: str = "") -> Dict[str, Any]:
+        """Process an image to extract location information.
+
+        Args:
+            image_path: Path to the image file.
+            location_hint: Optional text hint for location (e.g., "Moscow, Red Square").
+        """
+        result = {
+            'success': False,
+            'coordinates': None,
+            'address': None,
+            'error': None,
+            'has_gps': False,
+            'suggest_manual_input': False
+        }
+
+        try:
+            # Check if file exists
+            if not os.path.exists(image_path):
+                result['error'] = "Image file not found"
+                return result
+
+            # Extract EXIF data
+            exif_data = self.get_exif_data(image_path)
+            if not exif_data:
+                result['error'] = "No EXIF data found in image"
+                return result
+
+            # Get GPS coordinates
+            coordinates = self.get_gps_coordinates(exif_data)
+            if coordinates:
+                # Get address from coordinates
+                address = self.reverse_geocode(*coordinates)
+                result.update({
+                    'success': True,
+                    'coordinates': {
+                        'latitude': coordinates[0],
+                        'longitude': coordinates[1]
+                    },
+                    'address': address,
+                    'has_gps': True
+                })
+                return result
+
+            # If no GPS in EXIF, try alternative methods
+            if location_hint:
+                result = self._process_with_location_hint(image_path, location_hint)
+                if result['success']:
+                    return result
+
+            # If still no location, suggest manual input
+            result.update({
+                'error': "Unable to determine location automatically",
+                'suggest_manual_input': True
+            })
+
+        except Exception as e:
+            logger.error(f"Error processing image: {e}")
+            result['error'] = str(e)
+
+        return result
+
+    def _process_with_location_hint(self, image_path: str, location_hint: str) -> Dict[str, Any]:
+        """Try to determine location using location hint and satellite imagery."""
         result = {
             'success': False,
             'coordinates': None,
@@ -91,43 +156,91 @@ class GeoLocationService:
             'error': None,
             'has_gps': False
         }
-        
+
         try:
-            # Check if file exists
-            if not os.path.exists(image_path):
-                result['error'] = "Image file not found"
+            # Step 1: Search for places using the location hint
+            search_result = asyncio.run(map_aggregator.search_places(location_hint, 55.75, 37.62))  # Default: Moscow
+            if not search_result or 'error' in search_result:
+                result['error'] = "No places found for the given location hint"
                 return result
-            
-            # Extract EXIF data
-            exif_data = self.get_exif_data(image_path)
-            if not exif_data:
-                result['error'] = "No EXIF data found in image"
-                return result
-            
-            # Get GPS coordinates
-            coordinates = self.get_gps_coordinates(exif_data)
+
+            # Step 2: Get coordinates from the first found place
+            # Note: This is a simplified example. Actual implementation depends on the API response structure.
+            # For Yandex, coordinates might be in search_result['features'][0]['geometry']['coordinates']
+            # For 2GIS, coordinates might be in search_result['result']['items'][0]['point']
+            coordinates = None
+            if 'features' in search_result and search_result['features']:
+                coordinates = search_result['features'][0]['geometry']['coordinates']
+            elif 'result' in search_result and 'items' in search_result['result'] and search_result['result']['items']:
+                coordinates = search_result['result']['items'][0]['point'].split(',')
+                coordinates = (float(coordinates[1]), float(coordinates[0]))  # lat, lon
+
             if not coordinates:
-                result['error'] = "No GPS coordinates found in EXIF data"
+                result['error'] = "No coordinates found for the location hint"
                 return result
-            
-            # Get address from coordinates
-            address = self.reverse_geocode(*coordinates)
-            
+
+            # Step 3: Get satellite image for the found coordinates
+            satellite_result = asyncio.run(map_aggregator.get_satellite_image(coordinates[0], coordinates[1]))
+            if not satellite_result or 'error' in satellite_result:
+                result['error'] = "Failed to get satellite image for the location"
+                return result
+
+            # Step 4: Compare the uploaded image with the satellite image
+            match_score = self._compare_images(image_path, satellite_result['image'])
+            if match_score < 30:  # Threshold for considering images similar
+                result['error'] = "Uploaded image does not match satellite imagery for the location"
+                return result
+
+            # Step 5: Success - return the found coordinates
+            address = asyncio.run(map_aggregator.reverse_geocode(coordinates[0], coordinates[1]))
             result.update({
                 'success': True,
                 'coordinates': {
                     'latitude': coordinates[0],
                     'longitude': coordinates[1]
                 },
-                'address': address,
-                'has_gps': True
+                'address': address.get('result', {}).get('items', [{}])[0] if address else None,
+                'has_gps': False,
+                'method': 'location_hint_matching'
             })
-            
+
         except Exception as e:
-            logger.error(f"Error processing image: {e}")
+            logger.error(f"Error processing with location hint: {e}")
             result['error'] = str(e)
-        
+
         return result
+
+    def _compare_images(self, image_path: str, satellite_image_bytes: bytes) -> int:
+        """Compare uploaded image with satellite image using feature matching."""
+        try:
+            # Load images
+            img1 = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+            img2 = cv2.imdecode(np.frombuffer(satellite_image_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+
+            # Initialize SIFT detector
+            sift = cv2.SIFT_create()
+
+            # Find keypoints and descriptors
+            kp1, des1 = sift.detectAndCompute(img1, None)
+            kp2, des2 = sift.detectAndCompute(img2, None)
+
+            # Match descriptors using FLANN
+            flann = cv2.FlannBasedMatcher(dict(algorithm=1, trees=5), dict(checks=50))
+            matches = flann.knnMatch(des1, des2, k=2)
+
+            # Apply Lowe's ratio test
+            good_matches = []
+            for m, n in matches:
+                if m.distance < 0.7 * n.distance:
+                    good_matches.append(m)
+
+            # Calculate match score (percentage of good matches)
+            match_score = (len(good_matches) / len(matches)) * 100 if matches else 0
+            return int(match_score)
+
+        except Exception as e:
+            logger.error(f"Error comparing images: {e}")
+            return 0
 
 
 # Example usage

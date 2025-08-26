@@ -1,12 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent } from '@mui/material';
+import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, TextField } from '@mui/material';
 import { CloudUpload as UploadIcon, Image as ImageIcon } from '@mui/icons-material';
 
 const ViolationUploader = () => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [results, setResults] = useState([]);
+  const [locationHint, setLocationHint] = useState('');
+  const [manualCoordinates, setManualCoordinates] = useState({ lat: '', lon: '' });
+  const [showManualInput, setShowManualInput] = useState(false);
   
   const onDrop = useCallback(acceptedFiles => {
     const imageFiles = acceptedFiles.filter(file => file.type.startsWith('image/'));
@@ -18,56 +21,62 @@ const ViolationUploader = () => {
     setFiles(prevFiles => [...prevFiles, ...filesWithPreview]);
   }, []);
 
+  const handleSubmit = async () => {
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+
+    // Add all files
+    files.forEach(file => {
+      formData.append('file', file);
+    });
+
+    // Add metadata
+    formData.append('user_id', 'current_user_id'); // Replace with actual user ID
+    formData.append('location_notes', 'User notes');
+    formData.append('location_hint', locationHint);
+
+    try {
+      const response = await fetch('/api/violations/detect', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        if (data.error === 'UNABLE_TO_DETERMINE_LOCATION' || data.suggest_manual_input) {
+          setShowManualInput(true);
+          alert('Unable to determine location automatically. Please enter coordinates manually.');
+        } else {
+          alert(`Error: ${data.message}`);
+        }
+        return;
+      }
+
+      // Process successful response
+      const processedResults = data.data.map(item => ({
+        image: item.image_path,
+        violations: item.violations,
+        location: item.location,
+      }));
+
+      setResults(processedResults);
+    } catch (error) {
+      console.error('Error submitting files:', error);
+      alert('An error occurred while processing your request.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {'image/*': ['.jpeg', '.jpg', '.png', '.gif']},
     maxFiles: 10,
     multiple: true
   });
-
-  const handleSubmit = async () => {
-    if (files.length === 0) return;
-    
-    setIsUploading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, you would upload to your backend here
-      // const formData = new FormData();
-      // files.forEach(file => formData.append('files', file));
-      // const response = await fetch('/api/violations/detect', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      // const result = await response.json();
-      
-      // Mock response
-      const mockResults = files.map(file => ({
-        id: Math.random().toString(36).substr(2, 9),
-        image: file.preview,
-        violations: [{
-          category: 'unauthorized_construction',
-          confidence: 0.85 + Math.random() * 0.14
-        }],
-        location: {
-          coordinates: {
-            latitude: 55.7558 + (Math.random() * 0.1 - 0.05),
-            longitude: 37.6173 + (Math.random() * 0.1 - 0.05)
-          },
-          has_gps: Math.random() > 0.5
-        }
-      }));
-      
-      setResults(prev => [...prev, ...mockResults]);
-      setFiles([]);
-      
-    } catch (error) {
-      console.error('Error uploading files:', error);
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -119,10 +128,47 @@ const ViolationUploader = () => {
           
           {files.length > 0 && (
             <Box mt={2}>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                fullWidth 
+              <TextField
+                label="Location Hint (optional)"
+                placeholder="e.g., Moscow, Red Square, near Kremlin"
+                fullWidth
+                value={locationHint}
+                onChange={(e) => setLocationHint(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+
+              {showManualInput && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Manual Coordinates (if automatic detection fails)
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <TextField
+                        label="Latitude"
+                        type="number"
+                        fullWidth
+                        value={manualCoordinates.lat}
+                        onChange={(e) => setManualCoordinates({...manualCoordinates, lat: e.target.value})}
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <TextField
+                        label="Longitude"
+                        type="number"
+                        fullWidth
+                        value={manualCoordinates.lon}
+                        onChange={(e) => setManualCoordinates({...manualCoordinates, lon: e.target.value})}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
                 onClick={handleSubmit}
                 disabled={isUploading}
               >

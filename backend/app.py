@@ -1,88 +1,77 @@
 from flask import Flask, request, jsonify
-from celery import Celery
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
-from models import SessionLocal, init_db
-from routes.maps import init_app as init_maps_routes
-import os
-import asyncio
-import aiohttp
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Celery
-def make_celery(app):
-    celery = Celery(
-        app.import_name,
-        backend=app.config['CELERY_RESULT_BACKEND'],
-        broker=app.config['CELERY_BROKER_URL']
-    )
-    celery.conf.update(app.config)
-    return celery
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+CORS(app)
 
-celery = make_celery(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 
-# Initialize database and routes
-init_db()
-init_maps_routes(app)
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(150), nullable=False)
 
-# Эндпоинты
-@app.route('/upload', methods=['POST'])
-def upload():
-    files = request.files.getlist('files')  # 1-5 файлов
-    text = request.form.get('text', '')  # Текстовый контекст
-    mode = request.form.get('mode', 'normal')  # normal, panorama, video
-    
-    if not files or len(files) > 5:
-        return jsonify({'error': 'Invalid files'}), 400
-    
-    # Сохраняем файлы временно
-    upload_dir = 'uploads'
-    os.makedirs(upload_dir, exist_ok=True)
-    file_paths = []
-    for file in files:
-        if file.filename.split('.')[-1].lower() not in ['jpeg', 'jpg', 'png', 'mp4', 'mov']:
-            return jsonify({'error': 'Unsupported format'}), 400
-        path = os.path.join(upload_dir, file.filename)
-        file.save(path)
-        file_paths.append(path)
-    
-    # Запускаем Celery таску
-    task = process_media.delay(file_paths, text, mode)
-    
-    return jsonify({'task_id': task.id}), 202
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-@app.route('/status/<task_id>', methods=['GET'])
-def get_status(task_id):
-    task = celery.AsyncResult(task_id)
-    return jsonify({'status': task.status})
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+    new_user = User(username=data['username'], email=data['email'], password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({"message": "User registered successfully"}), 201
 
-@app.route('/result/<task_id>', methods=['GET'])
-def get_result(task_id):
-    task = celery.AsyncResult(task_id)
-    if task.status == 'SUCCESS':
-        return jsonify(task.result)
-    return jsonify({'status': task.status}), 202
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    user = User.query.filter_by(email=data['email']).first()
+    if user and check_password_hash(user.password, data['password']):
+        login_user(user)
+        return jsonify({"message": "Logged in successfully"}), 200
+    return jsonify({"message": "Invalid credentials"}), 401
 
-# Для внешней интеграции (e.g., от ИНС системы)
-@app.route('/api/coords', methods=['POST'])
-def api_coords():
-    # Аналогично upload, но для интеграции
-    data = request.json
-    file_paths = data.get('file_paths')  # Или URL к фото от внешней системы
-    text = data.get('text')
-    mode = data.get('mode', 'normal')
-    # ... (обработка)
-    task = process_media.delay(file_paths, text, mode)
-    return jsonify({'task_id': task.id})
+@app.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({"message": "Logged out successfully"}), 200
 
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    """Close database session on app teardown"""
-    db_session = SessionLocal()
-    db_session.close()
 
+------- REPLACE
+@app.route('/api/violations/detect', methods=['POST'])
+@login_required
+def detect_violations():
+    # Implement the violation detection logic here
+    data = request.get_json()
+    image_path = data['image_path']
+    result = perform_violation_detection(image_path)
+
+    # Write the result to a file
+    with open('violation_detection_result.json', 'w') as f:
+        json.dump(result, f)
+
+    return jsonify(result)
+
+def perform_violation_detection(image_path):
+    # Dummy implementation of the violation detection logic
+    # Replace this with the actual implementation
+    return {
+        "violation_detected": True,
+        "details": "Dummy details of the detected violation."
+    }
 if __name__ == '__main__':
-    # Create uploads directory if it doesn't exist
-    os.makedirs('uploads', exist_ok=True)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)

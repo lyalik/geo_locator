@@ -25,11 +25,12 @@ def allowed_file(filename):
 def detect_violations():
     """
     API endpoint to upload an image and detect property violations.
-    
+
     Request (multipart/form-data):
     - file: The image file to process
     - user_id: ID of the user submitting the image
     - location_notes: Optional notes about the location
+    - location_hint: Optional text hint for location (e.g., "Moscow, Red Square, near Kremlin")
     
     Response (JSON):
     {
@@ -58,7 +59,8 @@ def detect_violations():
             'metadata': {
                 'timestamp': str,
                 'user_id': str,
-                'location_notes': str
+                'location_notes': str,
+                'location_hint': str
             }
         },
         'error': str | None
@@ -100,6 +102,7 @@ def detect_violations():
         # Get additional form data
         user_id = request.form.get('user_id', 'anonymous')
         location_notes = request.form.get('location_notes', '')
+        location_hint = request.form.get('location_hint', '')
         
         # Process the image
         try:
@@ -115,7 +118,7 @@ def detect_violations():
                 }), 500
             
             # Step 2: Extract geolocation data
-            geo_result = geolocation_service.process_image(filepath)
+            geo_result = geolocation_service.process_image(filepath, location_hint=location_hint)
             
             # Prepare response data
             response_data = {
@@ -132,6 +135,7 @@ def detect_violations():
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
                     'user_id': user_id,
                     'location_notes': location_notes,
+                    'location_hint': location_hint,
                     'image_size': detection_result.get('image_size')
                 }
             }
