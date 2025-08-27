@@ -281,6 +281,9 @@ Denis Lyalik — [lyalik.denis@gmail.com](mailto:lyalik.denis@gmail.com)
    ```bash
    docker-compose up --build
    ```
+   sudo docker-compose down && sudo docker-compose up --build
+   sudo docker-compose down
+   
 
 5. После успешного запуска откройте в браузере:
    - Frontend: http://localhost:3000

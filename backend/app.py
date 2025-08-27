@@ -45,15 +45,12 @@ def login():
     return jsonify({"message": "Invalid credentials"}), 401
 
 @app.route('/logout', methods=['POST'])
-@login_required
 def logout():
     logout_user()
     return jsonify({"message": "Logged out successfully"}), 200
 
 
-------- REPLACE
 @app.route('/api/violations/detect', methods=['POST'])
-@login_required
 def detect_violations():
     # Implement the violation detection logic here
     data = request.get_json()
