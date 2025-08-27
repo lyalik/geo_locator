@@ -8,7 +8,7 @@ from PIL import Image
 import numpy as np
 import cv2
 import asyncio
-from ..maps import map_aggregator
+from .maps import map_aggregator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

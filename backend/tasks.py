@@ -1,6 +1,5 @@
 from celery import Celery
-from . import create_app
-from .models import db, SearchRequest
+from .app import app as flask_app, db
 import os
 from datetime import datetime
 import requests
@@ -23,45 +22,19 @@ def make_celery(app):
     celery.Task = ContextTask
     return celery
 
-# Create Flask app and then celery
-app = create_app()
+# Use the existing Flask app
+app = flask_app
 celery = make_celery(app)
 
 @celery.task(bind=True)
 def process_search_request(self, request_id):
-    """Process a search request asynchronously."""
+    """Process a search request asynchronously (placeholder)."""
     with app.app_context():
         try:
-            search_request = SearchRequest.query.get(request_id)
-            if not search_request:
-                raise ValueError(f"Search request {request_id} not found")
-            
-            search_request.status = 'processing'
-            db.session.commit()
-            
-            # TODO: Implement actual processing logic
-            # This is a placeholder for the actual implementation
-            
-            # Example processing (replace with actual implementation)
-            if search_request.search_type == 'text':
-                # Process text search
-                pass
-            elif search_request.search_type in ['image', 'video', 'panorama']:
-                # Process media file
-                pass
-            
-            # Update search request status
-            search_request.status = 'completed'
-            search_request.completed_at = datetime.utcnow()
-            db.session.commit()
-            
+            # Placeholder implementation while SearchRequest model is not defined
+            # Implement actual logic once model and routes are ready
             return {'status': 'success', 'request_id': request_id}
-            
         except Exception as e:
-            if 'search_request' in locals():
-                search_request.status = 'failed'
-                search_request.completed_at = datetime.utcnow()
-                db.session.commit()
             raise self.retry(exc=e, countdown=60, max_retries=3)
 
 # Example task for Yandex Maps API

@@ -37,7 +37,7 @@ class ViolationDetector:
         
         Args:
             model_path: Path to a pre-trained model. If None, uses a default model.
-        ""
+        """
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self._load_model(model_path)
         self.transform = transforms.Compose([

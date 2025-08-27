@@ -251,7 +251,7 @@ Denis Lyalik — [lyalik.denis@gmail.com](mailto:lyalik.denis@gmail.com)
 1. Клонируйте репозиторий:
    ```bash
    git clone https://github.com/lyalik/geo_locator.git
-   cd geo-locator
+   cd geo_locator
    ```
 
 2. Создайте файл `.env` в корне проекта:
@@ -281,14 +281,12 @@ Denis Lyalik — [lyalik.denis@gmail.com](mailto:lyalik.denis@gmail.com)
    ```bash
    docker-compose up --build
    ```
-   sudo docker-compose down && sudo docker-compose up --build
-   sudo docker-compose down
    
 
 5. После успешного запуска откройте в браузере:
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:5000
-   - Flower (мониторинг Celery): http://localhost:5555
+   - Flower (мониторинг Celery): опционально, не включен в docker-compose по умолчанию
 
 ## 🔧 Разработка
 
