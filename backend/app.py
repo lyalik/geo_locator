@@ -27,8 +27,8 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Create tables
-with app.app_context():
-    db.create_all()
+# with app.app_context():
+#     db.create_all()
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -138,7 +138,6 @@ try:
     from routes.rosreestr_api import bp as rosreestr_bp
     from routes.openstreetmap_api import openstreetmap_api
     from routes.sentinel_api import sentinel_api
-    from routes.ocr_api import ocr_api
     
     app.register_blueprint(maps_bp)
     app.register_blueprint(violation_api_bp)
@@ -146,10 +145,18 @@ try:
     app.register_blueprint(rosreestr_bp)
     app.register_blueprint(openstreetmap_api, url_prefix='/api/openstreetmap')
     app.register_blueprint(sentinel_api, url_prefix='/api/sentinel')
-    app.register_blueprint(ocr_api, url_prefix='/api/ocr')
 except Exception as e:
-    # Avoid crashing startup if blueprints fail to import; log later
-    pass
+    print(f"Warning: Some blueprints failed to import: {e}")
+
+# Register OCR API separately to catch specific errors
+try:
+    from routes.ocr_api import ocr_api
+    app.register_blueprint(ocr_api, url_prefix='/api/ocr')
+    print("✅ OCR API registered successfully")
+except Exception as e:
+    print(f"❌ OCR API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
 
 @app.route('/')
 def index():

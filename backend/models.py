@@ -47,14 +47,54 @@ class Violation(db.Model):
 class ProcessingTask(db.Model):
     __tablename__ = 'processing_tasks'
     
-    id = db.Column(db.String(100), primary_key=True)  # Celery task_id
+    id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status = db.Column(db.String(20), default='PENDING')  # PENDING, STARTED, SUCCESS, FAILURE
-    task_type = db.Column(db.String(50))  # 'violation_detection', 'location_matching'
+    photo_id = db.Column(db.Integer, db.ForeignKey('photos.id'), nullable=True)
+    task_type = db.Column(db.String(50), nullable=False)  # 'ocr', 'violation_detection', etc.
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'processing', 'completed', 'failed'
     result_data = db.Column(db.JSON)
     error_message = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    user = db.relationship('User', backref=db.backref('tasks', lazy=True))
+    user = db.relationship('User', backref='processing_tasks')
+    photo = db.relationship('Photo', backref='processing_tasks')
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    violation_id = db.Column(db.Integer, db.ForeignKey('violations.id'), nullable=True)
+    type = db.Column(db.String(50), nullable=False)  # 'email', 'sms', 'push'
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'sent', 'failed', 'read'
+    subject = db.Column(db.String(255))
+    message = db.Column(db.Text, nullable=False)
+    recipient = db.Column(db.String(255), nullable=False)  # email address or phone number
+    sent_at = db.Column(db.DateTime)
+    read_at = db.Column(db.DateTime)
+    metadata = db.Column(db.JSON)  # additional data like email provider response
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='notifications')
+    violation = db.relationship('Violation', backref='notifications')
+
+class UserNotificationPreferences(db.Model):
+    __tablename__ = 'user_notification_preferences'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+    email_notifications = db.Column(db.Boolean, default=True)
+    sms_notifications = db.Column(db.Boolean, default=False)
+    push_notifications = db.Column(db.Boolean, default=True)
+    violation_alerts = db.Column(db.Boolean, default=True)
+    weekly_reports = db.Column(db.Boolean, default=True)
+    immediate_alerts = db.Column(db.Boolean, default=True)
+    notification_frequency = db.Column(db.String(20), default='immediate')  # 'immediate', 'daily', 'weekly'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='notification_preferences', uselist=False)

@@ -6,7 +6,10 @@ from flask import Blueprint, request, jsonify
 import logging
 import os
 from werkzeug.utils import secure_filename
-from ..services.ocr_service import OCRService
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from services.ocr_service import OCRService
 
 logger = logging.getLogger(__name__)
 
