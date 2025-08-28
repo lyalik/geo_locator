@@ -1,32 +1,34 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
-
+import json
 import os
+
+# Import models and db
+from models import db, User, Photo, Violation, ProcessingTask
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-db = SQLAlchemy(app)
+# Initialize extensions
+db.init_app(app)
 migrate = Migrate(app, db)
 CORS(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# Create tables
+with app.app_context():
+    db.create_all()
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -63,38 +65,49 @@ def uploaded_file(filename):
 # Register API blueprints
 try:
     from routes.maps import bp as maps_bp
-    from routes.violation_api import bp as violation_bp
+    from routes.violation_api import bp as violation_api_bp
+    from routes.cache_api import bp as cache_api_bp
+    from routes.rosreestr_api import bp as rosreestr_bp
+    from routes.openstreetmap_api import openstreetmap_api
+    from routes.sentinel_api import sentinel_api
+    from routes.ocr_api import ocr_api
+    
     app.register_blueprint(maps_bp)
-    app.register_blueprint(violation_bp)
+    app.register_blueprint(violation_api_bp)
+    app.register_blueprint(cache_api_bp)
+    app.register_blueprint(rosreestr_bp)
+    app.register_blueprint(openstreetmap_api, url_prefix='/api/openstreetmap')
+    app.register_blueprint(sentinel_api, url_prefix='/api/sentinel')
+    app.register_blueprint(ocr_api, url_prefix='/api/ocr')
 except Exception as e:
     # Avoid crashing startup if blueprints fail to import; log later
     pass
 
+@app.route('/')
+def index():
+    """Show available API endpoints."""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        # Skip static routes and debugger routes
+        if not rule.rule.startswith('/static') and not rule.rule.startswith('/debugtoolbar'):
+            routes.append({
+                'endpoint': rule.endpoint,
+                'methods': sorted(rule.methods - {'OPTIONS', 'HEAD'}),
+                'path': rule.rule
+            })
+    return jsonify({
+        'name': 'Geo Locator API',
+        'endpoints': routes
+    })
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
-        'status': 'ok'
+        'status': 'ok',
+        'version': '1.0',
+        'database': 'connected' if db.engine.dialect.has_table(db.engine, 'users') else 'no database connection'
     })
 
-@app.route('/api/violations/detect', methods=['POST'])
-def detect_violations():
-    # Implement the violation detection logic here
-    data = request.get_json()
-    image_path = data['image_path']
-    result = perform_violation_detection(image_path)
-
-    # Write the result to a file
-    with open('violation_detection_result.json', 'w') as f:
-        json.dump(result, f)
-
-    return jsonify(result)
-
-def perform_violation_detection(image_path):
-    # Dummy implementation of the violation detection logic
-    # Replace this with the actual implementation
-    return {
-        "violation_detected": True,
-        "details": "Dummy details of the detected violation."
-    }
+# This endpoint is now handled by the violation_api blueprint
 if __name__ == '__main__':
     app.run(debug=True)

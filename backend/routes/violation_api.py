@@ -6,14 +6,14 @@ from pathlib import Path
 import uuid
 
 from services.geolocation_service import GeoLocationService
-from services.violation_detector import ViolationDetector
+from services.yolo_violation_detector import YOLOViolationDetector
 
 # Create blueprint
 bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
 
 # Initialize services
 geolocation_service = GeoLocationService()
-violation_detector = ViolationDetector()
+violation_detector = YOLOViolationDetector()
 
 def allowed_file(filename):
     """Check if the file extension is allowed."""
@@ -195,3 +195,164 @@ def list_violations():
         },
         'error': None
     })
+
+@bp.route('/batch_detect', methods=['POST'])
+def batch_detect_violations():
+    """
+    API endpoint for batch processing multiple images.
+    
+    Request (multipart/form-data):
+    - files: Multiple image files to process
+    - location_hint: Optional location hint for all images
+    - user_id: User identifier
+    
+    Returns:
+    - JSON response with batch processing results
+    """
+    try:
+        # Check if files are present
+        if 'files' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No files provided',
+                'data': []
+            }), 400
+        
+        files = request.files.getlist('files')
+        if not files or all(f.filename == '' for f in files):
+            return jsonify({
+                'success': False,
+                'error': 'No files selected',
+                'data': []
+            }), 400
+        
+        # Get optional parameters
+        location_hint = request.form.get('location_hint', '')
+        user_id = request.form.get('user_id', 'anonymous')
+        
+        # Process files
+        processed_files = []
+        saved_paths = []
+        
+        for file in files:
+            if file and allowed_file(file.filename):
+                # Generate unique filename
+                filename = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                
+                # Save file
+                upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+                os.makedirs(upload_folder, exist_ok=True)
+                file_path = os.path.join(upload_folder, unique_filename)
+                file.save(file_path)
+                
+                processed_files.append({
+                    'original_name': filename,
+                    'saved_path': file_path,
+                    'unique_name': unique_filename
+                })
+                saved_paths.append(file_path)
+        
+        if not processed_files:
+            return jsonify({
+                'success': False,
+                'error': 'No valid image files found',
+                'data': []
+            }), 400
+        
+        # Batch detect violations using YOLOv8
+        batch_results = violation_detector.batch_detect(saved_paths)
+        
+        # Process each result with geolocation
+        final_results = []
+        for i, (file_info, detection_result) in enumerate(zip(processed_files, batch_results)):
+            try:
+                if detection_result['success']:
+                    # Get geolocation for this image
+                    location_result = geolocation_service.get_location_from_image(
+                        file_info['saved_path'], 
+                        location_hint
+                    )
+                    
+                    # Combine results
+                    combined_result = {
+                        'file_info': {
+                            'original_name': file_info['original_name'],
+                            'unique_name': file_info['unique_name'],
+                            'file_size': os.path.getsize(file_info['saved_path'])
+                        },
+                        'detection': detection_result,
+                        'location': location_result,
+                        'processing_time': datetime.utcnow().isoformat(),
+                        'user_id': user_id
+                    }
+                else:
+                    combined_result = {
+                        'file_info': {
+                            'original_name': file_info['original_name'],
+                            'unique_name': file_info['unique_name']
+                        },
+                        'detection': detection_result,
+                        'location': {'success': False, 'error': 'Detection failed'},
+                        'processing_time': datetime.utcnow().isoformat(),
+                        'user_id': user_id
+                    }
+                
+                final_results.append(combined_result)
+                
+            except Exception as e:
+                final_results.append({
+                    'file_info': {
+                        'original_name': file_info['original_name'],
+                        'unique_name': file_info['unique_name']
+                    },
+                    'detection': {'success': False, 'error': str(e)},
+                    'location': {'success': False, 'error': str(e)},
+                    'processing_time': datetime.utcnow().isoformat(),
+                    'user_id': user_id
+                })
+        
+        # Calculate summary statistics
+        total_files = len(final_results)
+        successful_detections = sum(1 for r in final_results if r['detection']['success'])
+        total_violations = sum(len(r['detection'].get('violations', [])) for r in final_results if r['detection']['success'])
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'results': final_results,
+                'summary': {
+                    'total_files': total_files,
+                    'successful_detections': successful_detections,
+                    'failed_detections': total_files - successful_detections,
+                    'total_violations_found': total_violations,
+                    'processing_time': datetime.utcnow().isoformat()
+                }
+            },
+            'error': None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Batch detection error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Batch processing failed: {str(e)}',
+            'data': []
+        }), 500
+
+@bp.route('/model_info', methods=['GET'])
+def get_model_info():
+    """Get information about the current detection model."""
+    try:
+        model_info = violation_detector.get_model_info()
+        return jsonify({
+            'success': True,
+            'data': model_info,
+            'error': None
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': None
+        }), 500

@@ -9,6 +9,7 @@ import numpy as np
 import cv2
 import asyncio
 from .maps import map_aggregator
+from .cache_service import GeolocationCache, MapCache
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -72,11 +73,20 @@ class GeoLocationService:
             raise ValueError("Invalid GPS coordinate format")
     
     def reverse_geocode(self, lat: float, lon: float) -> Optional[Dict[str, Any]]:
-        """Convert coordinates to human-readable address."""
+        """Convert coordinates to human-readable address with caching."""
+        # Check cache first
+        cached_result = MapCache.get_cached_reverse_geocode_result(lat, lon)
+        if cached_result:
+            logger.debug(f"Cache hit for reverse geocoding {lat}, {lon}")
+            return cached_result
+        
         try:
             location = self.geolocator.reverse(f"{lat}, {lon}", exactly_one=True)
             if location:
-                return location.raw
+                result = location.raw
+                # Cache the result
+                MapCache.cache_reverse_geocode_result(lat, lon, result)
+                return result
             return None
         except (GeocoderTimedOut, GeocoderServiceError) as e:
             logger.warning(f"Geocoding service error: {e}")
@@ -241,6 +251,32 @@ class GeoLocationService:
         except Exception as e:
             logger.error(f"Error comparing images: {e}")
             return 0
+    
+    def get_location_from_image(self, image_path: str, location_hint: str = "") -> Dict[str, Any]:
+        """
+        Main function to get location from image with caching.
+        
+        Args:
+            image_path: Path to the image file
+            location_hint: Optional location hint
+            
+        Returns:
+            Dictionary with location results
+        """
+        # Check cache first
+        cached_result = GeolocationCache.get_cached_location_result(image_path, location_hint)
+        if cached_result:
+            logger.debug(f"Cache hit for geolocation {image_path}")
+            return cached_result
+        
+        # Process image
+        result = self.process_image(image_path, location_hint)
+        
+        # Cache the result if successful
+        if result.get('success'):
+            GeolocationCache.cache_location_result(image_path, location_hint, result)
+        
+        return result
 
 
 # Example usage
