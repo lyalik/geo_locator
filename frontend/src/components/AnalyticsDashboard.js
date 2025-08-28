@@ -29,7 +29,7 @@ const AnalyticsDashboard = ({ violations = [] }) => {
     setLoading(true);
     try {
       // Load cache statistics
-      const cacheResponse = await fetch('/api/cache/info');
+      const cacheResponse = await fetch('http://localhost:5000/api/cache/info');
       if (cacheResponse.ok) {
         const cacheData = await cacheResponse.json();
         setCacheStats(cacheData.data);

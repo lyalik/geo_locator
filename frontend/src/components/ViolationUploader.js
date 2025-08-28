@@ -42,7 +42,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
     formData.append('location_hint', locationHint);
 
     try {
-      const response = await fetch('/api/violations/detect', {
+      const response = await fetch('http://localhost:5000/api/violations/detect', {
         method: 'POST',
         body: formData,
       });
