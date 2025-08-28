@@ -12,7 +12,8 @@ import json
 
 from .yandex_maps_service import YandexMapsService
 from .dgis_service import DGISService
-from .sentinel_service import SentinelHubService
+from .roscosmos_satellite_service import RoscosmosService
+from .yandex_satellite_service import YandexSatelliteService
 from .image_database_service import ImageDatabaseService
 from .geolocation_service import GeoLocationService
 
@@ -24,7 +25,8 @@ class GeoAggregatorService:
     - EXIF данные из фотографий
     - Yandex Maps API
     - 2GIS API  
-    - Sentinel Hub спутниковые снимки
+    - Роскосмос спутниковые снимки
+    - Яндекс Спутник API
     - Собственная база данных изображений
     - Алгоритмы сопоставления изображений
     """
@@ -32,7 +34,8 @@ class GeoAggregatorService:
     def __init__(self):
         self.yandex_service = YandexMapsService()
         self.dgis_service = DGISService()
-        self.sentinel_service = SentinelHubService()
+        self.roscosmos_service = RoscosmosService()
+        self.yandex_satellite_service = YandexSatelliteService()
         self.image_db_service = ImageDatabaseService()
         self.geo_service = GeoLocationService()
         
@@ -224,13 +227,10 @@ class GeoAggregatorService:
             if not coordinates:
                 return {'success': False, 'source': 'satellite'}
             
-            # Получаем спутниковый снимок
-            satellite_image = asyncio.run(
-                self.sentinel_service.get_satellite_image(
-                    coordinates['latitude'], 
-                    coordinates['longitude'],
-                    zoom=16
-                )
+            # Получаем спутниковый снимок через российские сервисы
+            satellite_image = self._get_best_satellite_image(
+                coordinates['latitude'], 
+                coordinates['longitude']
             )
             
             if satellite_image.get('success'):
@@ -434,6 +434,37 @@ class GeoAggregatorService:
         
         return R * c
     
+    def _get_best_satellite_image(self, lat: float, lon: float) -> Dict[str, Any]:
+        """
+        Получение лучшего доступного спутникового снимка из российских источников
+        """
+        try:
+            # Пробуем источники в порядке приоритета
+            sources = [
+                ('roscosmos', self.roscosmos_service.get_satellite_image),
+                ('yandex_satellite', self.yandex_satellite_service.get_satellite_image)
+            ]
+            
+            for source_name, get_image_func in sources:
+                try:
+                    result = get_image_func(lat, lon, zoom=16)
+                    if result.get('success'):
+                        result['preferred_source'] = source_name
+                        return result
+                except Exception as e:
+                    logger.warning(f"Satellite source {source_name} failed: {e}")
+                    continue
+            
+            return {
+                'success': False,
+                'error': 'No satellite images available from Russian sources',
+                'source': 'russian_satellites'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting satellite image: {e}")
+            return {'success': False, 'error': str(e), 'source': 'russian_satellites'}
+    
     def get_location_statistics(self) -> Dict[str, Any]:
         """Получение статистики по геолокации"""
         try:
@@ -453,7 +484,8 @@ class GeoAggregatorService:
                 'available_services': {
                     'yandex_maps': bool(self.yandex_service.api_key),
                     'dgis': bool(self.dgis_service.api_key),
-                    'sentinel_hub': True,  # Всегда доступен
+                    'roscosmos_satellite': True,  # Российские спутниковые данные
+                    'yandex_satellite': bool(self.yandex_satellite_service.api_key),
                     'image_database': True
                 }
             }
