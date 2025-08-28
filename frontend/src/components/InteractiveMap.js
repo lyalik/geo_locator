@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Box, Card, CardContent, Typography, Chip, Button, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
-import { LocationOn, Visibility, FilterList, GetApp } from '@mui/icons-material';
+import { Box, Card, CardContent, Typography, Chip, Button, FormControl, InputLabel, Select, MenuItem, TextField, Switch, FormControlLabel } from '@mui/material';
+import { LocationOn, Visibility, FilterList, GetApp, Satellite } from '@mui/icons-material';
+import { api } from '../services/api';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default markers in react-leaflet
@@ -63,6 +64,9 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
     confidenceMin: 0.5
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [showSatellite, setShowSatellite] = useState(false);
+  const [satelliteData, setSatelliteData] = useState(null);
+  const [loadingSatellite, setLoadingSatellite] = useState(false);
   const mapRef = useRef();
 
   // Default center (Moscow)
@@ -132,6 +136,44 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
     linkElement.click();
   };
 
+  const loadSatelliteData = async (bounds) => {
+    if (!bounds) return;
+    
+    try {
+      setLoadingSatellite(true);
+      const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+      
+      const params = new URLSearchParams({
+        bbox,
+        date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        date_to: new Date().toISOString().split('T')[0],
+        resolution: 10,
+        max_cloud_coverage: 20
+      });
+      
+      const response = await api.get(`/api/satellite/image?${params}`);
+      
+      if (response.data.success) {
+        setSatelliteData(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading satellite data:', error);
+    } finally {
+      setLoadingSatellite(false);
+    }
+  };
+
+  const toggleSatelliteLayer = async () => {
+    const newShowSatellite = !showSatellite;
+    setShowSatellite(newShowSatellite);
+    
+    if (newShowSatellite && mapRef.current && !satelliteData) {
+      const map = mapRef.current;
+      const bounds = map.getBounds();
+      await loadSatelliteData(bounds);
+    }
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Controls */}
@@ -144,6 +186,16 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
           >
             Фильтры
           </Button>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showSatellite}
+                onChange={toggleSatelliteLayer}
+                disabled={loadingSatellite}
+              />
+            }
+            label="Спутниковый слой"
+          />
           <Button
             startIcon={<GetApp />}
             onClick={exportData}

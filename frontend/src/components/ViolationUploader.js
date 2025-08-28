@@ -1,15 +1,19 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, TextField } from '@mui/material';
-import { CloudUpload as UploadIcon, Image as ImageIcon } from '@mui/icons-material';
+import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, TextField, Chip, Switch, FormControlLabel } from '@mui/material';
+import { CloudUpload as UploadIcon, Image as ImageIcon, Satellite as SatelliteIcon, Analytics as AnalyticsIcon } from '@mui/icons-material';
+import { api } from '../services/api';
 
-const ViolationUploader = () => {
+const ViolationUploader = ({ onUploadComplete }) => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [results, setResults] = useState([]);
   const [locationHint, setLocationHint] = useState('');
   const [manualCoordinates, setManualCoordinates] = useState({ lat: '', lon: '' });
   const [showManualInput, setShowManualInput] = useState(false);
+  const [enableSatelliteAnalysis, setEnableSatelliteAnalysis] = useState(true);
+  const [enableGeoAnalysis, setEnableGeoAnalysis] = useState(true);
+  const [satelliteData, setSatelliteData] = useState(null);
   
   const onDrop = useCallback(acceptedFiles => {
     const imageFiles = acceptedFiles.filter(file => file.type.startsWith('image/'));
@@ -45,6 +49,11 @@ const ViolationUploader = () => {
 
       const data = await response.json();
 
+      if (data.success && enableSatelliteAnalysis && data.location) {
+        // Получаем спутниковые данные для обнаруженного местоположения
+        await loadSatelliteData(data.location.coordinates[0], data.location.coordinates[1]);
+      }
+
       if (!data.success) {
         if (data.error === 'UNABLE_TO_DETERMINE_LOCATION' || data.suggest_manual_input) {
           setShowManualInput(true);
@@ -56,18 +65,37 @@ const ViolationUploader = () => {
       }
 
       // Process successful response
-      const processedResults = data.data.map(item => ({
-        image: item.image_path,
-        violations: item.violations,
-        location: item.location,
-      }));
-
-      setResults(processedResults);
+      setResults([data]);
+      setFiles([]);
+      
+      if (onUploadComplete) {
+        onUploadComplete([data]);
+      }
     } catch (error) {
-      console.error('Error submitting files:', error);
-      alert('An error occurred while processing your request.');
+      console.error('Upload error:', error);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const loadSatelliteData = async (lat, lon) => {
+    try {
+      const bbox = `${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}`;
+      const params = new URLSearchParams({
+        bbox,
+        date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        date_to: new Date().toISOString().split('T')[0],
+        resolution: 10,
+        max_cloud_coverage: 20
+      });
+      
+      const response = await api.get(`/api/satellite/image?${params}`);
+      
+      if (response.data.success) {
+        setSatelliteData(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading satellite data:', error);
     }
   };
 
@@ -128,6 +156,31 @@ const ViolationUploader = () => {
           
           {files.length > 0 && (
             <Box mt={2}>
+              {/* Настройки анализа */}
+              <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Настройки анализа
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={enableSatelliteAnalysis}
+                      onChange={(e) => setEnableSatelliteAnalysis(e.target.checked)}
+                    />
+                  }
+                  label="Спутниковый анализ"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={enableGeoAnalysis}
+                      onChange={(e) => setEnableGeoAnalysis(e.target.checked)}
+                    />
+                  }
+                  label="Геолокационный анализ"
+                />
+              </Box>
+              
               <TextField
                 label="Location Hint (optional)"
                 placeholder="e.g., Moscow, Red Square, near Kremlin"

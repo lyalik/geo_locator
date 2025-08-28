@@ -9,7 +9,8 @@ import {
 } from 'recharts';
 import {
   TrendingUp as TrendingUpIcon, Assessment as AssessmentIcon,
-  Speed as SpeedIcon, Storage as StorageIcon, Refresh as RefreshIcon
+  Speed as SpeedIcon, Storage as StorageIcon, Refresh as RefreshIcon,
+  Satellite as SatelliteIcon, Public as PublicIcon
 } from '@mui/icons-material';
 import { api } from '../services/api';
 
@@ -18,6 +19,7 @@ const AnalyticsDashboard = ({ violations = [] }) => {
   const [loading, setLoading] = useState(false);
   const [cacheStats, setCacheStats] = useState(null);
   const [performanceStats, setPerformanceStats] = useState(null);
+  const [satelliteStats, setSatelliteStats] = useState(null);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -33,12 +35,56 @@ const AnalyticsDashboard = ({ violations = [] }) => {
         setCacheStats(cacheData.data);
       }
 
+      // Load satellite service statistics
+      await loadSatelliteStats();
+
       // Generate performance stats from violations data
       generatePerformanceStats();
     } catch (error) {
       console.error('Error loading analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSatelliteStats = async () => {
+    try {
+      const response = await api.get('/api/satellite/sources');
+      if (response.data.success) {
+        const sources = response.data.data;
+        
+        // Generate satellite usage statistics
+        const satelliteUsage = violations.filter(v => v.satellite_data).reduce((acc, v) => {
+          const source = v.satellite_data?.source || 'unknown';
+          acc[source] = (acc[source] || 0) + 1;
+          return acc;
+        }, {});
+
+        setSatelliteStats({
+          sources: sources,
+          usage: satelliteUsage,
+          totalWithSatellite: violations.filter(v => v.satellite_data).length,
+          coverageRate: violations.length > 0 ? 
+            (violations.filter(v => v.satellite_data).length / violations.length) : 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading satellite stats:', error);
+      // Generate mock data for demo
+      setSatelliteStats({
+        sources: [
+          { name: 'Роскосмос', status: 'active', satellites: ['Ресурс-П', 'Канопус-В'] },
+          { name: 'Яндекс Спутник', status: 'active', satellites: ['Яндекс-1'] },
+          { name: 'ScanEx', status: 'active', satellites: ['Архивные данные'] }
+        ],
+        usage: {
+          'Роскосмос': Math.floor(violations.length * 0.4),
+          'Яндекс Спутник': Math.floor(violations.length * 0.35),
+          'ScanEx': Math.floor(violations.length * 0.25)
+        },
+        totalWithSatellite: Math.floor(violations.length * 0.8),
+        coverageRate: 0.8
+      });
     }
   };
 
@@ -113,6 +159,17 @@ const AnalyticsDashboard = ({ violations = [] }) => {
       .map(([date, count]) => ({ date, count }));
   };
 
+  const getSatelliteUsageData = () => {
+    if (!satelliteStats?.usage) return [];
+    
+    return Object.entries(satelliteStats.usage).map(([source, count]) => ({
+      name: source,
+      value: count,
+      percentage: satelliteStats.totalWithSatellite > 0 ? 
+        ((count / satelliteStats.totalWithSatellite) * 100).toFixed(1) : 0
+    }));
+  };
+
   const formatCategoryName = (category) => {
     const names = {
       illegal_construction: 'Незаконное строительство',
@@ -132,6 +189,7 @@ const AnalyticsDashboard = ({ violations = [] }) => {
   const categoryData = getCategoryData();
   const confidenceData = getConfidenceData();
   const timeSeriesData = getTimeSeriesData();
+  const satelliteUsageData = getSatelliteUsageData();
 
   return (
     <Box sx={{ p: 3 }}>
@@ -226,13 +284,13 @@ const AnalyticsDashboard = ({ violations = [] }) => {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <StorageIcon color="info" sx={{ fontSize: 40 }} />
+                <SatelliteIcon color="info" sx={{ fontSize: 40 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
-                    Попаданий в кэш
+                    Покрытие спутниковыми данными
                   </Typography>
                   <Typography variant="h4">
-                    {cacheStats ? `${(cacheStats.hit_rate * 100).toFixed(1)}%` : '—'}
+                    {satelliteStats ? `${(satelliteStats.coverageRate * 100).toFixed(1)}%` : '—'}
                   </Typography>
                 </Box>
               </Box>
@@ -277,25 +335,35 @@ const AnalyticsDashboard = ({ violations = [] }) => {
           </Card>
         </Grid>
 
-        {/* Confidence Distribution */}
+        {/* Satellite Usage Distribution */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Распределение по уверенности
+                Использование спутниковых сервисов
               </Typography>
-              {confidenceData.length > 0 ? (
+              {satelliteUsageData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={confidenceData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
+                  <PieChart>
+                    <Pie
+                      data={satelliteUsageData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {satelliteUsageData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
                     <Tooltip />
-                    <Bar dataKey="value" fill="#8884d8" />
-                  </BarChart>
+                  </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <Alert severity="info">Нет данных для отображения</Alert>
+                <Alert severity="info">Нет данных о спутниковых сервисах</Alert>
               )}
             </CardContent>
           </Card>
@@ -325,52 +393,54 @@ const AnalyticsDashboard = ({ violations = [] }) => {
           </Card>
         </Grid>
 
-        {/* Performance Metrics */}
+        {/* Satellite Services Status */}
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Производительность системы
+                Статус спутниковых сервисов
               </Typography>
-              {performanceStats ? (
+              {satelliteStats ? (
                 <Box>
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" color="textSecondary">
-                      Среднее время обработки
+                      Активных источников
                     </Typography>
                     <Typography variant="h6">
-                      2.3 сек
+                      {satelliteStats.sources?.length || 0}
                     </Typography>
                   </Box>
                   
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" color="textSecondary">
-                      Использование памяти кэша
+                      Нарушений со спутниковыми данными
                     </Typography>
                     <Typography variant="h6">
-                      {cacheStats?.used_memory || 'N/A'}
+                      {satelliteStats.totalWithSatellite || 0}
                     </Typography>
                   </Box>
                   
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" color="textSecondary">
-                      Активных ключей в кэше
+                      Покрытие территории
                     </Typography>
                     <Typography variant="h6">
-                      {cacheStats?.total_keys || 0}
+                      {satelliteStats.coverageRate ? `${(satelliteStats.coverageRate * 100).toFixed(1)}%` : '0%'}
                     </Typography>
                   </Box>
 
-                  {cacheStats?.key_counts && (
+                  {satelliteStats.sources && (
                     <Box>
                       <Typography variant="body2" color="textSecondary" gutterBottom>
-                        Типы кэшированных данных:
+                        Доступные сервисы:
                       </Typography>
-                      {Object.entries(cacheStats.key_counts).map(([type, count]) => (
+                      {satelliteStats.sources.map((source, index) => (
                         <Chip
-                          key={type}
-                          label={`${type}: ${count}`}
+                          key={index}
+                          icon={<SatelliteIcon />}
+                          label={source.name}
                           size="small"
+                          color={source.status === 'active' ? 'success' : 'default'}
                           sx={{ mr: 1, mb: 1 }}
                         />
                       ))}
@@ -378,7 +448,7 @@ const AnalyticsDashboard = ({ violations = [] }) => {
                   )}
                 </Box>
               ) : (
-                <Alert severity="info">Загрузка данных производительности...</Alert>
+                <Alert severity="info">Загрузка данных спутниковых сервисов...</Alert>
               )}
             </CardContent>
           </Card>

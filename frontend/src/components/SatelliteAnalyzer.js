@@ -32,7 +32,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
     dateTo: '',
     resolution: 10,
     maxCloudCoverage: 20,
-    bands: 'B02,B03,B04,B08'
+    bands: 'RGB'
   });
   
   const [timeSeriesParams, setTimeSeriesParams] = useState({
@@ -293,14 +293,19 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                 </Grid>
               </Grid>
               
-              <TextField
-                fullWidth
-                label="Спектральные каналы"
-                value={searchParams.bands}
-                onChange={(e) => setSearchParams(prev => ({ ...prev, bands: e.target.value }))}
-                margin="normal"
-                placeholder="B02,B03,B04,B08"
-              />
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Тип снимка</InputLabel>
+                <Select
+                  value={searchParams.bands}
+                  onChange={(e) => setSearchParams(prev => ({ ...prev, bands: e.target.value }))}
+                >
+                  <MenuItem value="RGB">RGB (видимый спектр)</MenuItem>
+                  <MenuItem value="NIR">Ближний инфракрасный</MenuItem>
+                  <MenuItem value="NDVI">Индекс растительности</MenuItem>
+                  <MenuItem value="THERMAL">Тепловой канал</MenuItem>
+                  <MenuItem value="MULTISPECTRAL">Мультиспектральный</MenuItem>
+                </Select>
+              </FormControl>
               
               <Box sx={{ mt: 2 }}>
                 <Button
@@ -325,26 +330,76 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                   Спутниковый снимок
                 </Typography>
                 
-                <Box sx={{ mb: 2 }}>
+                <Box sx={{ mb: 2, position: 'relative' }}>
                   <img
                     src={satelliteImage.image_url}
-                    alt="Satellite"
-                    style={{ width: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                    alt="Российский спутниковый снимок"
+                    style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '8px' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
                   />
+                  <Box 
+                    sx={{ 
+                      display: 'none', 
+                      p: 2, 
+                      textAlign: 'center', 
+                      bgcolor: 'grey.100', 
+                      borderRadius: '8px',
+                      border: '2px dashed',
+                      borderColor: 'grey.300'
+                    }}
+                  >
+                    <SatelliteIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      Изображение недоступно
+                    </Typography>
+                  </Box>
                 </Box>
                 
-                <Typography variant="body2" color="text.secondary">
-                  Дата съемки: {satelliteImage.acquisition_date}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Облачность: {satelliteImage.cloud_coverage}%
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Разрешение: {satelliteImage.resolution}м
-                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Chip 
+                    icon={<SatelliteIcon />}
+                    label={`Источник: ${satelliteImage.source || 'Российские спутники'}`}
+                    color="primary"
+                    sx={{ mb: 1, mr: 1 }}
+                  />
+                  {satelliteImage.satellite_name && (
+                    <Chip 
+                      label={`Спутник: ${satelliteImage.satellite_name}`}
+                      variant="outlined"
+                      sx={{ mb: 1 }}
+                    />
+                  )}
+                </Box>
                 
-                <Box sx={{ mt: 2 }}>
-                  <Chip label={`Каналы: ${satelliteImage.bands.join(', ')}`} size="small" />
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <strong>Дата съемки:</strong> {satelliteImage.acquisition_date || 'Не указана'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <strong>Облачность:</strong> {satelliteImage.cloud_coverage || 0}%
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <strong>Разрешение:</strong> {satelliteImage.resolution || 'Не указано'}м
+                </Typography>
+                {satelliteImage.coordinates && (
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <strong>Координаты:</strong> {satelliteImage.coordinates.lat?.toFixed(4)}, {satelliteImage.coordinates.lon?.toFixed(4)}
+                  </Typography>
+                )}
+                
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {satelliteImage.bands && satelliteImage.bands.length > 0 && (
+                    <Chip label={`Каналы: ${satelliteImage.bands.join(', ')}`} size="small" />
+                  )}
+                  {satelliteImage.quality_score && (
+                    <Chip 
+                      label={`Качество: ${(satelliteImage.quality_score * 100).toFixed(0)}%`} 
+                      size="small" 
+                      color={satelliteImage.quality_score > 0.7 ? 'success' : 'warning'}
+                    />
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -725,11 +780,11 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       
       {!credentialsConfigured && (
         <Alert 
-          severity="warning" 
+          severity="info" 
           sx={{ mb: 2 }}
           action={
             <Button color="inherit" size="small" onClick={() => setShowConfigDialog(true)}>
-              Настроить
+              Проверить подключение
             </Button>
           }
         >
