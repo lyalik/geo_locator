@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, List
 import exifread
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
@@ -8,8 +8,14 @@ from PIL import Image
 import numpy as np
 import cv2
 import asyncio
+import requests
+import json
+from datetime import datetime
 from .maps import map_aggregator
 from .cache_service import GeolocationCache, MapCache
+from .yandex_maps_service import YandexMapsService
+from .dgis_service import DGISService
+from .sentinel_service import SentinelService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

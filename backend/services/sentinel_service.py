@@ -3,11 +3,13 @@ Sentinel Hub Service for satellite imagery integration
 Provides access to Sentinel-2 satellite imagery and analysis capabilities
 """
 
+import os
 import asyncio
 import aiohttp
 import json
 import base64
 import logging
+import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass

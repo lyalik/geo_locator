@@ -1,0 +1,428 @@
+#!/usr/bin/env python3
+"""
+2GIS API Service для геолокации и поиска объектов
+"""
+import os
+import logging
+import requests
+import json
+from typing import Optional, Dict, Any, List, Tuple
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+class DGISService:
+    """
+    Сервис для работы с 2GIS API
+    - Поиск организаций и объектов
+    - Получение детальной информации
+    - Маршруты и навигация
+    - Фотографии и панорамы
+    """
+    
+    def __init__(self):
+        self.api_key = os.getenv('DGIS_API_KEY')
+        self.base_url = 'https://catalog.api.2gis.com'
+        self.geo_url = 'https://catalog.api.2gis.ru/3.0'
+        
+        if not self.api_key:
+            logger.warning("DGIS_API_KEY not found in environment variables")
+    
+    def search_places(self, query: str, lat: float = None, lon: float = None, 
+                     radius: int = 1000, region_id: int = None) -> Dict[str, Any]:
+        """
+        Поиск мест и организаций через 2GIS Catalog API
+        
+        Args:
+            query: Поисковый запрос
+            lat, lon: Координаты центра поиска
+            radius: Радиус поиска в метрах
+            region_id: ID региона (например, 1 для Москвы)
+        """
+        try:
+            url = f"{self.base_url}/3.0/items"
+            params = {
+                'key': self.api_key,
+                'q': query,
+                'page_size': 20,
+                'fields': 'items.point,items.adm_div,items.address,items.contact_groups,items.rubrics,items.reviews,items.photos'
+            }
+            
+            if lat and lon:
+                params['point'] = f"{lon},{lat}"
+                params['radius'] = radius
+            
+            if region_id:
+                params['region_id'] = region_id
+            else:
+                # По умолчанию ищем в Москве
+                params['region_id'] = 1
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            results = {
+                'success': True,
+                'source': '2gis',
+                'query': query,
+                'total_found': data.get('meta', {}).get('total', 0),
+                'places': []
+            }
+            
+            for item in data.get('result', {}).get('items', []):
+                place = {
+                    'id': item.get('id'),
+                    'name': item.get('name', ''),
+                    'address': self._format_address(item.get('address_name', '')),
+                    'coordinates': self._extract_coordinates(item.get('point', {})),
+                    'rubrics': [rubric.get('name', '') for rubric in item.get('rubrics', [])],
+                    'phone': self._extract_phone(item.get('contact_groups', [])),
+                    'website': self._extract_website(item.get('contact_groups', [])),
+                    'rating': item.get('reviews', {}).get('rating', 0),
+                    'reviews_count': item.get('reviews', {}).get('count', 0),
+                    'photos_count': len(item.get('photos', [])),
+                    'working_hours': self._extract_working_hours(item.get('schedule', {})),
+                    'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else ''
+                }
+                results['places'].append(place)
+            
+            return results
+            
+        except requests.RequestException as e:
+            logger.error(f"2GIS search error: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+        except Exception as e:
+            logger.error(f"Unexpected error in 2GIS search: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+    
+    def get_place_details(self, place_id: str) -> Dict[str, Any]:
+        """
+        Получение детальной информации о месте
+        """
+        try:
+            url = f"{self.base_url}/3.0/items/byid"
+            params = {
+                'key': self.api_key,
+                'id': place_id,
+                'fields': 'items.point,items.adm_div,items.address,items.contact_groups,items.rubrics,items.reviews,items.photos,items.schedule,items.attributes'
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            items = data.get('result', {}).get('items', [])
+            
+            if not items:
+                return {'success': False, 'error': 'Place not found', 'source': '2gis'}
+            
+            item = items[0]
+            
+            result = {
+                'success': True,
+                'source': '2gis',
+                'id': item.get('id'),
+                'name': item.get('name', ''),
+                'full_name': item.get('full_name', ''),
+                'address': self._format_address(item.get('address_name', '')),
+                'coordinates': self._extract_coordinates(item.get('point', {})),
+                'rubrics': [rubric.get('name', '') for rubric in item.get('rubrics', [])],
+                'contacts': self._extract_all_contacts(item.get('contact_groups', [])),
+                'rating': item.get('reviews', {}).get('rating', 0),
+                'reviews_count': item.get('reviews', {}).get('count', 0),
+                'photos': self._extract_photos(item.get('photos', [])),
+                'working_hours': self._extract_working_hours(item.get('schedule', {})),
+                'attributes': self._extract_attributes(item.get('attributes', [])),
+                'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else ''
+            }
+            
+            return result
+            
+        except requests.RequestException as e:
+            logger.error(f"2GIS place details error: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+        except Exception as e:
+            logger.error(f"Unexpected error getting 2GIS place details: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+    
+    def geocode(self, address: str, region_id: int = 1) -> Dict[str, Any]:
+        """
+        Геокодирование адреса
+        """
+        try:
+            url = f"{self.base_url}/3.0/items"
+            params = {
+                'key': self.api_key,
+                'q': address,
+                'region_id': region_id,
+                'type': 'adm_div.place,building.address',
+                'fields': 'items.point,items.adm_div,items.address'
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            items = data.get('result', {}).get('items', [])
+            
+            if not items:
+                return {'success': False, 'error': 'Address not found', 'source': '2gis'}
+            
+            item = items[0]  # Берем первый результат
+            coordinates = self._extract_coordinates(item.get('point', {}))
+            
+            result = {
+                'success': True,
+                'source': '2gis',
+                'address': address,
+                'coordinates': coordinates,
+                'formatted_address': item.get('address_name', ''),
+                'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else '',
+                'type': item.get('type', '')
+            }
+            
+            return result
+            
+        except requests.RequestException as e:
+            logger.error(f"2GIS geocoding error: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+        except Exception as e:
+            logger.error(f"Unexpected error in 2GIS geocoding: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+    
+    def reverse_geocode(self, lat: float, lon: float, radius: int = 100) -> Dict[str, Any]:
+        """
+        Обратное геокодирование - поиск адреса по координатам
+        """
+        try:
+            url = f"{self.base_url}/3.0/items"
+            params = {
+                'key': self.api_key,
+                'point': f"{lon},{lat}",
+                'radius': radius,
+                'type': 'building.address',
+                'fields': 'items.point,items.adm_div,items.address',
+                'page_size': 1
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            items = data.get('result', {}).get('items', [])
+            
+            if not items:
+                return {'success': False, 'error': 'Address not found', 'source': '2gis'}
+            
+            item = items[0]
+            
+            result = {
+                'success': True,
+                'source': '2gis',
+                'coordinates': {'latitude': lat, 'longitude': lon},
+                'formatted_address': item.get('address_name', ''),
+                'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else '',
+                'building_name': item.get('name', ''),
+                'type': item.get('type', '')
+            }
+            
+            return result
+            
+        except requests.RequestException as e:
+            logger.error(f"2GIS reverse geocoding error: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+        except Exception as e:
+            logger.error(f"Unexpected error in 2GIS reverse geocoding: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+    
+    def find_nearby_places(self, lat: float, lon: float, category: str = None, 
+                          radius: int = 1000) -> Dict[str, Any]:
+        """
+        Поиск ближайших мест определенной категории
+        """
+        try:
+            url = f"{self.base_url}/3.0/items"
+            params = {
+                'key': self.api_key,
+                'point': f"{lon},{lat}",
+                'radius': radius,
+                'fields': 'items.point,items.adm_div,items.address,items.contact_groups,items.rubrics,items.reviews',
+                'page_size': 20
+            }
+            
+            if category:
+                params['rubric_id'] = self._get_rubric_id(category)
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            results = {
+                'success': True,
+                'source': '2gis',
+                'center_coordinates': {'latitude': lat, 'longitude': lon},
+                'category': category,
+                'radius': radius,
+                'total_found': data.get('meta', {}).get('total', 0),
+                'places': []
+            }
+            
+            for item in data.get('result', {}).get('items', []):
+                place_coords = self._extract_coordinates(item.get('point', {}))
+                distance = self._calculate_distance(lat, lon, 
+                                                  place_coords['latitude'], 
+                                                  place_coords['longitude'])
+                
+                place = {
+                    'id': item.get('id'),
+                    'name': item.get('name', ''),
+                    'address': self._format_address(item.get('address_name', '')),
+                    'coordinates': place_coords,
+                    'distance': round(distance, 0),
+                    'rubrics': [rubric.get('name', '') for rubric in item.get('rubrics', [])],
+                    'rating': item.get('reviews', {}).get('rating', 0),
+                    'reviews_count': item.get('reviews', {}).get('count', 0)
+                }
+                results['places'].append(place)
+            
+            # Сортируем по расстоянию
+            results['places'].sort(key=lambda x: x['distance'])
+            
+            return results
+            
+        except requests.RequestException as e:
+            logger.error(f"2GIS nearby places error: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+        except Exception as e:
+            logger.error(f"Unexpected error finding nearby places: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+    
+    def _extract_coordinates(self, point: Dict) -> Dict[str, float]:
+        """Извлечение координат из объекта point"""
+        if not point:
+            return {'latitude': 0.0, 'longitude': 0.0}
+        
+        return {
+            'latitude': point.get('lat', 0.0),
+            'longitude': point.get('lon', 0.0)
+        }
+    
+    def _format_address(self, address: str) -> str:
+        """Форматирование адреса"""
+        return address.strip() if address else ''
+    
+    def _extract_phone(self, contact_groups: List) -> str:
+        """Извлечение телефона из контактных групп"""
+        for group in contact_groups:
+            for contact in group.get('contacts', []):
+                if contact.get('type') == 'phone':
+                    return contact.get('value', '')
+        return ''
+    
+    def _extract_website(self, contact_groups: List) -> str:
+        """Извлечение веб-сайта из контактных групп"""
+        for group in contact_groups:
+            for contact in group.get('contacts', []):
+                if contact.get('type') == 'website':
+                    return contact.get('value', '')
+        return ''
+    
+    def _extract_all_contacts(self, contact_groups: List) -> Dict[str, List]:
+        """Извлечение всех контактов"""
+        contacts = {'phones': [], 'websites': [], 'emails': []}
+        
+        for group in contact_groups:
+            for contact in group.get('contacts', []):
+                contact_type = contact.get('type', '')
+                value = contact.get('value', '')
+                
+                if contact_type == 'phone' and value:
+                    contacts['phones'].append(value)
+                elif contact_type == 'website' and value:
+                    contacts['websites'].append(value)
+                elif contact_type == 'email' and value:
+                    contacts['emails'].append(value)
+        
+        return contacts
+    
+    def _extract_photos(self, photos: List) -> List[Dict]:
+        """Извлечение фотографий"""
+        result = []
+        for photo in photos:
+            result.append({
+                'url': photo.get('url', ''),
+                'preview_url': photo.get('preview_url', ''),
+                'width': photo.get('width', 0),
+                'height': photo.get('height', 0)
+            })
+        return result
+    
+    def _extract_working_hours(self, schedule: Dict) -> Dict:
+        """Извлечение рабочих часов"""
+        if not schedule:
+            return {}
+        
+        return {
+            'is_24x7': schedule.get('is_24x7', False),
+            'working_hours': schedule.get('working_hours', []),
+            'tz_offset': schedule.get('tz_offset', 0)
+        }
+    
+    def _extract_attributes(self, attributes: List) -> Dict:
+        """Извлечение атрибутов места"""
+        result = {}
+        for attr in attributes:
+            result[attr.get('name', '')] = attr.get('value', '')
+        return result
+    
+    def _get_rubric_id(self, category: str) -> str:
+        """Получение ID рубрики по категории"""
+        # Маппинг популярных категорий на ID рубрик 2GIS
+        category_mapping = {
+            'кафе': '30',
+            'ресторан': '31',
+            'магазин': '1',
+            'аптека': '184',
+            'банк': '361',
+            'заправка': '127',
+            'больница': '185',
+            'школа': '141',
+            'парк': '372'
+        }
+        
+        return category_mapping.get(category.lower(), '')
+    
+    def _calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Вычисление расстояния между двумя точками в метрах"""
+        import math
+        
+        R = 6371000  # Радиус Земли в метрах
+        
+        lat1_rad = math.radians(lat1)
+        lat2_rad = math.radians(lat2)
+        delta_lat = math.radians(lat2 - lat1)
+        delta_lon = math.radians(lon2 - lon1)
+        
+        a = (math.sin(delta_lat / 2) * math.sin(delta_lat / 2) +
+             math.cos(lat1_rad) * math.cos(lat2_rad) *
+             math.sin(delta_lon / 2) * math.sin(delta_lon / 2))
+        
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        
+        return R * c
+
+
+# Пример использования
+if __name__ == "__main__":
+    service = DGISService()
+    
+    # Тест поиска
+    result = service.search_places("пиццерия", 55.7558, 37.6176)  # Москва
+    print("Search result:", json.dumps(result, indent=2, ensure_ascii=False))
+    
+    # Тест поиска ближайших мест
+    nearby = service.find_nearby_places(55.7558, 37.6176, "кафе", 500)
+    print("Nearby places:", json.dumps(nearby, indent=2, ensure_ascii=False))

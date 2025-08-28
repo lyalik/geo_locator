@@ -151,6 +151,7 @@ try:
     from routes.rosreestr_api import bp as rosreestr_bp
     from routes.openstreetmap_api import openstreetmap_api
     from routes.sentinel_api import sentinel_api
+    from routes.geo_api import geo_bp
     
     app.register_blueprint(maps_bp)
     app.register_blueprint(violation_api_bp)
@@ -158,6 +159,7 @@ try:
     app.register_blueprint(rosreestr_bp)
     app.register_blueprint(openstreetmap_api, url_prefix='/api/openstreetmap')
     app.register_blueprint(sentinel_api, url_prefix='/api/sentinel')
+    app.register_blueprint(geo_bp)
 except Exception as e:
     print(f"Warning: Some blueprints failed to import: {e}")
 
