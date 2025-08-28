@@ -1,46 +1,42 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
+import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
 import { useAuth } from './contexts/AuthContext';
-import HomePage from './pages/HomePage';
-import SearchPage from './pages/SearchPage';
-import HistoryPage from './pages/HistoryPage';
+import Dashboard from './components/Dashboard';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import './App.css';
 
-// Create a theme instance
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontWeight: 500,
-    },
-    h2: {
-      fontWeight: 500,
-    },
-    h3: {
-      fontWeight: 500,
-    },
-  },
-});
+function App() {
+  const { currentUser, logout } = useAuth();
+
+  if (!currentUser) {
+    return <LoginPage />;
+  }
+
+  return (
+    <Router>
+      <Box sx={{ flexGrow: 1 }}>
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              🏢 Geo Locator - Анализ нарушений
+            </Typography>
+            <Typography variant="body2" sx={{ mr: 2 }}>
+              Добро пожаловать, {currentUser.username}
+            </Typography>
+            <Button color="inherit" onClick={logout}>
+              Выйти
+            </Button>
+          </Toolbar>
+        </AppBar>
+        
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Box>
+    </Router>
+  );
+}
+
+export default App;

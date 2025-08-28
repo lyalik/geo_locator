@@ -12,9 +12,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // Sign up function
-  const signup = async (email, password) => {
+  const signup = async (username, email, password) => {
     try {
-      const response = await auth.signup(email, password);
+      const response = await auth.signup(username, email, password);
       setCurrentUser(response.data.user);
       return response;
     } catch (error) {
@@ -48,11 +48,10 @@ export function AuthProvider({ children }) {
     const checkAuth = async () => {
       try {
         const response = await auth.getCurrentUser();
-        if (response.data.user) {
-          setCurrentUser(response.data.user);
-        }
+        setCurrentUser(response.data);
       } catch (error) {
         console.error('Auth check failed:', error);
+        setCurrentUser(null);
       } finally {
         setLoading(false);
       }

@@ -36,29 +36,44 @@ class DocumentAnalysis:
     metadata: Dict[str, Any]
 
 @dataclass
-class ViolationTextAnalysis:
-    """Text analysis specific to violation detection"""
-    violation_keywords: List[str]
+class AddressAnalysis:
+    """Address and building name analysis from signage"""
     addresses: List[str]
-    dates: List[str]
-    legal_references: List[str]
-    severity_indicators: List[str]
+    building_names: List[str]
+    street_numbers: List[str]
+    organization_names: List[str]
+    phone_numbers: List[str]
     confidence_score: float
+    detected_language: str
 
 class OCRService:
     """Service for OCR and multimodal text analysis"""
     
-    def __init__(self):
-        self.cache_service = CacheService()
+    def __init__(self, cache_service: Optional[CacheService] = None):
+        """Initialize OCR service with optional caching"""
+        self.cache_service = cache_service
         
-        # Configure Tesseract
-        self.tesseract_config = {
-            'default': '--oem 3 --psm 6',
-            'single_block': '--oem 3 --psm 8',
-            'single_line': '--oem 3 --psm 7',
-            'single_word': '--oem 3 --psm 8',
-            'digits_only': '--oem 3 --psm 8 -c tessedit_char_whitelist=0123456789'
-        }
+        # Configure Tesseract for Russian and English
+        self.tesseract_config = r'--oem 3 --psm 6 -l rus+eng'
+        
+        # Address and building name patterns
+        self.address_patterns = [
+            r'ул\.?\s+[А-Яа-я\s]+,?\s*\d+[а-я]?',
+            r'улица\s+[А-Яа-я\s]+,?\s*\d+[а-я]?',
+            r'пр\.?\s+[А-Яа-я\s]+,?\s*\d+[а-я]?',
+            r'проспект\s+[А-Яа-я\s]+,?\s*\d+[а-я]?',
+            r'пер\.?\s+[А-Яа-я\s]+,?\s*\d+[а-я]?',
+            r'переулок\s+[А-Яа-я\s]+,?\s*\d+[а-я]?',
+            r'\d+[а-я]?\s+[А-Яа-я\s]+\s+ул\.?',
+            r'\d+[а-я]?\s+[А-Яа-я\s]+\s+улица'
+        ]
+        
+        # Phone number patterns
+        self.phone_patterns = [
+            r'\+7\s*\(?\d{3}\)?\s*\d{3}[-\s]?\d{2}[-\s]?\d{2}',
+            r'8\s*\(?\d{3}\)?\s*\d{3}[-\s]?\d{2}[-\s]?\d{2}',
+            r'\(?\d{3}\)?\s*\d{3}[-\s]?\d{2}[-\s]?\d{2}'
+        ]
         
         # Violation-related keywords
         self.violation_keywords = [
@@ -271,51 +286,73 @@ class OCRService:
         
         return key_info
     
-    def analyze_violation_text(self, text: str) -> ViolationTextAnalysis:
-        """Analyze text specifically for violation-related content"""
+    def analyze_address_text(self, text: str) -> AddressAnalysis:
+        """Analyze text for addresses and building information from signage"""
         try:
-            text_lower = text.lower()
+            # Extract addresses using patterns
+            addresses = []
+            for pattern in self.address_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                addresses.extend(matches)
             
-            # Find violation keywords
-            found_keywords = []
-            for keyword in self.violation_keywords:
-                if keyword in text_lower:
-                    found_keywords.append(keyword)
+            # Extract phone numbers
+            phone_numbers = []
+            for pattern in self.phone_patterns:
+                matches = re.findall(pattern, text)
+                phone_numbers.extend(matches)
             
-            # Extract addresses
-            addresses = self._extract_key_information(text)['addresses']
+            # Extract building names and organization names
+            lines = text.split('\n')
+            building_names = []
+            organization_names = []
+            street_numbers = []
             
-            # Extract dates
-            dates = self._extract_key_information(text)['dates']
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Check for building/organization names (usually in uppercase or title case)
+                if len(line) > 3 and (line.isupper() or line.istitle()):
+                    # Skip if it's just an address
+                    if not any(re.search(pattern, line, re.IGNORECASE) for pattern in self.address_patterns):
+                        if any(word in line.lower() for word in ['магазин', 'кафе', 'ресторан', 'банк', 'аптека', 'салон', 'центр', 'офис']):
+                            organization_names.append(line)
+                        else:
+                            building_names.append(line)
+                
+                # Extract street numbers
+                number_match = re.search(r'\b\d+[а-я]?\b', line)
+                if number_match:
+                    street_numbers.append(number_match.group())
             
-            # Extract legal references
-            legal_references = self._extract_key_information(text)['legal_references']
-            
-            # Severity indicators
-            severity_keywords = ['срочно', 'немедленно', 'критично', 'опасно', 'штраф', 'санкции']
-            severity_indicators = [kw for kw in severity_keywords if kw in text_lower]
+            # Detect language
+            russian_chars = len(re.findall(r'[а-яё]', text.lower()))
+            english_chars = len(re.findall(r'[a-z]', text.lower()))
+            detected_language = 'rus' if russian_chars > english_chars else 'eng'
             
             # Calculate confidence score
             confidence_score = min(1.0, (
-                len(found_keywords) * 0.3 +
-                len(addresses) * 0.2 +
-                len(dates) * 0.1 +
-                len(legal_references) * 0.2 +
-                len(severity_indicators) * 0.2
+                len(addresses) * 0.4 +
+                len(building_names) * 0.2 +
+                len(organization_names) * 0.2 +
+                len(phone_numbers) * 0.1 +
+                len(street_numbers) * 0.1
             ) / 5.0)
             
-            return ViolationTextAnalysis(
-                violation_keywords=found_keywords,
-                addresses=addresses,
-                dates=dates,
-                legal_references=legal_references,
-                severity_indicators=severity_indicators,
-                confidence_score=confidence_score
+            return AddressAnalysis(
+                addresses=list(set(addresses)),  # Remove duplicates
+                building_names=list(set(building_names)),
+                street_numbers=list(set(street_numbers)),
+                organization_names=list(set(organization_names)),
+                phone_numbers=list(set(phone_numbers)),
+                confidence_score=confidence_score,
+                detected_language=detected_language
             )
             
         except Exception as e:
-            logger.error(f"Error analyzing violation text: {e}")
-            return ViolationTextAnalysis([], [], [], [], [], 0.0)
+            logger.error(f"Error analyzing address text: {e}")
+            return AddressAnalysis([], [], [], [], [], 0.0, 'unknown')
     
     async def process_image_async(self, image_path: str) -> DocumentAnalysis:
         """Asynchronously process image for OCR analysis"""

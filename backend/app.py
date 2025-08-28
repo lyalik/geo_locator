@@ -16,11 +16,11 @@ app.config.from_object(Config)
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
-CORS(app)
+CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = None  # Disable automatic redirects for API endpoints
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -33,7 +33,7 @@ with app.app_context():
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-    hashed_password = generate_password_hash(data['password'], method='sha256')
+    hashed_password = generate_password_hash(data['password'])
     new_user = User(username=data['username'], email=data['email'], password=hashed_password)
     db.session.add(new_user)
     db.session.commit()
@@ -50,6 +50,74 @@ def login():
 
 @app.route('/logout', methods=['POST'])
 def logout():
+    logout_user()
+    return jsonify({"message": "Logged out successfully"}), 200
+
+@app.route('/api/v1/auth/me', methods=['GET'])
+def get_current_user():
+    if not current_user.is_authenticated:
+        return jsonify({"message": "Not authenticated"}), 401
+    
+    return jsonify({
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email
+    }), 200
+
+@app.route('/api/v1/auth/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    user = User.query.filter_by(email=data['email']).first()
+    if user and check_password_hash(user.password, data['password']):
+        login_user(user)
+        return jsonify({
+            "message": "Logged in successfully",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
+            }
+        }), 200
+    return jsonify({"message": "Invalid credentials"}), 401
+
+@app.route('/api/v1/auth/register', methods=['POST'])
+def api_register():
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('username') or not data.get('email') or not data.get('password'):
+            return jsonify({"message": "Missing required fields"}), 400
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({"message": "User already exists"}), 400
+        
+        # Check if username already exists
+        existing_username = User.query.filter_by(username=data['username']).first()
+        if existing_username:
+            return jsonify({"message": "Username already exists"}), 400
+        
+        hashed_password = generate_password_hash(data['password'])
+        new_user = User(username=data['username'], email=data['email'], password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        login_user(new_user)
+        return jsonify({
+            "message": "User registered successfully",
+            "user": {
+                "id": new_user.id,
+                "username": new_user.username,
+                "email": new_user.email
+            }
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Registration failed: {str(e)}"}), 500
+
+@app.route('/api/v1/auth/logout', methods=['POST'])
+def api_logout():
     logout_user()
     return jsonify({"message": "Logged out successfully"}), 200
 
@@ -102,10 +170,17 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health():
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        db_status = 'connected' if inspector.has_table('users') else 'no users table'
+    except Exception as e:
+        db_status = f'error: {str(e)}'
+    
     return jsonify({
         'status': 'ok',
         'version': '1.0',
-        'database': 'connected' if db.engine.dialect.has_table(db.engine, 'users') else 'no database connection'
+        'database': db_status
     })
 
 # This endpoint is now handled by the violation_api blueprint

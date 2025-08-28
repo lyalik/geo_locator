@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { MAP_CONFIG, DEFAULT_MAP_CENTER, DEFAULT_ZOOM } from '../config/maps';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 
@@ -28,8 +29,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
+    const isAuthEndpoint = error.config?.url?.includes('/auth/');
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      // Handle unauthorized access (but not for auth endpoints)
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
@@ -39,7 +41,7 @@ api.interceptors.response.use(
 
 // Authentication API
 export const auth = {
-  signup: (email, password) => api.post('/auth/register', { email, password }),
+  signup: (username, email, password) => api.post('/auth/register', { username, email, password }),
   login: (email, password) => api.post('/auth/login', { email, password }),
   logout: () => api.post('/auth/logout'),
   getCurrentUser: () => api.get('/auth/me'),
@@ -78,8 +80,6 @@ export const search = {
   getStatus: (requestId) => api.get(`/search/status/${requestId}`),
   getHistory: () => api.get('/search/history'),
 };
-
-import { MAP_CONFIG, DEFAULT_MAP_CENTER, DEFAULT_ZOOM } from '../config/maps';
 
 // Maps API
 export const maps = {
@@ -124,4 +124,5 @@ export const maps = {
   }
 };
 
+export { api };
 export default api;

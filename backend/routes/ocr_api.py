@@ -101,9 +101,9 @@ def extract_text():
         logger.error(f"Error extracting text: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@ocr_api.route('/analyze-violation', methods=['POST'])
-def analyze_violation():
-    """Analyze text for violation-related content"""
+@ocr_api.route('/analyze-address', methods=['POST'])
+def analyze_address():
+    """Analyze text for addresses and building information from signage"""
     try:
         data = request.get_json()
         
@@ -112,29 +112,29 @@ def analyze_violation():
         
         text = data['text']
         
-        # Analyze violation text
-        violation_analysis = ocr_service.analyze_violation_text(text)
+        # Analyze address text
+        address_analysis = ocr_service.analyze_address_text(text)
         
         return jsonify({
             'success': True,
             'data': {
-                'violation_keywords': violation_analysis.violation_keywords,
-                'addresses': violation_analysis.addresses,
-                'dates': violation_analysis.dates,
-                'legal_references': violation_analysis.legal_references,
-                'severity_indicators': violation_analysis.severity_indicators,
-                'confidence_score': violation_analysis.confidence_score,
-                'is_violation_related': violation_analysis.confidence_score > 0.3
+                'addresses': address_analysis.addresses,
+                'building_names': address_analysis.building_names,
+                'street_numbers': address_analysis.street_numbers,
+                'organization_names': address_analysis.organization_names,
+                'phone_numbers': address_analysis.phone_numbers,
+                'confidence_score': address_analysis.confidence_score,
+                'detected_language': address_analysis.detected_language
             }
         })
         
     except Exception as e:
-        logger.error(f"Error analyzing violation: {e}")
+        logger.error(f"Error analyzing address: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@ocr_api.route('/analyze-violation-image', methods=['POST'])
-def analyze_violation_image():
-    """Analyze uploaded image for violation-related content"""
+@ocr_api.route('/analyze-address-image', methods=['POST'])
+def analyze_address_image():
+    """Analyze uploaded image for address and building information"""
     try:
         # Check if file is present
         if 'file' not in request.files:
@@ -321,8 +321,8 @@ def health_check():
             'endpoints': [
                 '/api/ocr/analyze-document',
                 '/api/ocr/extract-text',
-                '/api/ocr/analyze-violation',
-                '/api/ocr/analyze-violation-image',
+                '/api/ocr/analyze-address',
+                '/api/ocr/analyze-address-image',
                 '/api/ocr/detect-text-regions',
                 '/api/ocr/batch-analyze'
             ]
