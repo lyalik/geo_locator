@@ -12,3 +12,5 @@
 .pytest_cache
 /backend/pytest_cache
 /backend/tests
+/backend/routes/__pycache__
+/backend/services/__pycache__

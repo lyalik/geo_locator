@@ -74,7 +74,7 @@ class Notification(db.Model):
     recipient = db.Column(db.String(255), nullable=False)  # email address or phone number
     sent_at = db.Column(db.DateTime)
     read_at = db.Column(db.DateTime)
-    metadata = db.Column(db.JSON)  # additional data like email provider response
+    meta_data = db.Column(db.JSON)  # additional data like email provider response
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships

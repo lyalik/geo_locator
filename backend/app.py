@@ -158,6 +158,16 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+# Register Notification API
+try:
+    from routes.notification_api import notification_api
+    app.register_blueprint(notification_api, url_prefix='/api/notifications')
+    print("✅ Notification API registered successfully")
+except Exception as e:
+    print(f"❌ Notification API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
+
 @app.route('/')
 def index():
     """Show available API endpoints."""
