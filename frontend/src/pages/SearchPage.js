@@ -332,14 +332,21 @@ const SearchPage = () => {
                 )}
               </Grid>
               
-              {searchResults.sentinel && (
+              {searchResults.satellite && (
                 <Grid item xs={12}>
                   <Typography variant="h6" gutterBottom>
-                    Satellite Analysis
+                    Спутниковый анализ
                   </Typography>
                   <Typography variant="body1">
-                    {searchResults.sentinel.analysis || 'No analysis available'}
+                    {searchResults.satellite.analysis || 'Анализ недоступен'}
                   </Typography>
+                  {searchResults.satellite.source && (
+                    <Chip 
+                      label={`Источник: ${searchResults.satellite.source}`} 
+                      size="small" 
+                      sx={{ mt: 1 }}
+                    />
+                  )}
                 </Grid>
               )}
               

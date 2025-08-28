@@ -163,6 +163,16 @@ try:
 except Exception as e:
     print(f"Warning: Some blueprints failed to import: {e}")
 
+# Register Satellite API separately
+try:
+    from routes.satellite_api import satellite_bp
+    app.register_blueprint(satellite_bp, url_prefix='/api/satellite')
+    print("✅ Satellite API registered successfully")
+except Exception as e:
+    print(f"❌ Satellite API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
+
 # Register OCR API separately to catch specific errors
 try:
     from routes.ocr_api import ocr_api

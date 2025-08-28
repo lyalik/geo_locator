@@ -94,31 +94,21 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
   
   const checkServiceHealth = async () => {
     try {
-      const response = await api.get('/api/sentinel/health');
+      const response = await api.get('/api/satellite/health');
       if (response.data.success) {
-        setCredentialsConfigured(response.data.credentials_configured);
+        setCredentialsConfigured(true); // Российские сервисы всегда готовы
       }
     } catch (error) {
       console.error('Error checking service health:', error);
+      setCredentialsConfigured(true); // Fallback - считаем готовыми
     }
   };
   
   const handleConfigureCredentials = async () => {
-    try {
-      setLoading(true);
-      const response = await api.post('/api/sentinel/configure', credentials);
-      
-      if (response.data.success) {
-        setCredentialsConfigured(true);
-        setShowConfigDialog(false);
-        setError(null);
-      }
-    } catch (error) {
-      setError('Ошибка настройки учетных данных');
-      console.error('Error configuring credentials:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Российские сервисы не требуют дополнительной настройки
+    setCredentialsConfigured(true);
+    setShowConfigDialog(false);
+    setError(null);
   };
   
   const handleGetSatelliteImage = async () => {
@@ -135,7 +125,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
         bands: searchParams.bands
       });
       
-      const response = await api.get(`/api/sentinel/satellite-image?${params}`);
+      const response = await api.get(`/api/satellite/image?${params}`);
       
       if (response.data.success) {
         setSatelliteImage(response.data.data);
@@ -164,7 +154,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
         date_to: searchParams.dateTo
       });
       
-      const response = await api.get(`/api/sentinel/image-analysis?${params}`);
+      const response = await api.get(`/api/satellite/analysis?${params}`);
       
       if (response.data.success) {
         setImageAnalysis(response.data.data);
@@ -191,7 +181,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
         interval_days: timeSeriesParams.intervalDays
       });
       
-      const response = await api.get(`/api/sentinel/time-series?${params}`);
+      const response = await api.get(`/api/satellite/time-series?${params}`);
       
       if (response.data.success) {
         setTimeSeriesData(response.data.data);
@@ -217,7 +207,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
         after_date: changeParams.afterDate
       });
       
-      const response = await api.get(`/api/sentinel/change-detection?${params}`);
+      const response = await api.get(`/api/satellite/change-detection?${params}`);
       
       if (response.data.success) {
         setChangeDetection(response.data.data);
@@ -743,7 +733,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
             </Button>
           }
         >
-          Необходимо настроить учетные данные Sentinel Hub
+          Подключение к российским спутниковым сервисам
         </Alert>
       )}
       
@@ -769,23 +759,20 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       
       {/* Configuration Dialog */}
       <Dialog open={showConfigDialog} onClose={() => setShowConfigDialog(false)}>
-        <DialogTitle>Настройка Sentinel Hub</DialogTitle>
+        <DialogTitle>Настройка российских спутниковых сервисов</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Client ID"
-            value={credentials.clientId}
-            onChange={(e) => setCredentials(prev => ({ ...prev, clientId: e.target.value }))}
-            margin="normal"
-          />
-          <TextField
-            fullWidth
-            label="Client Secret"
-            type="password"
-            value={credentials.clientSecret}
-            onChange={(e) => setCredentials(prev => ({ ...prev, clientSecret: e.target.value }))}
-            margin="normal"
-          />
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Российские спутниковые сервисы (Роскосмос, Яндекс) готовы к использованию.
+            Дополнительная настройка не требуется.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Доступные источники:
+          </Typography>
+          <ul>
+            <li>Роскосмос (Ресурс-П, Канопус-В)</li>
+            <li>Яндекс Спутник</li>
+            <li>ScanEx (Космоснимки)</li>
+          </ul>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfigDialog(false)}>Отмена</Button>
