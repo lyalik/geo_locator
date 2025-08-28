@@ -15,6 +15,15 @@ logger = logging.getLogger(__name__)
 notification_api = Blueprint('notification_api', __name__)
 notification_service = NotificationService()
 
+@notification_api.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for notification API"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'notification_api',
+        'message': 'Notification API is running'
+    })
+
 @notification_api.route('/preferences', methods=['GET'])
 @login_required
 def get_notification_preferences():

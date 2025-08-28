@@ -7,6 +7,7 @@ import uuid
 
 from services.geolocation_service import GeoLocationService
 from services.yolo_violation_detector import YOLOViolationDetector
+from services.notification_service import NotificationService
 
 # Create blueprint
 bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
@@ -14,6 +15,7 @@ bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
 # Initialize services
 geolocation_service = GeoLocationService()
 violation_detector = YOLOViolationDetector()
+notification_service = NotificationService()
 
 def allowed_file(filename):
     """Check if the file extension is allowed."""
@@ -121,8 +123,9 @@ def detect_violations():
             geo_result = geolocation_service.process_image(filepath, location_hint=location_hint)
             
             # Prepare response data
+            violation_id = str(uuid.uuid4())
             response_data = {
-                'violation_id': str(uuid.uuid4()),
+                'violation_id': violation_id,
                 'image_path': f"/uploads/violations/{filename}",
                 'annotated_image_path': f"/uploads/violations/{Path(detection_result['annotated_image_path']).name}" if detection_result.get('annotated_image_path') else None,
                 'violations': detection_result.get('violations', []),
@@ -139,6 +142,31 @@ def detect_violations():
                     'image_size': detection_result.get('image_size')
                 }
             }
+            
+            # Send notification if violations were detected
+            violations = detection_result.get('violations', [])
+            if violations and user_id != 'anonymous':
+                try:
+                    # Prepare violation data for notification
+                    violation_data = {
+                        'violation_id': violation_id,
+                        'category': violations[0].get('category', 'Неизвестно'),
+                        'confidence': violations[0].get('confidence', 0),
+                        'total_violations': len(violations),
+                        'location': response_data['location'],
+                        'timestamp': response_data['metadata']['timestamp'],
+                        'image_path': response_data['image_path']
+                    }
+                    
+                    # Send violation alert notification
+                    notification_service.send_violation_alert(
+                        user_id=int(user_id) if user_id.isdigit() else None,
+                        violation_data=violation_data
+                    )
+                    current_app.logger.info(f"Violation notification sent for user {user_id}")
+                except Exception as e:
+                    current_app.logger.error(f"Failed to send violation notification: {str(e)}")
+                    # Don't fail the main request if notification fails
             
             return jsonify({
                 'success': True,
@@ -286,6 +314,27 @@ def batch_detect_violations():
                         'processing_time': datetime.utcnow().isoformat(),
                         'user_id': user_id
                     }
+                    
+                    # Send notification for batch violations if detected
+                    violations = detection_result.get('violations', [])
+                    if violations and user_id != 'anonymous':
+                        try:
+                            violation_data = {
+                                'violation_id': str(uuid.uuid4()),
+                                'category': violations[0].get('category', 'Неизвестно'),
+                                'confidence': violations[0].get('confidence', 0),
+                                'total_violations': len(violations),
+                                'location': location_result,
+                                'timestamp': combined_result['processing_time'],
+                                'image_path': file_info['unique_name']
+                            }
+                            
+                            notification_service.send_violation_alert(
+                                user_id=int(user_id) if user_id.isdigit() else None,
+                                violation_data=violation_data
+                            )
+                        except Exception as e:
+                            current_app.logger.error(f"Failed to send batch violation notification: {str(e)}")
                 else:
                     combined_result = {
                         'file_info': {

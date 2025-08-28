@@ -53,8 +53,9 @@ def logout():
     logout_user()
     return jsonify({"message": "Logged out successfully"}), 200
 
-@app.route('/api/v1/auth/me', methods=['GET'])
-def get_current_user():
+@app.route('/auth/me', methods=['GET'])
+@login_required
+def api_me():
     if not current_user.is_authenticated:
         return jsonify({"message": "Not authenticated"}), 401
     
@@ -64,11 +65,23 @@ def get_current_user():
         "email": current_user.email
     }), 200
 
-@app.route('/api/v1/auth/login', methods=['POST'])
+@app.route('/auth/login', methods=['POST'])
 def api_login():
     data = request.get_json()
-    user = User.query.filter_by(email=data['email']).first()
-    if user and check_password_hash(user.password, data['password']):
+    
+    # Получаем логин (может быть email или username)
+    login_field = data.get('email') or data.get('username') or data.get('login')
+    password = data.get('password')
+    
+    if not login_field or not password:
+        return jsonify({"message": "Login and password are required"}), 400
+    
+    # Ищем пользователя по email или username
+    user = User.query.filter(
+        (User.email == login_field) | (User.username == login_field)
+    ).first()
+    
+    if user and check_password_hash(user.password, password):
         login_user(user)
         return jsonify({
             "message": "Logged in successfully",
@@ -80,7 +93,7 @@ def api_login():
         }), 200
     return jsonify({"message": "Invalid credentials"}), 401
 
-@app.route('/api/v1/auth/register', methods=['POST'])
+@app.route('/auth/register', methods=['POST'])
 def api_register():
     try:
         data = request.get_json()
@@ -116,7 +129,7 @@ def api_register():
         db.session.rollback()
         return jsonify({"message": f"Registration failed: {str(e)}"}), 500
 
-@app.route('/api/v1/auth/logout', methods=['POST'])
+@app.route('/auth/logout', methods=['POST'])
 def api_logout():
     logout_user()
     return jsonify({"message": "Logged out successfully"}), 200
