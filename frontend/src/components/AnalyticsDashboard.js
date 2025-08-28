@@ -429,7 +429,7 @@ const AnalyticsDashboard = ({ violations = [] }) => {
                     </Typography>
                   </Box>
 
-                  {satelliteStats.sources && (
+                  {satelliteStats.sources && Array.isArray(satelliteStats.sources) && (
                     <Box>
                       <Typography variant="body2" color="textSecondary" gutterBottom>
                         Доступные сервисы:
