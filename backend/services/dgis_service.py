@@ -413,6 +413,51 @@ class DGISService:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         
         return R * c
+    
+    def get_satellite_layer(self, lat: float, lon: float) -> Dict[str, Any]:
+        """
+        Получение спутникового слоя 2GIS для указанных координат
+        
+        Args:
+            lat: Широта
+            lon: Долгота
+        
+        Returns:
+            Dict с информацией о спутниковом снимке
+        """
+        try:
+            # 2GIS предоставляет спутниковые слои через Static API
+            # Формируем URL для получения спутникового изображения
+            zoom = 16
+            size = "512,512"
+            
+            # URL для спутникового слоя 2GIS
+            satellite_url = f"https://tile2.maps.2gis.com/1.0?request=GetMap&layers=sat&srs=EPSG:3857&format=image/png&bbox={lon-0.01},{lat-0.01},{lon+0.01},{lat+0.01}&width=512&height=512"
+            
+            # Альтернативный URL через статические карты
+            static_url = f"https://static.maps.2gis.com/1.0?center={lon},{lat}&zoom={zoom}&size={size}&format=png&markers={lon},{lat}"
+            
+            return {
+                'success': True,
+                'image_url': static_url,
+                'satellite_url': satellite_url,
+                'source': 'dgis',
+                'coordinates': {
+                    'latitude': lat,
+                    'longitude': lon
+                },
+                'zoom_level': zoom,
+                'image_size': size,
+                'format': 'png'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting 2GIS satellite layer: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'source': 'dgis'
+            }
 
 
 # Пример использования

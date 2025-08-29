@@ -43,12 +43,21 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     setError(null);
     
     try {
-      const response = await api.get('/osm/geocode', {
-        params: { address: searchQuery, country_code: 'ru' }
+      // Используем российские геолокационные сервисы
+      const response = await api.get('/api/geo/locate', {
+        params: { address: searchQuery }
       });
       
-      if (response.data.success) {
-        setGeocodeResults(response.data.results);
+      if (response.data.success && response.data.results.length > 0) {
+        const results = response.data.results.map(result => ({
+          display_name: result.formatted_address,
+          lat: result.coordinates.lat,
+          lon: result.coordinates.lon,
+          type: result.type,
+          class: result.source,
+          feature_type: result.type
+        }));
+        setGeocodeResults(results);
       } else {
         setError('Не удалось найти адрес');
       }
@@ -65,12 +74,15 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     setError(null);
     
     try {
-      const response = await api.get('/osm/reverse_geocode', {
-        params: { lat, lon, zoom: 18 }
+      const response = await api.get('/api/geo/locate', {
+        params: { lat, lon }
       });
       
-      if (response.data.success) {
-        return response.data.result;
+      if (response.data.success && response.data.results.length > 0) {
+        return {
+          display_name: response.data.results[0].formatted_address,
+          type: response.data.results[0].type
+        };
       }
       return null;
     } catch (err) {
@@ -86,12 +98,27 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     setError(null);
     
     try {
-      const response = await api.get('/osm/buildings', {
-        params: { lat, lon, radius }
+      const response = await api.get('/api/geo/nearby', {
+        params: { 
+          lat, 
+          lon, 
+          radius,
+          category: 'здания'
+        }
       });
       
-      if (response.data.success) {
-        setBuildings(response.data.buildings);
+      if (response.data.success && response.data.places) {
+        const buildings = response.data.places.map(place => ({
+          osm_id: place.id,
+          name: place.name,
+          building_type: place.category || 'building',
+          address: place.address,
+          coordinates: [place.coordinates.lat, place.coordinates.lon],
+          amenity: place.amenity,
+          levels: place.levels,
+          height: place.height
+        }));
+        setBuildings(buildings);
       } else {
         setError('Не удалось получить данные о зданиях');
       }
@@ -108,14 +135,57 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     setError(null);
     
     try {
-      const response = await api.post('/osm/analyze', { lat, lon });
+      // Комплексный анализ через российские сервисы и спутниковые данные
+      const [geoResponse, nearbyResponse, satelliteResponse] = await Promise.all([
+        api.get('/api/geo/locate', { params: { lat, lon } }),
+        api.get('/api/geo/nearby', { params: { lat, lon, radius: 500 } }),
+        api.get('/api/satellite/analyze', { 
+          params: { 
+            bbox: `${lon-0.005},${lat-0.005},${lon+0.005},${lat+0.005}`,
+            analysis_type: 'urban_context'
+          }
+        })
+      ]);
       
-      if (response.data.success) {
-        setUrbanAnalysis(response.data.analysis);
-        setBuildings(response.data.analysis.buildings || []);
-      } else {
-        setError('Не удалось провести анализ городского контекста');
-      }
+      const buildings = nearbyResponse.data.places?.filter(place => 
+        place.category?.includes('здание') || place.category?.includes('building')
+      ).map(place => ({
+        osm_id: place.id,
+        name: place.name,
+        building_type: place.category || 'building',
+        address: place.address,
+        coordinates: [place.coordinates.lat, place.coordinates.lon],
+        amenity: place.amenity,
+        levels: place.levels,
+        height: place.height
+      })) || [];
+      
+      const amenities = nearbyResponse.data.places?.filter(place => 
+        !place.category?.includes('здание') && !place.category?.includes('building')
+      ) || [];
+      
+      const amenityCategories = amenities.reduce((acc, amenity) => {
+        const category = amenity.category || 'other';
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const analysis = {
+        address_info: geoResponse.data.results?.[0] ? {
+          display_name: geoResponse.data.results[0].formatted_address,
+          type: geoResponse.data.results[0].type
+        } : null,
+        area_type: satelliteResponse.data.analysis?.area_classification || 'mixed_use',
+        building_count: buildings.length,
+        building_density: buildings.length / 0.25, // buildings per km² (500m radius ≈ 0.25 km²)
+        amenity_count: amenities.length,
+        amenity_categories: amenityCategories,
+        buildings: buildings,
+        satellite_analysis: satelliteResponse.data.analysis
+      };
+      
+      setUrbanAnalysis(analysis);
+      setBuildings(buildings);
     } catch (err) {
       setError('Ошибка при анализе городского контекста');
       console.error('Urban analysis error:', err);
@@ -136,10 +206,18 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
         params.radius = 5000;
       }
       
-      const response = await api.get('/osm/search', { params });
+      const response = await api.get('/api/geo/search/places', { params });
       
-      if (response.data.success) {
-        setGeocodeResults(response.data.results);
+      if (response.data.success && response.data.places) {
+        const results = response.data.places.map(place => ({
+          display_name: place.address || place.name,
+          lat: place.coordinates.lat,
+          lon: place.coordinates.lon,
+          type: place.category,
+          class: place.source,
+          feature_type: place.category
+        }));
+        setGeocodeResults(results);
       } else {
         setError('Не удалось найти места');
       }
@@ -171,15 +249,43 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     setError(null);
     
     try {
-      const response = await api.post('/osm/compare_locations', {
-        locations: comparisonLocations
+      // Анализируем каждую локацию через российские сервисы
+      const analysisPromises = comparisonLocations.map(async (location) => {
+        const [geoResponse, nearbyResponse] = await Promise.all([
+          api.get('/api/geo/locate', { params: { lat: location.lat, lon: location.lon } }),
+          api.get('/api/geo/nearby', { params: { lat: location.lat, lon: location.lon, radius: 500 } })
+        ]);
+        
+        const buildings = nearbyResponse.data.places?.filter(place => 
+          place.category?.includes('здание') || place.category?.includes('building')
+        ) || [];
+        
+        return {
+          location: location,
+          building_count: buildings.length,
+          building_density: buildings.length / 0.25,
+          amenity_count: nearbyResponse.data.places?.length - buildings.length || 0
+        };
       });
       
-      if (response.data.success) {
-        setComparisonResults(response.data.comparison);
-      } else {
-        setError('Не удалось сравнить локации');
-      }
+      const analyses = await Promise.all(analysisPromises);
+      
+      // Находим наиболее и наименее урбанизированные локации
+      const sortedByDensity = analyses.sort((a, b) => b.building_density - a.building_density);
+      
+      const comparison = {
+        locations: analyses,
+        comparison_summary: {
+          most_urban: sortedByDensity[0].location.name,
+          least_urban: sortedByDensity[sortedByDensity.length - 1].location.name,
+          building_density_range: {
+            min: sortedByDensity[sortedByDensity.length - 1].building_density,
+            max: sortedByDensity[0].building_density
+          }
+        }
+      };
+      
+      setComparisonResults(comparison);
     } catch (err) {
       setError('Ошибка при сравнении локаций');
       console.error('Comparison error:', err);

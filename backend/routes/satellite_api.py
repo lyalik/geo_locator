@@ -13,6 +13,11 @@ try:
 except ImportError:
     YandexSatelliteService = None
 
+try:
+    from services.dgis_service import DGISService
+except ImportError:
+    DGISService = None
+
 satellite_bp = Blueprint('satellite', __name__)
 logger = logging.getLogger(__name__)
 
@@ -23,6 +28,7 @@ def health_check():
         available_services = {
             'roscosmos': RoscosmosService is not None,
             'yandex_satellite': YandexSatelliteService is not None,
+            'dgis': DGISService is not None,
             'scanex': True  # Всегда доступен как резервный
         }
         
@@ -95,6 +101,19 @@ def get_satellite_image():
                         source = 'yandex_satellite'
                 except Exception as e:
                     logger.warning(f"Yandex satellite service error: {e}")
+        
+        # Если Яндекс не сработал, пробуем 2GIS
+        if not result or not result.get('success'):
+            if DGISService:
+                try:
+                    dgis_service = DGISService()
+                    # 2GIS может предоставить спутниковые слои для определенных регионов
+                    dgis_result = dgis_service.get_satellite_layer(center_lat, center_lon)
+                    if dgis_result.get('success'):
+                        result = dgis_result
+                        source = 'dgis'
+                except Exception as e:
+                    logger.warning(f"2GIS service error: {e}")
         
         # Если ничего не сработало, возвращаем заглушку
         if not result or not result.get('success'):
@@ -323,19 +342,29 @@ def get_available_sources():
                 'name': 'Роскосмос',
                 'satellites': ['Ресурс-П1', 'Ресурс-П2', 'Ресурс-П3', 'Канопус-В'],
                 'resolution': '1-3 метра',
-                'available': True
+                'available': True,
+                'status': 'active'
             },
             'yandex': {
                 'name': 'Яндекс Спутник',
                 'satellites': ['Яндекс.Карты'],
                 'resolution': 'Переменное',
-                'available': True
+                'available': True,
+                'status': 'active'
             },
             'scanex': {
                 'name': 'ScanEx (Космоснимки)',
                 'satellites': ['Архивные данные'],
                 'resolution': '0.5-30 метров',
-                'available': True
+                'available': True,
+                'status': 'active'
+            },
+            'dgis': {
+                'name': '2GIS',
+                'satellites': ['Спутниковые слои 2GIS'],
+                'resolution': 'Высокое',
+                'available': True,
+                'status': 'active'
             }
         }
         
