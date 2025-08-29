@@ -89,7 +89,7 @@ fi
 
 # Setup database
 echo "🗄️  Setting up database..."
-export PGPASSWORD="${POSTGRES_PASSWORD:-3666599}"
+export PGPASSWORD="${POSTGRES_PASSWORD:-postgres}"
 psql -h "${POSTGRES_HOST:-localhost}" -U "${POSTGRES_USER:-postgres}" -c "CREATE DATABASE ${POSTGRES_DB:-geo_locator};" 2>/dev/null || echo "Database may already exist"
 psql -h "${POSTGRES_HOST:-localhost}" -U "${POSTGRES_USER:-postgres}" -c "CREATE USER geo_user WITH PASSWORD 'geo_password';" 2>/dev/null || echo "User may already exist"
 psql -h "${POSTGRES_HOST:-localhost}" -U "${POSTGRES_USER:-postgres}" -c "GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB:-geo_locator} TO geo_user;" 2>/dev/null
@@ -119,8 +119,8 @@ if [ ! -f ".env" ]; then
     cat > .env << EOF
 # Database Configuration
 POSTGRES_HOST=localhost
-POSTGRES_USER=geo_user
-POSTGRES_PASSWORD=geo_password
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
 POSTGRES_DB=geo_locator
 
 # Redis Configuration
@@ -144,7 +144,15 @@ echo "🚀 Starting services..."
 # Start backend
 echo "Starting backend server..."
 cd backend
-source venv/bin/activate
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+    echo "✅ Virtual environment activated"
+else
+    echo "❌ Virtual environment not found at backend/venv/"
+    echo "Please run: cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
+    exit 1
+fi
+export POSTGRES_PASSWORD=postgres
 python run_local.py &
 BACKEND_PID=$!
 
