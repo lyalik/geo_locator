@@ -80,6 +80,14 @@ def locate_by_address():
         except Exception as e:
             logger.warning(f"Yandex geocoding failed: {e}")
         
+        # Пробуем 2GIS
+        try:
+            result = dgis_service.geocode(address)
+            if result.get('success') and result.get('results'):
+                return jsonify(result), 200
+        except Exception as e:
+            logger.warning(f"2GIS geocoding failed: {e}")
+        
         # Fallback на OSM geocoding
         try:
             from services.openstreetmap_service import sync_geocode_address

@@ -48,12 +48,29 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         params: { address: searchQuery }
       });
       
+      // Обрабатываем разные форматы ответов от API
+      let results = [];
+      
       if (response.data.success && response.data.results && response.data.results.length > 0) {
-        const properties = response.data.results.map((result, index) => ({
+        // Формат с массивом results
+        results = response.data.results;
+      } else if (response.data.success && response.data.coordinates) {
+        // Формат Yandex API (одиночный результат)
+        results = [{
+          formatted_address: response.data.formatted_address || response.data.address,
+          latitude: response.data.coordinates.latitude,
+          longitude: response.data.coordinates.longitude,
+          type: response.data.kind || 'place',
+          confidence: response.data.precision === 'exact' ? 0.9 : 0.7
+        }];
+      }
+      
+      if (results.length > 0) {
+        const properties = results.map((result, index) => ({
           id: result.id || `addr_${index}`,
           address: result.formatted_address || result.address,
           coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
-          category: result.type || 'Объект недвижимости',
+          category: result.type || result.kind || 'Объект недвижимости',
           area: result.area || 'Не указано',
           permitted_use: result.description || 'Не указано',
           source: response.data.source || 'Геолокационный сервис',
