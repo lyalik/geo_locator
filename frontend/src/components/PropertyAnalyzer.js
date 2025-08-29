@@ -39,34 +39,103 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     
     setLoading(true);
     setError(null);
+    setProperties([]);
     
     try {
-      // Используем российские геолокационные сервисы для поиска
+      // Используем российские геолокационные сервисы для поиска недвижимости
       const response = await api.get('/api/geo/locate', {
         params: { address: searchQuery }
       });
       
-      if (response.data.success && response.data.results.length > 0) {
-        // Преобразуем результаты геолокации в формат объектов недвижимости
+      if (response.data.success && response.data.results && response.data.results.length > 0) {
         const properties = response.data.results.map((result, index) => ({
-          id: `geo_${index}`,
-          address: result.formatted_address || searchQuery,
-          coordinates: [result.coordinates.lat, result.coordinates.lon],
+          id: result.id || `addr_${index}`,
+          address: result.formatted_address || result.address,
+          coordinates: result.coordinates ? [result.coordinates.lat, result.coordinates.lon] : null,
           category: result.type || 'Объект недвижимости',
           area: result.area || 'Не указано',
           permitted_use: result.description || 'Не указано',
-          source: result.source,
-          confidence: result.confidence
+          source: result.source || 'Геолокационный сервис',
+          confidence: result.confidence || 0.8
         }));
         setProperties(properties);
+        
+        // Дополнительно пытаемся получить детальную информацию о недвижимости
+        if (properties.length > 0 && properties[0].coordinates) {
+          await enrichPropertyData(properties[0].coordinates[0], properties[0].coordinates[1]);
+        }
       } else {
         setError('Не удалось найти объекты по указанному адресу');
       }
     } catch (err) {
-      setError('Ошибка при поиске объектов недвижимости');
-      console.error('Property search error:', err);
+      setError('Ошибка при поиске по адресу');
+      console.error('Address search error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const enrichPropertyData = async (lat, lon) => {
+    try {
+      // Получаем дополнительную информацию о недвижимости через спутниковые данные и OSM
+      const [satelliteResponse, osmBuildingsResponse] = await Promise.all([
+        api.get('/api/satellite/analyze', {
+          params: {
+            bbox: `${lon-0.001},${lat-0.001},${lon+0.001},${lat+0.001}`,
+            analysis_type: 'property_analysis'
+          }
+        }).catch(() => ({ data: { success: false } })),
+        
+        api.get('/api/osm/buildings', {
+          params: {
+            lat: lat,
+            lon: lon,
+            radius: 200
+          }
+        }).catch(() => ({ data: { success: false } }))
+      ]);
+      
+      if (satelliteResponse.data.success) {
+        console.log('Property enriched with satellite data:', satelliteResponse.data);
+      }
+      
+      if (osmBuildingsResponse.data.success) {
+        const buildings = osmBuildingsResponse.data.buildings || [];
+        console.log(`Found ${buildings.length} OSM buildings nearby:`, buildings);
+        
+        // Обновляем список недвижимости с данными OSM
+        const osmProperties = buildings.map((building, index) => ({
+          id: `osm_${building.osm_id || index}`,
+          address: building.address || 'Адрес не указан',
+          coordinates: [building.lat, building.lon],
+          category: building.building_type || 'Здание',
+          area: building.area || 'Не указано',
+          permitted_use: building.amenity || building.building_type || 'Не указано',
+          source: 'OpenStreetMap',
+          confidence: 0.9,
+          osm_data: {
+            levels: building.levels,
+            height: building.height,
+            name: building.name,
+            amenity: building.amenity
+          }
+        }));
+        
+        // Добавляем OSM данные к существующим результатам
+        setProperties(prevProperties => {
+          const combined = [...prevProperties, ...osmProperties];
+          // Удаляем дубликаты по координатам
+          const unique = combined.filter((property, index, self) => 
+            index === self.findIndex(p => 
+              Math.abs(p.coordinates[0] - property.coordinates[0]) < 0.0001 &&
+              Math.abs(p.coordinates[1] - property.coordinates[1]) < 0.0001
+            )
+          );
+          return unique;
+        });
+      }
+    } catch (error) {
+      console.log('Property enrichment failed:', error);
     }
   };
 
@@ -75,9 +144,10 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     
     setLoading(true);
     setError(null);
+    setProperties([]);
     
     try {
-      // Поиск через российские сервисы по идентификатору
+      // Поиск через российские сервисы по кадастровому номеру
       const response = await api.get('/api/geo/search/places', {
         params: { 
           query: searchQuery,
@@ -85,18 +155,24 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         }
       });
       
-      if (response.data.success && response.data.places.length > 0) {
+      if (response.data.success && response.data.places && response.data.places.length > 0) {
         const properties = response.data.places.map((place, index) => ({
           id: place.id || `cadastral_${index}`,
           cadastral_number: searchQuery,
-          address: place.address,
+          address: place.address || place.formatted_address,
           coordinates: place.coordinates ? [place.coordinates.lat, place.coordinates.lon] : null,
           category: place.category || 'Объект недвижимости',
           area: place.area || 'Не указано',
           permitted_use: place.description || 'Не указано',
-          source: place.source
+          source: place.source || 'Кадастровый поиск',
+          confidence: place.confidence || 0.9
         }));
         setProperties(properties);
+        
+        // Обогащаем данными спутникового анализа
+        if (properties.length > 0 && properties[0].coordinates) {
+          await enrichPropertyData(properties[0].coordinates[0], properties[0].coordinates[1]);
+        }
       } else {
         setError('Объект с указанным кадастровым номером не найден');
       }

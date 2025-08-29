@@ -20,6 +20,7 @@ const AnalyticsDashboard = ({ violations = [] }) => {
   const [cacheStats, setCacheStats] = useState(null);
   const [performanceStats, setPerformanceStats] = useState(null);
   const [satelliteStats, setSatelliteStats] = useState(null);
+  const [realViolationsData, setRealViolationsData] = useState([]);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -28,6 +29,9 @@ const AnalyticsDashboard = ({ violations = [] }) => {
   const loadAnalyticsData = async () => {
     setLoading(true);
     try {
+      // Загружаем реальные данные нарушений из глобального хранилища
+      await loadRealViolationsData();
+      
       // Load cache statistics
       const cacheResponse = await fetch('http://localhost:5000/api/cache/info');
       if (cacheResponse.ok) {
@@ -47,14 +51,66 @@ const AnalyticsDashboard = ({ violations = [] }) => {
     }
   };
 
+  const loadRealViolationsData = async () => {
+    try {
+      // Получаем данные из глобальных хранилищ результатов
+      const batchResults = window.GLOBAL_BATCH_RESULTS || [];
+      const singleResults = window.GLOBAL_SINGLE_RESULTS || [];
+      
+      // Объединяем все результаты
+      const allResults = [...batchResults, ...singleResults];
+      
+      // Преобразуем в формат для аналитики
+      const violationsData = allResults.flatMap(result => {
+        if (result.violations && result.violations.length > 0) {
+          return result.violations.map(violation => ({
+            id: violation.id || Math.random().toString(36),
+            category: violation.category || 'unknown',
+            confidence: violation.confidence || 0,
+            created_at: result.uploadTime || new Date().toISOString(),
+            location: result.location,
+            satellite_data: result.satellite_data,
+            image_path: result.image || result.image_path,
+            violation_id: result.violation_id
+          }));
+        }
+        return [];
+      });
+
+      console.log('Loaded real violations data:', violationsData);
+      setRealViolationsData(violationsData);
+      
+      // Также пытаемся загрузить данные через API
+      try {
+        const response = await api.get('/api/violations/list');
+        if (response.data.success && response.data.data) {
+          const apiViolations = response.data.data.map(v => ({
+            ...v,
+            created_at: v.created_at || v.timestamp || new Date().toISOString()
+          }));
+          
+          // Объединяем с локальными данными
+          const combinedData = [...violationsData, ...apiViolations];
+          setRealViolationsData(combinedData);
+          console.log('Combined with API data:', combinedData);
+        }
+      } catch (apiError) {
+        console.log('API violations not available, using local data only');
+      }
+      
+    } catch (error) {
+      console.error('Error loading real violations data:', error);
+    }
+  };
+
   const loadSatelliteStats = async () => {
     try {
       const response = await api.get('/api/satellite/sources');
       if (response.data.success) {
         const sources = response.data.data;
         
-        // Generate satellite usage statistics
-        const satelliteUsage = violations.filter(v => v.satellite_data).reduce((acc, v) => {
+        // Generate satellite usage statistics from real data
+        const satelliteUsage = realViolationsData.filter(v => v.satellite_data).reduce((acc, v) => {
           const source = v.satellite_data?.source || 'unknown';
           acc[source] = (acc[source] || 0) + 1;
           return acc;
@@ -63,9 +119,9 @@ const AnalyticsDashboard = ({ violations = [] }) => {
         setSatelliteStats({
           sources: sources,
           usage: satelliteUsage,
-          totalWithSatellite: violations.filter(v => v.satellite_data).length,
-          coverageRate: violations.length > 0 ? 
-            (violations.filter(v => v.satellite_data).length / violations.length) : 0
+          totalWithSatellite: realViolationsData.filter(v => v.satellite_data).length,
+          coverageRate: realViolationsData.length > 0 ? 
+            (realViolationsData.filter(v => v.satellite_data).length / realViolationsData.length * 100).toFixed(1) : 0
         });
       }
     } catch (error) {
@@ -89,32 +145,67 @@ const AnalyticsDashboard = ({ violations = [] }) => {
   };
 
   const generatePerformanceStats = () => {
-    if (!violations.length) return;
-
-    // Calculate processing time trends (mock data for demo)
-    const timeData = [];
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      timeData.push({
-        date: date.toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' }),
-        avgProcessingTime: Math.random() * 3 + 1, // 1-4 seconds
-        violationsProcessed: Math.floor(Math.random() * 20) + 5
-      });
+    const dataToUse = realViolationsData.length > 0 ? realViolationsData : violations;
+    
+    if (dataToUse.length === 0) {
+      setPerformanceStats(null);
+      return;
     }
 
+    // Category distribution
+    const categoryStats = dataToUse.reduce((acc, violation) => {
+      const category = violation.category || 'unknown';
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Time-based analysis
+    const now = new Date();
+    const timeRangeMs = {
+      '24h': 24 * 60 * 60 * 1000,
+      '7d': 7 * 24 * 60 * 60 * 1000,
+      '30d': 30 * 24 * 60 * 60 * 1000
+    };
+
+    const cutoffTime = new Date(now.getTime() - timeRangeMs[timeRange]);
+    const recentViolations = dataToUse.filter(v => {
+      const violationTime = new Date(v.created_at || v.timestamp || now);
+      return violationTime >= cutoffTime;
+    });
+
+    // Confidence analysis
+    const confidenceStats = dataToUse.reduce((acc, v) => {
+      const confidence = v.confidence || 0;
+      if (confidence >= 0.8) acc.high++;
+      else if (confidence >= 0.6) acc.medium++;
+      else acc.low++;
+      return acc;
+    }, { high: 0, medium: 0, low: 0 });
+
+    // Location analysis
+    const locationStats = dataToUse.reduce((acc, v) => {
+      if (v.location && (v.location.coordinates || v.location.lat)) {
+        acc.withLocation++;
+      } else {
+        acc.withoutLocation++;
+      }
+      return acc;
+    }, { withLocation: 0, withoutLocation: 0 });
+
     setPerformanceStats({
-      processingTimes: timeData,
-      avgAccuracy: 0.87,
-      totalProcessed: violations.length,
-      successRate: 0.94
+      total: dataToUse.length,
+      recent: recentViolations.length,
+      categories: categoryStats,
+      confidence: confidenceStats,
+      location: locationStats,
+      averageConfidence: dataToUse.length > 0 ? 
+        (dataToUse.reduce((sum, v) => sum + (v.confidence || 0), 0) / dataToUse.length).toFixed(2) : 0
     });
   };
 
-  // Prepare data for charts
   const getCategoryData = () => {
-    const categoryCount = violations.reduce((acc, violation) => {
+    const dataToUse = realViolationsData.length > 0 ? realViolationsData : violations;
+    const categoryCount = dataToUse.reduce((acc, violation) => {
       const category = violation.category || 'unknown';
       acc[category] = (acc[category] || 0) + 1;
       return acc;
@@ -123,34 +214,37 @@ const AnalyticsDashboard = ({ violations = [] }) => {
     return Object.entries(categoryCount).map(([category, count]) => ({
       name: formatCategoryName(category),
       value: count,
-      percentage: ((count / violations.length) * 100).toFixed(1)
+      percentage: dataToUse.length > 0 ? ((count / dataToUse.length) * 100).toFixed(1) : 0
     }));
   };
 
   const getConfidenceData = () => {
+    const dataToUse = realViolationsData.length > 0 ? realViolationsData : violations;
     const ranges = {
       'Высокая (>80%)': 0,
       'Средняя (60-80%)': 0,
       'Низкая (<60%)': 0
     };
 
-    violations.forEach(v => {
+    dataToUse.forEach(v => {
       const conf = v.confidence || 0;
       if (conf > 0.8) ranges['Высокая (>80%)']++;
-      else if (conf > 0.6) ranges['Средняя (60-80%)']++;
+      else if (conf >= 0.6) ranges['Средняя (60-80%)']++;
       else ranges['Низкая (<60%)']++;
     });
 
     return Object.entries(ranges).map(([range, count]) => ({
       name: range,
-      value: count
+      value: count,
+      percentage: dataToUse.length > 0 ? ((count / dataToUse.length) * 100).toFixed(1) : 0
     }));
   };
 
   const getTimeSeriesData = () => {
+    const dataToUse = realViolationsData.length > 0 ? realViolationsData : violations;
     const dailyData = {};
-    violations.forEach(v => {
-      const date = new Date(v.created_at).toLocaleDateString('ru-RU');
+    dataToUse.forEach(v => {
+      const date = new Date(v.created_at || v.timestamp || new Date()).toLocaleDateString('ru-RU');
       dailyData[date] = (dailyData[date] || 0) + 1;
     });
 

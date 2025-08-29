@@ -135,18 +135,42 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     setError(null);
     
     try {
-      // Комплексный анализ через российские сервисы и спутниковые данные
-      const [geoResponse, nearbyResponse, satelliteResponse] = await Promise.all([
-        api.get('/api/geo/locate', { params: { lat, lon } }),
-        api.get('/api/geo/nearby', { params: { lat, lon, radius: 500 } }),
-        api.get('/api/satellite/analyze', { 
+      // Получаем данные о зданиях и инфраструктуре включая OSM
+      const [buildingsResponse, nearbyResponse, satelliteResponse, osmUrbanResponse] = await Promise.all([
+        api.get('/api/geo/search/places', {
           params: { 
-            bbox: `${lon-0.005},${lat-0.005},${lon+0.005},${lat+0.005}`,
-            analysis_type: 'urban_context'
+            query: 'здания', 
+            lat: lat, 
+            lon: lon,
+            radius: 1000
           }
-        })
+        }).catch(() => ({ data: { success: false } })),
+        
+        api.get('/api/geo/nearby', {
+          params: {
+            lat: lat,
+            lon: lon,
+            radius: 1000,
+            category: 'all'
+          }
+        }).catch(() => ({ data: { success: false } })),
+        
+        api.get('/api/satellite/analyze', {
+          params: {
+            bbox: `${lon-0.01},${lat-0.01},${lon+0.01},${lat+0.01}`,
+            analysis_type: 'urban_analysis'
+          }
+        }).catch(() => ({ data: { success: false } })),
+        
+        api.get('/api/osm/urban-context', {
+          params: {
+            lat: lat,
+            lon: lon,
+            radius: 1000
+          }
+        }).catch(() => ({ data: { success: false } }))
       ]);
-      
+
       const buildings = nearbyResponse.data.places?.filter(place => 
         place.category?.includes('здание') || place.category?.includes('building')
       ).map(place => ({
@@ -170,19 +194,49 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
         return acc;
       }, {});
       
+      // Обработка OSM данных
+      let osmBuildings = [];
+      let osmAmenities = [];
+      
+      if (osmUrbanResponse.data.success && osmUrbanResponse.data.context) {
+        const osmData = osmUrbanResponse.data.context;
+        osmBuildings = osmData.buildings || [];
+        osmAmenities = osmData.amenities || [];
+        
+        console.log(`OSM Urban Context: ${osmBuildings.length} buildings, ${osmAmenities.length} amenities`);
+      }
+      
+      // Объединяем данные из всех источников
+      const allBuildings = [...buildings, ...osmBuildings];
+      const allAmenities = [...amenities, ...osmAmenities];
+      
+      const combinedAmenityCategories = allAmenities.reduce((acc, amenity) => {
+        const category = amenity.category || amenity.amenity || 'other';
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {});
+
       const analysis = {
-        address_info: geoResponse.data.results?.[0] ? {
-          display_name: geoResponse.data.results[0].formatted_address,
-          type: geoResponse.data.results[0].type
-        } : null,
+        address_info: null, // Will be filled by reverse geocoding if needed
         area_type: satelliteResponse.data.analysis?.area_classification || 'mixed_use',
-        building_count: buildings.length,
-        building_density: buildings.length / 0.25, // buildings per km² (500m radius ≈ 0.25 km²)
-        amenity_count: amenities.length,
-        amenity_categories: amenityCategories,
-        buildings: buildings,
-        satellite_analysis: satelliteResponse.data.analysis
+        building_count: allBuildings.length,
+        building_density: Math.round(allBuildings.length / 0.25), // buildings per km² (500m radius ≈ 0.25 km²)
+        amenity_count: allAmenities.length,
+        amenity_categories: combinedAmenityCategories,
+        buildings: allBuildings,
+        satellite_analysis: satelliteResponse.data.analysis || {},
+        osm_analysis: osmUrbanResponse.data.context || {},
+        infrastructure_score: calculateInfrastructureScore(combinedAmenityCategories),
+        development_level: determineDevelopmentLevel(allBuildings.length, allAmenities.length),
+        data_sources: {
+          geo_api: nearbyResponse.data.success,
+          satellite: satelliteResponse.data.success,
+          osm: osmUrbanResponse.data.success
+        },
+        analysis_timestamp: new Date().toISOString()
       };
+
+      console.log('Urban context analysis completed:', analysis);
       
       setUrbanAnalysis(analysis);
       setBuildings(buildings);
@@ -192,6 +246,32 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateInfrastructureScore = (amenityCategories) => {
+    const weights = {
+      'транспорт': 3,
+      'образование': 2,
+      'медицина': 2,
+      'торговля': 1,
+      'услуги': 1,
+      'развлечения': 1
+    };
+    
+    let score = 0;
+    Object.entries(amenityCategories).forEach(([category, count]) => {
+      const weight = weights[category.toLowerCase()] || 0.5;
+      score += count * weight;
+    });
+    
+    return Math.round(score);
+  };
+
+  const determineDevelopmentLevel = (buildingCount, amenityCount) => {
+    const total = buildingCount + amenityCount;
+    if (total > 50) return 'Высокий';
+    if (total > 20) return 'Средний';
+    return 'Низкий';
   };
 
   const searchPlaces = async (query, lat = null, lon = null) => {

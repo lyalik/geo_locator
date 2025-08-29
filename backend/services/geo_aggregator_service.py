@@ -15,6 +15,21 @@ from .dgis_service import DGISService
 from .roscosmos_satellite_service import RoscosmosService
 from .yandex_satellite_service import YandexSatelliteService
 from .image_database_service import ImageDatabaseService
+
+# Import OpenStreetMap service
+try:
+    from .openstreetmap_service import (
+        sync_geocode_address,
+        sync_reverse_geocode,
+        sync_get_buildings_in_area,
+        sync_analyze_urban_context,
+        sync_search_places
+    )
+    OSM_SERVICE_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"OpenStreetMap service not available: {e}")
+    OSM_SERVICE_AVAILABLE = False
+
 # Circular import fix - import GeoLocationService only when needed
 
 logger = logging.getLogger(__name__)
@@ -25,6 +40,7 @@ class GeoAggregatorService:
     - EXIF данные из фотографий
     - Yandex Maps API
     - 2GIS API  
+    - OpenStreetMap API (для точности определения застроек)
     - Роскосмос спутниковые снимки
     - Яндекс Спутник API
     - Собственная база данных изображений
@@ -45,8 +61,10 @@ class GeoAggregatorService:
             'exif_gps': 1.0,        # Наивысший приоритет - GPS из EXIF
             'image_match': 0.9,     # Сопоставление с базой изображений
             'satellite_match': 0.8, # Сопоставление со спутниковыми снимками
+            'osm_buildings': 0.75,  # OpenStreetMap данные о зданиях
             'yandex_search': 0.7,   # Поиск через Yandex Maps
             'dgis_search': 0.7,     # Поиск через 2GIS
+            'osm_geocoding': 0.65,  # OpenStreetMap геокодирование
             'manual_input': 0.6     # Ручной ввод пользователя
         }
     
@@ -211,6 +229,29 @@ class GeoAggregatorService:
                         'place_info': place,
                         'confidence': 0.7
                     }
+            
+            # Поиск через OpenStreetMap
+            if OSM_SERVICE_AVAILABLE:
+                try:
+                    osm_results = sync_search_places(location_hint)
+                    if osm_results and len(osm_results) > 0:
+                        place = osm_results[0]
+                        results['osm'] = {
+                            'success': True,
+                            'source': 'openstreetmap',
+                            'coordinates': {
+                                'latitude': float(place.lat),
+                                'longitude': float(place.lon)
+                            },
+                            'place_info': {
+                                'name': place.display_name,
+                                'type': place.type,
+                                'class': place.class_name
+                            },
+                            'confidence': 0.65
+                        }
+                except Exception as osm_error:
+                    logger.warning(f"OpenStreetMap search failed: {osm_error}")
             
         except Exception as e:
             logger.error(f"Error searching external APIs: {e}")

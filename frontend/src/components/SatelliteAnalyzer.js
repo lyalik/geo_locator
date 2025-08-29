@@ -116,21 +116,32 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       setLoading(true);
       setError(null);
       
-      const params = new URLSearchParams({
+      const params = {
         bbox: searchParams.bbox,
         date_from: searchParams.dateFrom,
         date_to: searchParams.dateTo,
         resolution: searchParams.resolution,
         max_cloud_coverage: searchParams.maxCloudCoverage,
-        bands: searchParams.bands
-      });
+        bands: searchParams.bands,
+        source: 'roscosmos' // Приоритет российским спутниковым сервисам
+      };
       
-      const response = await api.get(`/api/satellite/image?${params}`);
+      const response = await api.get('/api/satellite/image', { params });
       
       if (response.data.success) {
-        setSatelliteImage(response.data.data);
+        const imageData = {
+          ...response.data.data,
+          acquisition_date: response.data.data.acquisition_date || new Date().toISOString(),
+          source: response.data.data.source || 'Роскосмос',
+          resolution: response.data.data.resolution || searchParams.resolution,
+          cloud_coverage: response.data.data.cloud_coverage || 0
+        };
+        
+        setSatelliteImage(imageData);
+        console.log('Satellite image retrieved:', imageData);
+        
         if (onImageSelect) {
-          onImageSelect(response.data.data);
+          onImageSelect(imageData);
         }
       } else {
         setError(response.data.error || 'Не удалось получить спутниковый снимок');
@@ -148,16 +159,25 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       setLoading(true);
       setError(null);
       
-      const params = new URLSearchParams({
+      const params = {
         bbox: searchParams.bbox,
         date_from: searchParams.dateFrom,
-        date_to: searchParams.dateTo
-      });
+        date_to: searchParams.dateTo,
+        analysis_type: 'comprehensive'
+      };
       
-      const response = await api.get(`/api/satellite/analysis?${params}`);
+      const response = await api.get('/api/satellite/analyze', { params });
       
       if (response.data.success) {
-        setImageAnalysis(response.data.data);
+        const analysisData = {
+          ...response.data.data,
+          analysis_timestamp: new Date().toISOString(),
+          source: response.data.data.source || 'Роскосмос',
+          bbox: searchParams.bbox
+        };
+        
+        setImageAnalysis(analysisData);
+        console.log('Satellite analysis completed:', analysisData);
       } else {
         setError(response.data.error || 'Не удалось проанализировать изображение');
       }

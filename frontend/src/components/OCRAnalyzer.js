@@ -71,11 +71,23 @@ const OCRAnalyzer = () => {
     setAddressResults(null);
 
     try {
-      const response = await axios.post(`${API_URL}/ocr/analyze-address`, {
+      const response = await axios.post(`${API_URL}/api/ocr/analyze-address`, {
         text: textInput
       });
       
-      setAddressResults(response.data.data);
+      if (response.data.success) {
+        const results = {
+          ...response.data.data,
+          analysis_timestamp: new Date().toISOString(),
+          input_text: textInput,
+          confidence: response.data.data.confidence || 0.8
+        };
+        
+        setAddressResults(results);
+        console.log('OCR text analysis completed:', results);
+      } else {
+        setError(response.data.error || 'Не удалось проанализировать текст');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка анализа текста');
     } finally {
@@ -87,6 +99,11 @@ const OCRAnalyzer = () => {
     const file = event.target.files[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      setError('Пожалуйста, выберите изображение');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setAddressResults(null);
@@ -95,13 +112,26 @@ const OCRAnalyzer = () => {
     formData.append('image', file);
 
     try {
-      const response = await axios.post(`${API_URL}/ocr/analyze-address-image`, formData, {
+      const response = await axios.post(`${API_URL}/api/ocr/analyze-image`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
-      setAddressResults(response.data.data);
+      if (response.data.success) {
+        const results = {
+          ...response.data.data,
+          analysis_timestamp: new Date().toISOString(),
+          image_name: file.name,
+          image_size: file.size,
+          confidence: response.data.data.confidence || 0.8
+        };
+        
+        setAddressResults(results);
+        console.log('OCR image analysis completed:', results);
+      } else {
+        setError(response.data.error || 'Не удалось проанализировать изображение');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Ошибка анализа изображения');
     } finally {

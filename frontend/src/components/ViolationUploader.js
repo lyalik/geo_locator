@@ -1,8 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, TextField, Switch, FormControlLabel } from '@mui/material';
-import { CloudUpload as UploadIcon, Image as ImageIcon } from '@mui/icons-material';
+import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, TextField, Switch, FormControlLabel, Chip } from '@mui/material';
+import { CloudUpload as UploadIcon, Image as ImageIcon, CheckCircle as CheckIcon, Error as ErrorIcon } from '@mui/icons-material';
 import { api } from '../services/api';
+
+// ГЛОБАЛЬНОЕ хранилище результатов вне React компонента
+let GLOBAL_SINGLE_RESULTS = [];
+let GLOBAL_SINGLE_COUNTER = 0;
 
 const ViolationUploader = ({ onUploadComplete }) => {
   const [files, setFiles] = useState([]);
@@ -18,6 +22,33 @@ const ViolationUploader = ({ onUploadComplete }) => {
   const [enableGeoAnalysis, setEnableGeoAnalysis] = useState(true);
   const [tempResults, setTempResults] = useState([]);
   const [hardcodedResults, setHardcodedResults] = useState([]);
+  
+  // Функции для работы с глобальным хранилищем
+  const addToGlobalStorage = (result) => {
+    GLOBAL_SINGLE_RESULTS.push(result);
+    GLOBAL_SINGLE_COUNTER++;
+    console.log('Added to GLOBAL_SINGLE_RESULTS:', result);
+    console.log('Total global results:', GLOBAL_SINGLE_RESULTS.length);
+  };
+  
+  const clearGlobalStorage = () => {
+    GLOBAL_SINGLE_RESULTS = [];
+    GLOBAL_SINGLE_COUNTER = 0;
+    console.log('Global storage cleared');
+    
+    // Принудительно обновляем компонент
+    setForceUpdate(Date.now());
+    
+    // Очищаем все React состояния
+    setResults([]);
+    setDisplayResults([]);
+    setHardcodedResults([]);
+    resultsRef.current = [];
+  };
+  
+  const getGlobalResults = () => {
+    return [...GLOBAL_SINGLE_RESULTS];
+  };
   
   // Debug effect to monitor results changes
   useEffect(() => {
@@ -98,9 +129,15 @@ const ViolationUploader = ({ onUploadComplete }) => {
           image: data.data.image_path || data.data.annotated_image_path || file.preview,
           violations: data.data.violations || [],
           location: data.data.location || {},
-          metadata: data.data.metadata || {}
+          metadata: data.data.metadata || {},
+          fileName: file.name,
+          uploadTime: new Date().toISOString()
         };
         allResults.push(processedResult);
+        
+        // Сохраняем в глобальное хранилище СРАЗУ
+        addToGlobalStorage(processedResult);
+        
         console.log('Processed result for display:', processedResult);
         console.log('Current allResults array:', allResults);
         
@@ -119,16 +156,23 @@ const ViolationUploader = ({ onUploadComplete }) => {
     
     console.log('DIRECT UPDATE - Setting hardcodedResults:', newResults);
     setHardcodedResults(newResults);
+    setDisplayResults([...newResults]);
+    setResults([...newResults]);
     
     // Also update ref as backup
-    resultsRef.current = newResults;
+    resultsRef.current = [...newResults];
     
     console.log('States updated FIRST. New results length:', newResults.length);
     console.log('Ref updated with:', resultsRef.current);
+    console.log('Global storage has:', GLOBAL_SINGLE_RESULTS.length, 'results');
     
-    // Force component re-render
+    // Force component re-render multiple times
     const timestamp = Date.now();
     setForceUpdate(timestamp);
+    
+    // Дополнительные принудительные обновления
+    setTimeout(() => setForceUpdate(timestamp + 1), 100);
+    setTimeout(() => setForceUpdate(timestamp + 2), 300);
     
     console.log('Force update timestamp:', timestamp);
     
@@ -330,61 +374,163 @@ const ViolationUploader = ({ onUploadComplete }) => {
         </Grid>
         
         <Grid item xs={12} key={`results-${forceUpdate}`}>
-          <Typography variant="h6" gutterBottom>
-            Результаты
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              Результаты анализа
+            </Typography>
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={clearGlobalStorage}
+              disabled={GLOBAL_SINGLE_RESULTS.length === 0}
+            >
+              Очистить результаты
+            </Button>
+          </Box>
           
-          {console.log('Rendering results section. Current displayResults:', displayResults)}
-          {console.log('DisplayResults state length:', displayResults.length)}
-          {console.log('DisplayResults state type:', typeof displayResults)}
-          {console.log('Force update counter:', forceUpdate)}
-          {console.log('Ref current length:', resultsRef.current.length)}
-          {console.log('Ref current data:', resultsRef.current)}
-          
-          {/* ЭКСТРЕННОЕ РЕШЕНИЕ - Статичное отображение результатов */}
-          <Box sx={{ p: 2, bgcolor: 'error.light', mb: 2 }}>
-            <Typography variant="body2" color="white">
-              ЭКСТРЕННЫЙ РЕЖИМ: React состояние сломано. Показываю последний результат.
+          {/* Диагностическая информация */}
+          <Box sx={{ p: 2, bgcolor: 'info.light', mb: 2, borderRadius: 1 }}>
+            <Typography variant="body2" color="info.contrastText">
+              🔍 Диагностика: Global={GLOBAL_SINGLE_RESULTS.length} | Ref={resultsRef.current.length} | 
+              Display={displayResults.length} | Hard={hardcodedResults.length} | Results={results.length}
+            </Typography>
+            <Typography variant="body2" color="info.contrastText">
+              📊 Источник данных: {GLOBAL_SINGLE_RESULTS.length > 0 ? 'GLOBAL_STORAGE' : 
+                                   resultsRef.current.length > 0 ? 'RESULTS_REF' :
+                                   hardcodedResults.length > 0 ? 'HARDCODED_STATE' :
+                                   displayResults.length > 0 ? 'DISPLAY_STATE' : 'EMPTY'}
             </Typography>
           </Box>
           
-          {/* Статичное отображение последнего результата */}
-          <Box sx={{ maxHeight: 500, overflowY: 'auto' }}>
-            <Card sx={{ mb: 2 }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <img 
-                    src="/uploads/violations/5d9c0449-0cb5-4d7d-9d16-dc7a36807e46.jpg"
-                    alt="Нарушение"
-                    style={{
-                      width: 120,
-                      height: 90,
-                      objectFit: 'cover',
-                      borderRadius: 4
-                    }}
-                    onError={(e) => {
-                      console.log('Image load error:', e.target.src);
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                  <Box>
-                    <Typography variant="subtitle1">
-                      Изображение успешно обработано
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Местоположение: Нет GPS данных
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      ID: 0397ced3-8a59-48df-a8a9-5c182bc1f153
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Время: 2025-08-29T10:31:10.400901Z
-                    </Typography>
-                  </Box>
+          {(() => {
+            // Приоритетная система отображения
+            const globalResults = getGlobalResults();
+            const sourceData = globalResults.length > 0 ? globalResults :
+                             resultsRef.current.length > 0 ? resultsRef.current :
+                             hardcodedResults.length > 0 ? hardcodedResults : 
+                             displayResults.length > 0 ? displayResults : 
+                             results;
+            
+            console.log('🎯 Rendering with source data:', sourceData);
+            console.log('🎯 Source data length:', sourceData.length);
+            
+            if (sourceData.length === 0) {
+              return (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    Результаты анализа появятся здесь после загрузки изображений
+                  </Typography>
                 </Box>
-              </CardContent>
-            </Card>
-          </Box>
+              );
+            }
+            
+            return (
+              <Box sx={{ maxHeight: 600, overflowY: 'auto' }}>
+                {sourceData.map((result, index) => {
+                  const violationCount = result.violations ? result.violations.length : 0;
+                  const hasLocation = result.location && (result.location.coordinates || result.location.address);
+                  
+                  return (
+                    <Card key={`result-${index}-${result.violation_id || index}`} sx={{ mb: 2 }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                          {/* Изображение */}
+                          <Box sx={{ flexShrink: 0 }}>
+                            <img 
+                              src={result.image || result.annotated_image_path || result.image_path}
+                              alt={`Результат ${index + 1}`}
+                              style={{
+                                width: 120,
+                                height: 90,
+                                objectFit: 'cover',
+                                borderRadius: 4,
+                                border: '1px solid #ddd'
+                              }}
+                              onError={(e) => {
+                                console.log('Image load error:', e.target.src);
+                                e.target.style.backgroundColor = '#f5f5f5';
+                                e.target.alt = 'Изображение недоступно';
+                              }}
+                            />
+                          </Box>
+                          
+                          {/* Информация */}
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="h6" gutterBottom>
+                              {result.fileName || `Изображение ${index + 1}`}
+                            </Typography>
+                            
+                            {/* Нарушения */}
+                            <Box sx={{ mb: 1 }}>
+                              {violationCount > 0 ? (
+                                <Chip 
+                                  icon={<ErrorIcon />}
+                                  label={`${violationCount} нарушений`}
+                                  color="error"
+                                  size="small"
+                                  sx={{ mr: 1 }}
+                                />
+                              ) : (
+                                <Chip 
+                                  icon={<CheckIcon />}
+                                  label="Нарушений не найдено"
+                                  color="success"
+                                  size="small"
+                                  sx={{ mr: 1 }}
+                                />
+                              )}
+                              
+                              {hasLocation && (
+                                <Chip 
+                                  label="Геолокация определена"
+                                  color="info"
+                                  size="small"
+                                  sx={{ mr: 1 }}
+                                />
+                              )}
+                            </Box>
+                            
+                            {/* Детали нарушений */}
+                            {result.violations && result.violations.length > 0 && (
+                              <Box sx={{ mb: 1 }}>
+                                <Typography variant="body2" color="text.secondary" gutterBottom>
+                                  Обнаруженные нарушения:
+                                </Typography>
+                                {result.violations.map((violation, vIndex) => (
+                                  <Typography key={vIndex} variant="body2" sx={{ ml: 1 }}>
+                                    • {violation.category} ({Math.round(violation.confidence * 100)}%)
+                                  </Typography>
+                                ))}
+                              </Box>
+                            )}
+                            
+                            {/* Местоположение */}
+                            {hasLocation && (
+                              <Typography variant="body2" color="text.secondary">
+                                📍 {result.location.address || 
+                                    `${result.location.coordinates?.latitude}, ${result.location.coordinates?.longitude}`}
+                              </Typography>
+                            )}
+                            
+                            {/* Метаданные */}
+                            <Typography variant="body2" color="text.secondary">
+                              🆔 {result.violation_id || 'N/A'}
+                            </Typography>
+                            
+                            {result.uploadTime && (
+                              <Typography variant="body2" color="text.secondary">
+                                ⏰ {new Date(result.uploadTime).toLocaleString('ru-RU')}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Box>
+            );
+          })()}
           
         </Grid>
       </Grid>

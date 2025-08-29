@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-lea
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { Box, Card, CardContent, Typography, Chip, Button, FormControl, InputLabel, Select, MenuItem, TextField, Switch, FormControlLabel } from '@mui/material';
-import { LocationOn, Visibility, FilterList, GetApp, Satellite } from '@mui/icons-material';
+import { LocationOn, Visibility, FilterList, GetApp, Satellite, Map as MapIcon } from '@mui/icons-material';
 import { api } from '../services/api';
 import 'leaflet/dist/leaflet.css';
 
@@ -65,8 +65,11 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
   });
   const [showFilters, setShowFilters] = useState(false);
   const [showSatellite, setShowSatellite] = useState(false);
+  const [showOSMBuildings, setShowOSMBuildings] = useState(false);
   const [satelliteData, setSatelliteData] = useState(null);
+  const [osmBuildingsData, setOsmBuildingsData] = useState([]);
   const [loadingSatellite, setLoadingSatellite] = useState(false);
+  const [loadingOSM, setLoadingOSM] = useState(false);
   const mapRef = useRef();
 
   // Default center (Moscow)
@@ -107,6 +110,41 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
 
   const getViolationIcon = (category) => {
     return violationIcons[category] || violationIcons.default;
+  };
+
+  const loadOSMBuildings = async () => {
+    if (!mapRef.current) return;
+    
+    setLoadingOSM(true);
+    try {
+      const map = mapRef.current;
+      const bounds = map.getBounds();
+      const center = map.getCenter();
+      
+      const response = await api.get('/api/osm/buildings', {
+        params: {
+          lat: center.lat,
+          lon: center.lng,
+          radius: 1000
+        }
+      });
+      
+      if (response.data.success) {
+        setOsmBuildingsData(response.data.buildings || []);
+        console.log(`Loaded ${response.data.buildings?.length || 0} OSM buildings`);
+      }
+    } catch (error) {
+      console.error('Failed to load OSM buildings:', error);
+    } finally {
+      setLoadingOSM(false);
+    }
+  };
+
+  const toggleOSMBuildings = () => {
+    if (!showOSMBuildings) {
+      loadOSMBuildings();
+    }
+    setShowOSMBuildings(!showOSMBuildings);
   };
 
   const getCategoryColor = (category) => {
@@ -194,7 +232,27 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
                 disabled={loadingSatellite}
               />
             }
-            label="Спутниковый слой"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Satellite />
+                {loadingSatellite ? 'Загрузка...' : 'Спутниковые данные'}
+              </Box>
+            }
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showOSMBuildings}
+                onChange={toggleOSMBuildings}
+                disabled={loadingOSM}
+              />
+            }
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MapIcon />
+                {loadingOSM ? 'Загрузка...' : 'OSM Здания'}
+              </Box>
+            }
           />
           <Button
             startIcon={<GetApp />}
@@ -357,6 +415,66 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
               )
             ))}
           </MarkerClusterGroup>
+
+          {/* OSM Buildings Layer */}
+          {showOSMBuildings && osmBuildingsData.map((building, index) => (
+            building.lat && building.lon && (
+              <Marker
+                key={`osm-building-${building.osm_id || index}`}
+                position={[building.lat, building.lon]}
+                icon={L.divIcon({
+                  html: '<div style="background-color: #4caf50; width: 12px; height: 12px; border-radius: 2px; border: 1px solid white;"></div>',
+                  className: 'osm-building-icon',
+                  iconSize: [12, 12],
+                  iconAnchor: [6, 6]
+                })}
+              >
+                <Popup>
+                  <Card sx={{ minWidth: 200, maxWidth: 300 }}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <MapIcon sx={{ color: '#4caf50' }} />
+                        <Typography variant="h6" component="div">
+                          {building.name || 'Здание OSM'}
+                        </Typography>
+                      </Box>
+                      
+                      <Chip
+                        label="OpenStreetMap"
+                        color="success"
+                        size="small"
+                        sx={{ mb: 1 }}
+                      />
+                      
+                      {building.address && (
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                          📍 {building.address}
+                        </Typography>
+                      )}
+                      
+                      {building.building_type && (
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                          🏢 Тип: {building.building_type}
+                        </Typography>
+                      )}
+                      
+                      {building.levels && (
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                          🏗️ Этажей: {building.levels}
+                        </Typography>
+                      )}
+                      
+                      {building.amenity && (
+                        <Typography variant="body2" color="textSecondary">
+                          🎯 Назначение: {building.amenity}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Popup>
+              </Marker>
+            )
+          ))}
         </MapContainer>
       </Box>
     </Box>

@@ -37,6 +37,26 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@bp.route('/list', methods=['GET'])
+def list_violations():
+    """
+    API endpoint to get list of all violations for analytics.
+    """
+    try:
+        # В реальном приложении здесь был бы запрос к базе данных
+        # Пока возвращаем пустой список, так как нарушения хранятся в глобальном состоянии фронтенда
+        return jsonify({
+            'success': True,
+            'data': [],
+            'message': 'Violations list retrieved successfully'
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving violations list: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve violations: {str(e)}'
+        }), 500
+
 @bp.route('/detect', methods=['POST'])
 def detect_violations():
     """
