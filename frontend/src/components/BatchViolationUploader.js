@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, 
@@ -12,15 +12,65 @@ import {
 } from '@mui/icons-material';
 import { api } from '../services/api';
 
+// ГЛОБАЛЬНОЕ хранилище результатов вне React компонента
+let GLOBAL_BATCH_RESULTS = [];
+let GLOBAL_RESULT_COUNTER = 0;
+
 const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
   const [files, setFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedUploads, setCompletedUploads] = useState([]);
+  const [displayResults, setDisplayResults] = useState([]);
+  const [hardcodedResults, setHardcodedResults] = useState([]);
   const [locationHint, setLocationHint] = useState('');
   const [globalProgress, setGlobalProgress] = useState(0);
   const [enableSatelliteAnalysis, setEnableSatelliteAnalysis] = useState(true);
   const [enableGeoAnalysis, setEnableGeoAnalysis] = useState(true);
   const [satelliteDataCache, setSatelliteDataCache] = useState({});
+  const [forceUpdate, setForceUpdate] = useState(0);
+  const resultsRef = useRef([]);
+
+  // Принудительное обновление компонента
+  const triggerForceUpdate = () => {
+    console.log('BatchUploader - Принудительное обновление компонента');
+    setForceUpdate(prev => prev + 1);
+  };
+
+  // Функция для работы с глобальным хранилищем
+  const addToGlobalResults = (result) => {
+    GLOBAL_BATCH_RESULTS.push(result);
+    GLOBAL_RESULT_COUNTER++;
+    console.log('BatchUploader - Добавлен результат в GLOBAL_BATCH_RESULTS:', {
+      total: GLOBAL_BATCH_RESULTS.length,
+      counter: GLOBAL_RESULT_COUNTER,
+      newResult: result
+    });
+  };
+
+  const clearGlobalResults = () => {
+    GLOBAL_BATCH_RESULTS = [];
+    GLOBAL_RESULT_COUNTER = 0;
+    console.log('BatchUploader - Очищено GLOBAL_BATCH_RESULTS');
+  };
+
+  const getGlobalResults = () => {
+    console.log('BatchUploader - Получение GLOBAL_BATCH_RESULTS:', GLOBAL_BATCH_RESULTS);
+    return GLOBAL_BATCH_RESULTS;
+  };
+
+  // Логирование изменений состояния
+  useEffect(() => {
+    console.log('BatchUploader - Состояние изменилось:', {
+      filesCount: files.length,
+      completedUploadsCount: completedUploads.length,
+      displayResultsCount: displayResults.length,
+      hardcodedResultsCount: hardcodedResults.length,
+      resultsRefCount: resultsRef.current.length,
+      globalResultsCount: GLOBAL_BATCH_RESULTS.length,
+      globalCounter: GLOBAL_RESULT_COUNTER,
+      forceUpdateCounter: forceUpdate
+    });
+  }, [files, completedUploads, displayResults, hardcodedResults, forceUpdate]);
 
   const onDrop = useCallback(acceptedFiles => {
     const imageFiles = acceptedFiles.filter(file => file.type.startsWith('image/'));
@@ -78,6 +128,7 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
         });
 
         // Update file status to completed
+        console.log('BatchUploader - Обновление статуса файла на completed:', fileItem.id, result);
         setFiles(prevFiles => 
           prevFiles.map(f => 
             f.id === fileItem.id ? { 
@@ -90,6 +141,27 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
         );
 
         results.push(result);
+        
+        // КРИТИЧЕСКИ ВАЖНО: Сохраняем в глобальное хранилище
+        addToGlobalResults(result);
+        
+        // Обновляем все состояния результатов
+        setDisplayResults(prev => {
+          const updated = [...prev, result];
+          console.log('BatchUploader - Обновление displayResults:', updated);
+          return updated;
+        });
+        
+        setHardcodedResults(prev => {
+          const updated = [...prev, result];
+          console.log('BatchUploader - Обновление hardcodedResults:', updated);
+          return updated;
+        });
+        
+        resultsRef.current = [...resultsRef.current, result];
+        console.log('BatchUploader - Обновление resultsRef:', resultsRef.current);
+        
+        triggerForceUpdate();
       } catch (error) {
         // Update file status to error
         setFiles(prevFiles => 
@@ -107,8 +179,29 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
       setGlobalProgress(((i + 1) / files.length) * 100);
     }
 
-    setCompletedUploads(results);
+    console.log('BatchUploader - Завершение обработки всех файлов:', results);
+    console.log('BatchUploader - GLOBAL_BATCH_RESULTS на момент завершения:', GLOBAL_BATCH_RESULTS);
+    
+    // Принудительно обновляем ВСЕ состояния результатов
+    console.log('BatchUploader - Обновление completedUploads:', results);
+    setCompletedUploads([...results]); // Создаем новый массив
+    
+    console.log('BatchUploader - Обновление displayResults:', results);
+    setDisplayResults([...results]); // Создаем новый массив
+    
+    console.log('BatchUploader - Обновление hardcodedResults:', results);
+    setHardcodedResults([...results]); // Создаем новый массив
+    
+    resultsRef.current = [...results]; // Создаем новый массив
+    console.log('BatchUploader - Финальный resultsRef:', resultsRef.current);
+    
     setIsProcessing(false);
+    
+    // Множественные принудительные обновления
+    triggerForceUpdate();
+    setTimeout(() => triggerForceUpdate(), 100);
+    setTimeout(() => triggerForceUpdate(), 500);
+    setTimeout(() => triggerForceUpdate(), 1000);
     
     if (onUploadComplete) {
       onUploadComplete(results);
@@ -240,8 +333,13 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
       }
     });
     setFiles([]);
-    setCompletedUploads([]);
+    // НЕ ОЧИЩАЕМ результаты при clearAll - только файлы!
+    // setCompletedUploads([]);
+    // setDisplayResults([]);
+    // setHardcodedResults([]);
+    // resultsRef.current = [];
     setGlobalProgress(0);
+    console.log('BatchUploader - clearAll: Очищены только файлы, результаты сохранены');
   };
 
   const exportResults = () => {
@@ -394,7 +492,24 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
                 disabled={isProcessing}
                 startIcon={<DeleteIcon />}
               >
-                Очистить все
+                Очистить файлы
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => {
+                  setCompletedUploads([]);
+                  setDisplayResults([]);
+                  setHardcodedResults([]);
+                  resultsRef.current = [];
+                  clearGlobalResults(); // Очищаем глобальное хранилище
+                  triggerForceUpdate();
+                  console.log('BatchUploader - Очищены ВСЕ результаты включая глобальные');
+                }}
+                disabled={isProcessing}
+                startIcon={<DeleteIcon />}
+              >
+                Очистить результаты
               </Button>
             </Box>
           </Box>
@@ -472,14 +587,19 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
                       </Typography>
                     )}
 
-                    {fileItem.result && (
+                    {fileItem.result && fileItem.result.violations && fileItem.result.violations.length > 0 && (
                       <Box sx={{ mt: 1 }}>
                         <Typography variant="caption" display="block">
-                          Категория: {fileItem.result.category}
+                          Категория: {fileItem.result.violations[0].category || 'Неизвестно'}
                         </Typography>
                         <Typography variant="caption" display="block">
-                          Уверенность: {(fileItem.result.confidence * 100).toFixed(1)}%
+                          Уверенность: {((fileItem.result.violations[0].confidence || 0) * 100).toFixed(1)}%
                         </Typography>
+                        {fileItem.result.location && fileItem.result.location.coordinates && (
+                          <Typography variant="caption" display="block">
+                            Координаты: {fileItem.result.location.coordinates.latitude?.toFixed(4)}, {fileItem.result.location.coordinates.longitude?.toFixed(4)}
+                          </Typography>
+                        )}
                         {fileItem.result.satellite_data && (
                           <Chip 
                             icon={<SatelliteIcon />}
@@ -498,12 +618,25 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
         </Paper>
       )}
 
-      {/* Results Summary */}
-      {completedUploads.length > 0 && (
+      {/* Results Summary - ПРИНУДИТЕЛЬНОЕ отображение с глобальным хранилищем */}
+      {(() => {
+        const globalResults = getGlobalResults();
+        const hasResults = hardcodedResults.length > 0 || displayResults.length > 0 || completedUploads.length > 0 || resultsRef.current.length > 0 || globalResults.length > 0;
+        console.log('BatchUploader - Проверка отображения результатов (включая глобальные):', {
+          hasResults,
+          hardcodedLength: hardcodedResults.length,
+          displayLength: displayResults.length,
+          completedLength: completedUploads.length,
+          refLength: resultsRef.current.length,
+          globalLength: globalResults.length,
+          globalData: globalResults
+        });
+        return hasResults;
+      })() && (
         <Paper sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">
-              Результаты обработки ({completedUploads.length})
+              Результаты обработки ({Math.max(hardcodedResults.length, displayResults.length, completedUploads.length)})
             </Typography>
             <Button
               startIcon={<DownloadIcon />}
@@ -514,44 +647,151 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
             </Button>
           </Box>
 
-          <Alert severity="success" sx={{ mb: 2 }}>
-            Успешно обработано {completedUploads.length} из {files.length} файлов
+          {/* Диагностическая информация */}
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              📊 Диагностика: hardcodedResults: {hardcodedResults.length}, displayResults: {displayResults.length}, 
+              completedUploads: {completedUploads.length}, resultsRef: {resultsRef.current.length}, 
+              🌐 GLOBAL: {GLOBAL_BATCH_RESULTS.length} (counter: {GLOBAL_RESULT_COUNTER}), 
+              forceUpdate: {forceUpdate}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              🔍 Данные: hardcoded={JSON.stringify(hardcodedResults.length > 0 ? hardcodedResults[0]?.violations?.length : 'empty')}, 
+              display={JSON.stringify(displayResults.length > 0 ? displayResults[0]?.violations?.length : 'empty')}, 
+              completed={JSON.stringify(completedUploads.length > 0 ? completedUploads[0]?.violations?.length : 'empty')}, 
+              🌐 global={JSON.stringify(GLOBAL_BATCH_RESULTS.length > 0 ? GLOBAL_BATCH_RESULTS[0]?.violations?.length : 'empty')}
+            </Typography>
           </Alert>
 
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Успешно обработано {Math.max(hardcodedResults.length, displayResults.length, completedUploads.length, resultsRef.current.length, getGlobalResults().length)} результатов
+            {files.length > 0 && ` из ${files.length} файлов`}
+            <br />
+            📊 Источники: React={Math.max(hardcodedResults.length, displayResults.length, completedUploads.length)}, Ref={resultsRef.current.length}, Global={getGlobalResults().length}
+          </Alert>
+
+          {/* ПРИНУДИТЕЛЬНОЕ отображение - используем ВСЕ доступные источники включая глобальные */}
           <Grid container spacing={2}>
-            {completedUploads.map((result, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Нарушение #{index + 1}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Категория:</strong> {result.category}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Уверенность:</strong> {(result.confidence * 100).toFixed(1)}%
-                    </Typography>
-                    {result.location && (
-                      <Typography variant="body2">
-                        <strong>Координаты:</strong> {result.location.coordinates.join(', ')}
-                      </Typography>
-                    )}
-                    {result.satellite_data && (
-                      <Box sx={{ mt: 1 }}>
-                        <Chip 
-                          icon={<SatelliteIcon />}
-                          label={`Источник: ${result.satellite_data.source}`}
-                          size="small"
-                          color="primary"
-                        />
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
+            {(() => {
+              const globalResults = getGlobalResults();
+              // Приоритет: globalResults -> resultsRef -> hardcodedResults -> displayResults -> completedUploads
+              const sourceData = globalResults.length > 0 ? globalResults :
+                               resultsRef.current.length > 0 ? resultsRef.current :
+                               hardcodedResults.length > 0 ? hardcodedResults : 
+                               displayResults.length > 0 ? displayResults : 
+                               completedUploads;
+              console.log('BatchUploader - Источник данных для рендеринга (приоритет GLOBAL):', {
+                source: globalResults.length > 0 ? 'GLOBAL_BATCH_RESULTS' :
+                       resultsRef.current.length > 0 ? 'resultsRef' :
+                       hardcodedResults.length > 0 ? 'hardcodedResults' :
+                       displayResults.length > 0 ? 'displayResults' : 'completedUploads',
+                data: sourceData,
+                globalCounter: GLOBAL_RESULT_COUNTER
+              });
+              return sourceData;
+            })().map((result, index) => {
+                console.log('BatchUploader - Рендеринг результата:', index, result);
+                return (
+                  <Grid item xs={12} sm={6} md={4} key={`result-${index}-${forceUpdate}`}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Нарушение #{index + 1}
+                        </Typography>
+                        
+                        {result.violations && result.violations.length > 0 ? (
+                          <>
+                            <Typography variant="body2">
+                              <strong>Категория:</strong> {result.violations[0].category || 'Неизвестно'}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Уверенность:</strong> {((result.violations[0].confidence || 0) * 100).toFixed(1)}%
+                            </Typography>
+                          </>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Нарушения не обнаружены
+                          </Typography>
+                        )}
+                        
+                        {result.location && result.location.coordinates && (
+                          <Typography variant="body2">
+                            <strong>Координаты:</strong> {result.location.coordinates.latitude?.toFixed(4)}, {result.location.coordinates.longitude?.toFixed(4)}
+                          </Typography>
+                        )}
+                        
+                        {result.location && result.location.address && (
+                          <Typography variant="body2">
+                            <strong>Адрес:</strong> {result.location.address.formatted || result.location.address.city || 'Не определен'}
+                          </Typography>
+                        )}
+                        
+                        {result.satellite_data && (
+                          <Box sx={{ mt: 1 }}>
+                            <Chip 
+                              icon={<SatelliteIcon />}
+                              label={`Источник: ${result.satellite_data.source || 'Спутник'}`}
+                              size="small"
+                              color="primary"
+                            />
+                          </Box>
+                        )}
+                        
+                        {result.metadata && (
+                          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                            Обработано: {new Date(result.metadata.timestamp).toLocaleString('ru-RU')}
+                          </Typography>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
           </Grid>
+          
+          {/* ЭКСТРЕННЫЙ РЕЖИМ - показываем только если ВСЕ источники пусты */}
+          {(() => {
+            const globalResults = getGlobalResults();
+            const allEmpty = hardcodedResults.length === 0 && displayResults.length === 0 && completedUploads.length === 0 && resultsRef.current.length === 0 && globalResults.length === 0;
+            return allEmpty;
+          })() && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                ❌ НЕТ РЕЗУЛЬТАТОВ ДЛЯ ОТОБРАЖЕНИЯ
+              </Typography>
+              <Typography variant="body2">
+                Все источники данных пусты (включая глобальное хранилище). Возможно, произошла ошибка при обработке.
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                🔍 Глобальный счетчик: {GLOBAL_RESULT_COUNTER}, Глобальные результаты: {getGlobalResults().length}
+              </Typography>
+            </Alert>
+          )}
+          
+          {/* ДОПОЛНИТЕЛЬНАЯ ДИАГНОСТИКА */}
+          {(() => {
+            const globalResults = getGlobalResults();
+            const hasGlobal = globalResults.length > 0;
+            const hasRef = resultsRef.current.length > 0;
+            const hasReact = hardcodedResults.length > 0 || displayResults.length > 0 || completedUploads.length > 0;
+            const showDiagnostic = (hasGlobal || hasRef) && !hasReact;
+            return showDiagnostic;
+          })() && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                ℹ️ ДИАГНОСТИКА: Источники данных
+              </Typography>
+              <Typography variant="body2">
+                🌐 Глобальное хранилище: {getGlobalResults().length} результатов (счетчик: {GLOBAL_RESULT_COUNTER})
+                <br />
+                📝 resultsRef: {resultsRef.current.length} результатов
+                <br />
+                ⚛️ React состояния: {hardcodedResults.length + displayResults.length + completedUploads.length} результатов
+                <br />
+                <strong>Данные отображаются из глобального хранилища выше.</strong>
+              </Typography>
+            </Alert>
+          )}
         </Paper>
       )}
     </Box>

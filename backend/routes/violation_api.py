@@ -123,9 +123,13 @@ def detect_violations():
         # Process the image
         try:
             # Step 1: Detect violations in the image (mock if service unavailable)
+            current_app.logger.info(f"🔍 YOLO Detection - Starting violation detection for: {filename}")
             if violation_detector:
+                current_app.logger.info(f"🔍 YOLO Detection - Using real YOLO detector")
                 detection_result = violation_detector.detect_violations(filepath)
+                current_app.logger.info(f"🔍 YOLO Detection - Result: {detection_result}")
             else:
+                current_app.logger.warning(f"🔍 YOLO Detection - Using MOCK detector (service unavailable)")
                 # Mock detection result for testing
                 detection_result = {
                     'success': True,
@@ -139,6 +143,7 @@ def detect_violations():
                     'annotated_image_path': None,
                     'image_size': {'width': 800, 'height': 600}
                 }
+                current_app.logger.info(f"🔍 YOLO Detection - Mock result: {detection_result}")
             
             if not detection_result['success']:
                 return jsonify({
@@ -149,15 +154,29 @@ def detect_violations():
                 }), 500
             
             # Step 2: Extract geolocation data (mock if service unavailable)
+            current_app.logger.info(f"🌍 Geolocation - Starting geolocation processing for: {filename}")
+            current_app.logger.info(f"🌍 Geolocation - Location hint: '{location_hint}'")
             if geolocation_service:
+                current_app.logger.info(f"🌍 Geolocation - Using real geolocation service")
                 geo_result = geolocation_service.process_image(filepath, location_hint=location_hint)
+                current_app.logger.info(f"🌍 Geolocation - Result: {geo_result}")
+                
+                # Детальные логи для каждого API
+                if hasattr(geolocation_service, 'last_yandex_response'):
+                    current_app.logger.info(f"🗺️ Yandex Maps API - Response: {geolocation_service.last_yandex_response}")
+                if hasattr(geolocation_service, 'last_dgis_response'):
+                    current_app.logger.info(f"🏢 2GIS API - Response: {geolocation_service.last_dgis_response}")
+                if hasattr(geolocation_service, 'last_satellite_response'):
+                    current_app.logger.info(f"🛰️ Roscosmos Satellite API - Response: {geolocation_service.last_satellite_response}")
             else:
+                current_app.logger.warning(f"🌍 Geolocation - Using MOCK geolocation (service unavailable)")
                 # Mock geolocation result for testing
                 geo_result = {
                     'coordinates': {'latitude': 55.7558, 'longitude': 37.6176},
                     'address': {'formatted': 'Москва, Россия', 'city': 'Москва', 'country': 'Россия'},
                     'has_gps': False
                 }
+                current_app.logger.info(f"🌍 Geolocation - Mock result: {geo_result}")
             
             # Prepare response data
             violation_id = str(uuid.uuid4())
@@ -204,6 +223,12 @@ def detect_violations():
                 except Exception as e:
                     current_app.logger.error(f"Failed to send violation notification: {str(e)}")
                     # Don't fail the main request if notification fails
+            
+            # Финальные логи результата
+            current_app.logger.info(f"✅ Final Response - Violation ID: {violation_id}")
+            current_app.logger.info(f"✅ Final Response - Violations found: {len(response_data['violations'])}")
+            current_app.logger.info(f"✅ Final Response - Location: {response_data['location']}")
+            current_app.logger.info(f"✅ Final Response - Full data: {response_data}")
             
             return jsonify({
                 'success': True,
