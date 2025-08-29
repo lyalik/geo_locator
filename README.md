@@ -145,12 +145,12 @@ cp .env.example .env
 cd backend
 source venv/bin/activate
 python run_local.py
-
+./start_local.sh
 # Терминал 2 - Frontend
 cd frontend
 npm start
 ```
-./start_local.sh
+
 
 </details>
 

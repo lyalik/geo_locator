@@ -223,6 +223,16 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+# Register OpenStreetMap API
+try:
+    from routes.openstreetmap_api import bp as osm_bp
+    app.register_blueprint(osm_bp, url_prefix='/api/osm')
+    print("✅ OpenStreetMap API registered successfully")
+except Exception as e:
+    print(f"❌ OpenStreetMap API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
+
 @app.route('/')
 def index():
     """Show available API endpoints."""

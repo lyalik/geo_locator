@@ -68,6 +68,7 @@ def geocode_address():
         logger.error(f"Error in geocoding: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
+@bp.route('/reverse-geocode', methods=['GET'])
 @bp.route('/reverse_geocode', methods=['GET'])
 def reverse_geocode():
     """
@@ -200,11 +201,17 @@ def search_places():
         return jsonify({'error': 'Internal server error'}), 500
 
 @bp.route('/analyze', methods=['POST'])
+@bp.route('/urban-context', methods=['GET'])
 def analyze_urban_context():
     """
     Analyze urban context around coordinates.
     
-    JSON Body:
+    For GET requests - Query Parameters:
+        lat (float): Latitude
+        lon (float): Longitude
+        radius (int): Search radius in meters
+        
+    For POST requests - JSON Body:
         lat (float): Latitude
         lon (float): Longitude
         
@@ -212,12 +219,18 @@ def analyze_urban_context():
         JSON response with comprehensive urban analysis
     """
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'JSON body is required'}), 400
-        
-        lat = data.get('lat', type=float)
-        lon = data.get('lon', type=float)
+        # Handle both GET and POST requests
+        if request.method == 'GET':
+            lat = request.args.get('lat', type=float)
+            lon = request.args.get('lon', type=float)
+            radius = request.args.get('radius', type=int, default=1000)
+        else:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'JSON body is required'}), 400
+            lat = data.get('lat', type=float)
+            lon = data.get('lon', type=float)
+            radius = data.get('radius', 1000)
         
         if lat is None or lon is None:
             return jsonify({'error': 'Latitude and longitude are required'}), 400
@@ -226,12 +239,28 @@ def analyze_urban_context():
             return jsonify({'error': 'Invalid coordinates'}), 400
         
         logger.info(f"Analyzing urban context: {lat}, {lon}")
+        
+        # Get buildings and urban context
+        buildings = sync_get_buildings_in_area(lat, lon, radius)
         analysis = sync_analyze_urban_context(lat, lon)
         
-        return jsonify({
-            'success': True,
-            'analysis': analysis
-        })
+        # Format response for urban-context endpoint
+        if request.method == 'GET':
+            return jsonify({
+                'success': True,
+                'context': {
+                    'buildings': buildings[:50] if buildings else [],  # Limit to 50 buildings
+                    'amenities': analysis.get('amenities', []) if isinstance(analysis, dict) else [],
+                    'area_type': analysis.get('area_type', 'unknown') if isinstance(analysis, dict) else 'urban',
+                    'building_density': analysis.get('building_density', 0.5) if isinstance(analysis, dict) else 0.5,
+                    'coordinates': {'lat': lat, 'lon': lon, 'radius': radius}
+                }
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'analysis': analysis
+            })
         
     except Exception as e:
         logger.error(f"Error analyzing urban context: {str(e)}")

@@ -16,6 +16,7 @@
 /backend/services/__pycache__
 .env.example
 .env.local
+.env
 backend/.env
 frontend/.env
 backend/.env.example

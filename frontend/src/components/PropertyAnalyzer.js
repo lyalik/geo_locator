@@ -27,10 +27,11 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
   const [showPropertyDialog, setShowPropertyDialog] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
 
-  // Auto-search when coordinates are provided
+  // Set coordinates in search field when provided, but don't auto-search
   useEffect(() => {
     if (coordinates && coordinates.lat && coordinates.lon) {
-      searchByCoordinates(coordinates.lat, coordinates.lon);
+      setSearchType('coordinates');
+      setSearchQuery(`${coordinates.lat.toFixed(6)}, ${coordinates.lon.toFixed(6)}`);
     }
   }, [coordinates]);
 
@@ -51,12 +52,13 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         const properties = response.data.results.map((result, index) => ({
           id: result.id || `addr_${index}`,
           address: result.formatted_address || result.address,
-          coordinates: result.coordinates ? [result.coordinates.lat, result.coordinates.lon] : null,
+          coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
           category: result.type || 'Объект недвижимости',
           area: result.area || 'Не указано',
           permitted_use: result.description || 'Не указано',
-          source: result.source || 'Геолокационный сервис',
-          confidence: result.confidence || 0.8
+          source: response.data.source || 'Геолокационный сервис',
+          confidence: result.confidence || 0.8,
+          cadastral_number: result.cadastral_number || `${Date.now()}_${index}`
         }));
         setProperties(properties);
         
@@ -184,35 +186,53 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     }
   };
 
-  const searchByCoordinates = async (lat, lon, radius = 100) => {
+  const searchByCoordinates = async (lat, lon, radius = 200) => {
     setLoading(true);
     setError(null);
+    setProperties([]);
     
     try {
-      // Поиск ближайших объектов через российские сервисы
-      const response = await api.get('/api/geo/nearby', {
+      // Поиск через OSM buildings API
+      const response = await api.get('/api/osm/buildings', {
         params: { 
           lat, 
           lon, 
-          radius,
-          category: 'недвижимость'
+          radius
         }
       });
       
-      if (response.data.success && response.data.places.length > 0) {
-        const properties = response.data.places.map((place, index) => ({
-          id: place.id || `coord_${index}`,
-          address: place.address,
-          coordinates: [place.coordinates.lat, place.coordinates.lon],
-          category: place.category || 'Объект недвижимости',
-          area: place.area || 'Не указано',
-          permitted_use: place.description || 'Не указано',
-          distance: place.distance,
-          source: place.source
+      if (response.data.success && response.data.buildings && response.data.buildings.length > 0) {
+        const properties = response.data.buildings.map((building, index) => ({
+          id: building.osm_id || `coord_${index}`,
+          address: building.address || `Координаты: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+          coordinates: [building.lat || lat, building.lon || lon],
+          category: building.building_type || building.amenity || 'Здание',
+          area: building.area || 'Не указано',
+          permitted_use: building.amenity || building.building_type || 'Не указано',
+          distance: Math.round(Math.sqrt(Math.pow((building.lat - lat) * 111000, 2) + Math.pow((building.lon - lon) * 111000, 2))),
+          source: 'OpenStreetMap',
+          cadastral_number: `osm_${building.osm_id || index}`,
+          osm_data: {
+            levels: building.levels,
+            height: building.height,
+            name: building.name
+          }
         }));
         setProperties(properties);
       } else {
-        setError('Не удалось найти объекты в указанной области');
+        // Fallback: создаем объект для указанных координат
+        const fallbackProperty = {
+          id: 'coord_fallback',
+          address: `Координаты: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+          coordinates: [lat, lon],
+          category: 'Местоположение',
+          area: 'Не указано',
+          permitted_use: 'Не указано',
+          distance: 0,
+          source: 'Координаты',
+          cadastral_number: `coord_${Date.now()}`
+        };
+        setProperties([fallbackProperty]);
       }
     } catch (err) {
       setError('Ошибка при поиске объектов по координатам');
@@ -319,7 +339,15 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         searchByCadastralNumber();
         break;
       case 'coordinates':
-        if (coordinates) {
+        // Парсим координаты из поля ввода или используем переданные координаты
+        if (searchQuery.trim()) {
+          const coords = searchQuery.split(',').map(c => parseFloat(c.trim()));
+          if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            searchByCoordinates(coords[0], coords[1]);
+          } else {
+            setError('Неверный формат координат. Используйте: широта, долгота');
+          }
+        } else if (coordinates) {
           searchByCoordinates(coordinates.lat, coordinates.lon);
         }
         break;
@@ -406,7 +434,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                disabled={loading || searchType === 'coordinates'}
+                disabled={loading}
                 placeholder={
                   searchType === 'address' ? 'Введите адрес...' :
                   searchType === 'cadastral' ? '77:01:0001001:1234' :
@@ -548,7 +576,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
             
             <List>
               {properties.map((property, index) => (
-                <React.Fragment key={property.cadastral_number || index}>
+                <React.Fragment key={property.id || property.cadastral_number || index}>
                   <ListItem
                     button
                     onClick={() => handlePropertyClick(property)}
@@ -563,36 +591,45 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                           <Typography variant="subtitle1">
                             {property.address || 'Адрес не указан'}
                           </Typography>
-                          {analysisResults && analysisResults.analysis.find(a => 
-                            a.property.cadastral_number === property.cadastral_number
-                          ) && (
+                          <Chip
+                            size="small"
+                            label={property.source || 'Источник'}
+                            color="default"
+                            variant="outlined"
+                          />
+                          {property.confidence && (
                             <Chip
                               size="small"
-                              label={getComplianceText(
-                                analysisResults.analysis.find(a => 
-                                  a.property.cadastral_number === property.cadastral_number
-                                ).compliance_status
-                              )}
-                              color={getComplianceColor(
-                                analysisResults.analysis.find(a => 
-                                  a.property.cadastral_number === property.cadastral_number
-                                ).compliance_status
-                              )}
+                              label={`${Math.round(property.confidence * 100)}%`}
+                              color={property.confidence > 0.8 ? 'success' : 'warning'}
+                              variant="outlined"
                             />
                           )}
                         </Box>
                       }
                       secondary={
                         <Box>
+                          {property.cadastral_number && (
+                            <Typography variant="body2" color="textSecondary">
+                              ID: {property.cadastral_number}
+                            </Typography>
+                          )}
                           <Typography variant="body2" color="textSecondary">
-                            Кадастровый номер: {property.cadastral_number}
+                            Категория: {property.category} • Площадь: {property.area}
                           </Typography>
                           <Typography variant="body2" color="textSecondary">
-                            Категория: {property.category} • Площадь: {property.area} м²
+                            Использование: {property.permitted_use}
                           </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            Разрешенное использование: {property.permitted_use}
-                          </Typography>
+                          {property.coordinates && (
+                            <Typography variant="body2" color="textSecondary">
+                              Координаты: {property.coordinates[0].toFixed(6)}, {property.coordinates[1].toFixed(6)}
+                            </Typography>
+                          )}
+                          {property.distance !== undefined && (
+                            <Typography variant="body2" color="textSecondary">
+                              Расстояние: {property.distance} м
+                            </Typography>
+                          )}
                         </Box>
                       }
                     />

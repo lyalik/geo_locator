@@ -236,17 +236,27 @@ class GeoAggregatorService:
                     osm_results = sync_search_places(location_hint)
                     if osm_results and len(osm_results) > 0:
                         place = osm_results[0]
+                        # Обработка различных форматов OSM результатов
+                        if hasattr(place, 'lat') and hasattr(place, 'lon'):
+                            lat, lon = float(place.lat), float(place.lon)
+                        elif isinstance(place, dict):
+                            lat = float(place.get('lat', 0))
+                            lon = float(place.get('lon', 0))
+                        else:
+                            logger.warning("OSM place object has no coordinates")
+                            lat, lon = 0, 0
+                            
                         results['osm'] = {
                             'success': True,
                             'source': 'openstreetmap',
                             'coordinates': {
-                                'latitude': float(place.lat),
-                                'longitude': float(place.lon)
+                                'latitude': lat,
+                                'longitude': lon
                             },
                             'place_info': {
-                                'name': place.display_name,
-                                'type': place.type,
-                                'class': place.class_name
+                                'name': getattr(place, 'display_name', place.get('display_name', 'Unknown')),
+                                'type': getattr(place, 'type', place.get('type', 'place')),
+                                'class': getattr(place, 'class_name', place.get('class', 'unknown'))
                             },
                             'confidence': 0.65
                         }
