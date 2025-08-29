@@ -12,31 +12,36 @@ from datetime import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 import exifread
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
+try:
+    from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean
+    from sqlalchemy.ext.declarative import declarative_base
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.dialects.postgresql import UUID
+    import uuid
+    SQLALCHEMY_AVAILABLE = True
+except ImportError:
+    SQLALCHEMY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
-Base = declarative_base()
+if SQLALCHEMY_AVAILABLE:
+    Base = declarative_base()
 
-class GeoImage(Base):
-    """Модель изображения с геотегами"""
-    __tablename__ = 'geo_images'
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    filename = Column(String(255), nullable=False)
-    file_path = Column(String(500), nullable=False)
-    file_hash = Column(String(64), unique=True, nullable=False)
-    file_size = Column(Integer)
-    
-    # Геолокация
-    latitude = Column(Float)
-    longitude = Column(Float)
-    altitude = Column(Float)
-    accuracy = Column(Float)
+    class GeoImage(Base):
+        """Модель изображения с геотегами"""
+        __tablename__ = 'geo_images'
+        
+        id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+        filename = Column(String(255), nullable=False)
+        file_path = Column(String(500), nullable=False)
+        file_hash = Column(String(64), unique=True, nullable=False)
+        file_size = Column(Integer)
+        
+        # Геолокация
+        latitude = Column(Float)
+        longitude = Column(Float)
+        altitude = Column(Float)
+        accuracy = Column(Float)
     
     # Метаданные изображения
     width = Column(Integer)
@@ -75,13 +80,24 @@ class ImageDatabaseService:
     """Сервис для работы с базой данных изображений"""
     
     def __init__(self, db_url: str = None):
-        if not db_url:
-            db_url = os.getenv('DATABASE_URL', 'postgresql://postgres:3666599@localhost/geo_locator')
-        
-        self.engine = create_engine(db_url)
-        Base.metadata.create_all(self.engine)
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
+        if not SQLALCHEMY_AVAILABLE:
+            logger.warning("SQLAlchemy not available, using mock database service")
+            self.engine = None
+            self.session = None
+            return
+            
+        try:
+            if not db_url:
+                db_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost/geo_locator')
+            
+            self.engine = create_engine(db_url)
+            Base.metadata.create_all(self.engine)
+            Session = sessionmaker(bind=self.engine)
+            self.session = Session()
+        except Exception as e:
+            logger.error(f"Database connection failed: {e}")
+            self.engine = None
+            self.session = None
         
         # Директории для хранения изображений
         self.upload_dir = os.path.join(os.getcwd(), 'uploads', 'images')

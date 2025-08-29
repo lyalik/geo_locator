@@ -37,7 +37,8 @@ class GeoAggregatorService:
         self.roscosmos_service = RoscosmosService()
         self.yandex_satellite_service = YandexSatelliteService()
         self.image_db_service = ImageDatabaseService()
-        self.geo_service = GeoLocationService()
+        # Lazy import to avoid circular dependency
+        self.geo_service = None
         
         # Веса для различных источников данных
         self.source_weights = {
@@ -127,6 +128,11 @@ class GeoAggregatorService:
     def _extract_exif_location(self, image_path: str) -> Dict[str, Any]:
         """Извлечение GPS координат из EXIF данных"""
         try:
+            # Lazy import to avoid circular dependency
+            if self.geo_service is None:
+                from .geolocation_service import GeoLocationService
+                self.geo_service = GeoLocationService()
+            
             result = self.geo_service.process_image(image_path)
             if result['success'] and result['has_gps']:
                 return {
@@ -468,24 +474,45 @@ class GeoAggregatorService:
     def get_location_statistics(self) -> Dict[str, Any]:
         """Получение статистики по геолокации"""
         try:
-            # Статистика из базы данных изображений
-            images_with_gps = self.image_db_service.session.query(
-                self.image_db_service.GeoImage
-            ).filter_by(has_gps=True).count()
+            # Проверяем доступность базы данных
+            if not self.image_db_service or not self.image_db_service.session:
+                return {
+                    'total_images': 0,
+                    'images_with_gps': 0,
+                    'gps_coverage': 0,
+                    'available_services': {
+                        'yandex_maps': hasattr(self.yandex_service, 'api_key') and bool(self.yandex_service.api_key),
+                        'dgis': hasattr(self.dgis_service, 'api_key') and bool(self.dgis_service.api_key),
+                        'roscosmos_satellite': True,  # Российские спутниковые данные
+                        'yandex_satellite': hasattr(self.yandex_satellite_service, 'api_key') and bool(self.yandex_satellite_service.api_key),
+                        'image_database': False
+                    }
+                }
             
-            total_images = self.image_db_service.session.query(
-                self.image_db_service.GeoImage
-            ).count()
+            # Статистика из базы данных изображений (упрощенная версия)
+            try:
+                from .image_database_service import GeoImage
+                images_with_gps = self.image_db_service.session.query(
+                    GeoImage
+                ).filter_by(has_gps=True).count()
+                
+                total_images = self.image_db_service.session.query(
+                    GeoImage
+                ).count()
+            except Exception as db_error:
+                logger.warning(f"Database query failed: {db_error}")
+                images_with_gps = 0
+                total_images = 0
             
             return {
                 'total_images': total_images,
                 'images_with_gps': images_with_gps,
                 'gps_coverage': (images_with_gps / total_images * 100) if total_images > 0 else 0,
                 'available_services': {
-                    'yandex_maps': bool(self.yandex_service.api_key),
-                    'dgis': bool(self.dgis_service.api_key),
+                    'yandex_maps': hasattr(self.yandex_service, 'api_key') and bool(self.yandex_service.api_key),
+                    'dgis': hasattr(self.dgis_service, 'api_key') and bool(self.dgis_service.api_key),
                     'roscosmos_satellite': True,  # Российские спутниковые данные
-                    'yandex_satellite': bool(self.yandex_satellite_service.api_key),
+                    'yandex_satellite': hasattr(self.yandex_satellite_service, 'api_key') and bool(self.yandex_satellite_service.api_key),
                     'image_database': True
                 }
             }

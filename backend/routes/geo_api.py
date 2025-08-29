@@ -19,11 +19,20 @@ logger = logging.getLogger(__name__)
 
 geo_bp = Blueprint('geo_api', __name__, url_prefix='/api/geo')
 
-# Инициализация сервисов
-geo_aggregator = GeoAggregatorService()
-image_db = ImageDatabaseService()
-yandex_service = YandexMapsService()
-dgis_service = DGISService()
+# Инициализация сервисов с обработкой ошибок
+try:
+    geo_aggregator = GeoAggregatorService()
+    image_db = ImageDatabaseService()
+    yandex_service = YandexMapsService()
+    dgis_service = DGISService()
+    logger.info("Geo services initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing geo services: {e}")
+    # Создаем заглушки для сервисов
+    geo_aggregator = None
+    image_db = None
+    yandex_service = None
+    dgis_service = None
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'temp')
@@ -36,6 +45,13 @@ def allowed_file(filename):
 def health():
     """Проверка состояния геолокационных сервисов"""
     try:
+        if geo_aggregator is None:
+            return jsonify({
+                'status': 'error',
+                'error': 'Geo services not initialized',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 500
+            
         stats = geo_aggregator.get_location_statistics()
         return jsonify({
             'status': 'healthy',
@@ -45,6 +61,24 @@ def health():
     except Exception as e:
         logger.error(f"Health check error: {e}")
         return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@geo_bp.route('/locate', methods=['GET'])
+def locate_by_address():
+    """
+    Поиск местоположения по адресу
+    """
+    try:
+        address = request.args.get('address', '')
+        if not address:
+            return jsonify({'error': 'Address parameter is required'}), 400
+        
+        # Используем Yandex Maps для геокодирования
+        result = yandex_service.geocode(address)
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.error(f"Error in locate_by_address: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/locate', methods=['POST'])
 def locate_image():

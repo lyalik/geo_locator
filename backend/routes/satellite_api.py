@@ -151,7 +151,7 @@ def get_satellite_image():
             'error': str(e)
         }), 500
 
-@satellite_bp.route('/analysis', methods=['GET'])
+@satellite_bp.route('/analyze', methods=['GET'])
 def analyze_satellite_image():
     """Анализ спутникового изображения"""
     try:
