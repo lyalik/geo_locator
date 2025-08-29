@@ -150,6 +150,7 @@ python run_local.py
 cd frontend
 npm start
 ```
+./start_local.sh
 
 </details>
 
