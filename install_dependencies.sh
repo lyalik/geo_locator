@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Geo Locator - Complete Dependencies Installation Script
-# This script installs all required dependencies for the full system
+# Geo Locator - Полная установка зависимостей
+# Этот скрипт устанавливает все необходимые зависимости для системы
 
 set -e
 
-echo "🚀 Installing Geo Locator Dependencies"
+echo "🚀 Установка зависимостей Geo Locator"
 echo "======================================"
 
 # Colors for output

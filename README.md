@@ -54,7 +54,14 @@
 
 ---
 
-## 🚀 Быстрый старт (Локальная разработка)
+## 🚀 Полное развертывание на новом ПК
+
+### Системные требования
+
+- **ОС**: Ubuntu 20.04+ / Debian 11+ / macOS 10.15+ / Windows 10+ (с WSL2)
+- **RAM**: Минимум 4GB, рекомендуется 8GB+
+- **Диск**: Свободно 10GB+ для зависимостей и данных
+- **Интернет**: Стабильное подключение для загрузки зависимостей
 
 ### Предварительные требования
 
@@ -65,33 +72,220 @@
 - **Git**
 - API-ключи для внешних сервисов
 
-### Автоматическая установка
+### 🎯 Пошаговое развертывание с нуля
 
-1. **Клонируйте репозиторий:**
-   ```bash
-   git clone https://github.com/lyalik/geo_locator.git
-   cd geo_locator
-   ```
+#### Шаг 1: Установка системных зависимостей
 
-2. **Запустите автоматическую установку:**
-   ```bash
-   ./start_local.sh
-   ```
-   
-   Скрипт автоматически:
-   - Проверит все зависимости
-   - Установит PostgreSQL и Redis (если нужно)
-   - Создаст базу данных
-   - Установит Python и Node.js зависимости
-   - Создаст файл `.env`
-   - Запустит все сервисы
+# 1. Клонирование репозитория
+git clone https://github.com/lyalik/geo_locator.git
+cd geo_locator
 
-3. **Обновите API-ключи в `.env`:**
-   ```env
-   YANDEX_API_KEY=ваш_ключ_яндекс_карт
-   DGIS_API_KEY=ваш_ключ_2gis
-   GEMINI_API_KEY=ваш_ключ_gemini
-   ```
+# 2. Автоматическая установка (опционально)
+./install_dependencies.sh
+
+# 3. Ручная установка (следуя README.md)
+# - Установка системных зависимостей
+# - Настройка PostgreSQL и Redis  
+# - Установка Python и Node.js зависимостей
+# - Настройка API ключей в .env
+
+# 4. Запуск системы
+cd backend && source venv/bin/activate && python run_local.py
+cd frontend && npm start
+
+**Ubuntu/Debian:**
+```bash
+# Обновление системы
+sudo apt update && sudo apt upgrade -y
+
+# Установка основных пакетов
+sudo apt install -y curl wget git build-essential software-properties-common
+
+# Установка Python 3.8+
+sudo apt install -y python3 python3-pip python3-venv python3-dev
+
+# Установка Node.js 16+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Установка PostgreSQL 13+
+sudo apt install -y postgresql postgresql-contrib postgresql-client
+
+# Установка Redis
+sudo apt install -y redis-server
+
+# Дополнительные зависимости для OpenCV и ML
+sudo apt install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1
+```
+
+**macOS:**
+```bash
+# Установка Homebrew (если не установлен)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Установка зависимостей
+brew install python3 node postgresql redis git
+```
+
+**Windows (WSL2):**
+```bash
+# Включить WSL2 и установить Ubuntu из Microsoft Store
+# Затем выполнить команды для Ubuntu выше
+```
+
+#### Шаг 2: Настройка PostgreSQL
+
+```bash
+# Запуск PostgreSQL
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Настройка пользователя postgres
+sudo -u postgres psql << EOF
+ALTER USER postgres PASSWORD 'postgres';
+CREATE DATABASE geo_locator;
+CREATE USER geo_user WITH PASSWORD 'geo_password';
+GRANT ALL PRIVILEGES ON DATABASE geo_locator TO geo_user;
+\q
+EOF
+
+# Проверка подключения
+psql -h localhost -U postgres -d geo_locator -c "SELECT version();"
+```
+
+#### Шаг 3: Настройка Redis
+
+```bash
+# Запуск Redis
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
+
+# Проверка работы
+redis-cli ping
+# Должен вернуть: PONG
+```
+
+#### Шаг 4: Клонирование и настройка проекта
+
+```bash
+# Клонирование репозитория
+git clone https://github.com/lyalik/geo_locator.git
+cd geo_locator
+
+# Создание .env файла
+cp .env.example .env || cat > .env << 'EOF'
+# Database Configuration
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=geo_locator
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# API Keys (ОБЯЗАТЕЛЬНО ЗАМЕНИТЬ НА РЕАЛЬНЫЕ!)
+YANDEX_API_KEY=your_yandex_api_key_here
+DGIS_API_KEY=your_dgis_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+ROSCOSMOS_API_KEY=your_roscosmos_api_key_here
+
+# Security
+SECRET_KEY=your-super-secret-key-change-in-production
+FLASK_ENV=development
+DEBUG=True
+EOF
+```
+
+#### Шаг 5: Установка Python зависимостей
+
+```bash
+# Переход в директорию backend
+cd backend
+
+# Создание виртуального окружения
+python3 -m venv venv
+
+# Активация виртуального окружения
+source venv/bin/activate  # Linux/Mac
+# или для Windows: venv\Scripts\activate
+
+# Обновление pip
+pip install --upgrade pip setuptools wheel
+
+# Установка зависимостей
+pip install -r requirements.txt
+
+# Возврат в корневую директорию
+cd ..
+```
+
+#### Шаг 6: Установка Node.js зависимостей
+
+```bash
+# Переход в директорию frontend
+cd frontend
+
+# Установка зависимостей
+npm install
+
+# Возврат в корневую директорию
+cd ..
+```
+
+#### Шаг 7: Получение API ключей
+
+**Обязательные API ключи для работы системы:**
+
+1. **Яндекс.Карты API**:
+   - Перейдите на https://developer.tech.yandex.ru/
+   - Зарегистрируйтесь и создайте приложение
+   - Получите API ключ для JavaScript API и HTTP Geocoder
+   - Добавьте в `.env`: `YANDEX_API_KEY=ваш_ключ`
+
+2. **2GIS API**:
+   - Перейдите на https://dev.2gis.ru/
+   - Зарегистрируйтесь и создайте проект
+   - Получите API ключ
+   - Добавьте в `.env`: `DGIS_API_KEY=ваш_ключ`
+
+3. **Google Gemini API** (для AI анализа):
+   - Перейдите на https://makersuite.google.com/app/apikey
+   - Создайте API ключ
+   - Добавьте в `.env`: `GEMINI_API_KEY=ваш_ключ`
+
+#### Шаг 8: Запуск системы
+
+```bash
+# Проверка всех сервисов
+sudo systemctl status postgresql redis-server
+
+# Запуск backend (в первом терминале)
+cd backend
+source venv/bin/activate
+python run_local.py
+
+# Запуск frontend (во втором терминале)
+cd frontend
+npm start
+```
+
+#### Шаг 9: Проверка работоспособности
+
+```bash
+# Проверка backend API
+curl http://localhost:5000/health
+
+# Проверка подключения к базе данных
+curl http://localhost:5000/api/health
+
+# Открыть в браузере
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:5000
+```
 
 ### Ручная установка
 
@@ -203,53 +397,158 @@ curl -X POST -F "file=@photo.jpg" -F "location_hint=Москва, Кремль" 
 
 ## 🐛 Устранение неисправностей
 
-### Проблемы с базой данных
+### Проблемы с PostgreSQL
+
 ```bash
-# Проверка статуса PostgreSQL
+# Проверка статуса
 sudo systemctl status postgresql
 
-# Перезапуск PostgreSQL
-sudo systemctl restart postgresql
+# Если не запущен
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
 
-# Создание базы данных вручную
+# Проблемы с подключением
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+
+# Проверка подключения
+psql -h localhost -U postgres -d postgres -c "SELECT version();"
+
+# Создание базы данных заново
+sudo -u postgres dropdb geo_locator --if-exists
 sudo -u postgres createdb geo_locator
+
+# Проблемы с правами доступа
+sudo nano /etc/postgresql/*/main/pg_hba.conf
+# Изменить строку: local all postgres peer -> local all postgres md5
+sudo systemctl restart postgresql
 ```
 
 ### Проблемы с Redis
-```bash
-# Проверка статуса Redis
-sudo systemctl status redis
 
-# Перезапуск Redis
-sudo systemctl restart redis
+```bash
+# Проверка статуса
+sudo systemctl status redis-server
+
+# Запуск Redis
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
 
 # Проверка подключения
 redis-cli ping
+# Должен вернуть: PONG
+
+# Очистка Redis (если нужно)
+redis-cli FLUSHALL
 ```
 
-### Проблемы с Python зависимостями
+### Проблемы с Python окружением
+
 ```bash
+# Пересоздание виртуального окружения
 cd backend
+rm -rf venv
+python3 -m venv venv
 source venv/bin/activate
-pip install --upgrade pip
+
+# Обновление pip и установка зависимостей
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
+
+# Проблемы с OpenCV
+sudo apt install -y python3-opencv
+pip install opencv-python-headless
+
+# Проблемы с PyTorch
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```
 
-### Проблемы с Node.js зависимостями
+### Проблемы с Node.js
+
 ```bash
+# Очистка кэша npm
+npm cache clean --force
+
+# Пересоздание node_modules
 cd frontend
 rm -rf node_modules package-lock.json
 npm install
+
+# Проблемы с правами (Linux)
+sudo chown -R $(whoami) ~/.npm
+sudo chown -R $(whoami) node_modules
+
+# Обновление Node.js (если версия старая)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
 ```
 
-### Логи и отладка
-```bash
-# Просмотр логов backend
-tail -f backend/app.log
+### Проблемы с портами
 
-# Проверка портов
-netstat -tlnp | grep :5000
-netstat -tlnp | grep :3000
+```bash
+# Проверка занятых портов
+sudo netstat -tlnp | grep :5000
+sudo netstat -tlnp | grep :3000
+
+# Освобождение порта (если занят)
+sudo lsof -ti:5000 | xargs sudo kill -9
+sudo lsof -ti:3000 | xargs sudo kill -9
+```
+
+### Проблемы с API ключами
+
+```bash
+# Проверка переменных окружения
+cd backend
+source venv/bin/activate
+python -c "import os; print('YANDEX_API_KEY:', os.getenv('YANDEX_API_KEY'))"
+
+# Тест API ключей
+python test_api_keys_debug.py
+```
+
+### Проблемы с правами доступа
+
+```bash
+# Исправление прав на файлы проекта
+sudo chown -R $(whoami):$(whoami) .
+chmod +x start_local.sh
+chmod +x install_dependencies.sh
+```
+
+### Логи и диагностика
+
+```bash
+# Логи PostgreSQL
+sudo tail -f /var/log/postgresql/postgresql-*-main.log
+
+# Логи Redis
+sudo tail -f /var/log/redis/redis-server.log
+
+# Логи приложения
+tail -f backend/logs/app.log
+
+# Проверка системных ресурсов
+free -h
+df -h
+top
+```
+
+### Полная переустановка (если ничего не помогает)
+
+```bash
+# Остановка всех сервисов
+sudo systemctl stop postgresql redis-server
+
+# Очистка данных (ОСТОРОЖНО!)
+sudo rm -rf /var/lib/postgresql/*/main/
+sudo rm -rf /var/lib/redis/
+
+# Переустановка PostgreSQL и Redis
+sudo apt remove --purge postgresql* redis*
+sudo apt autoremove
+sudo apt install postgresql postgresql-contrib redis-server
+
+# Повторная настройка (см. Шаг 2 и 3 выше)
 ```
 
 ---
