@@ -29,53 +29,62 @@ const ViolationUploader = ({ onUploadComplete }) => {
     if (files.length === 0) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-
-    // Add all files
-    files.forEach(file => {
-      formData.append('file', file);
-    });
-
-    // Add metadata
-    formData.append('user_id', 'current_user_id'); // Replace with actual user ID
-    formData.append('location_notes', 'User notes');
-    formData.append('location_hint', locationHint);
-
-    try {
-      const response = await fetch('http://localhost:5000/api/violations/detect', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success && enableSatelliteAnalysis && data.location) {
-        // Получаем спутниковые данные для обнаруженного местоположения
-        await loadSatelliteData(data.location.coordinates[0], data.location.coordinates[1]);
-      }
-
-      if (!data.success) {
-        if (data.error === 'UNABLE_TO_DETERMINE_LOCATION' || data.suggest_manual_input) {
-          setShowManualInput(true);
-          alert('Unable to determine location automatically. Please enter coordinates manually.');
-        } else {
-          alert(`Error: ${data.message}`);
-        }
-        return;
-      }
-
-      // Process successful response
-      setResults([data]);
-      setFiles([]);
+    
+    // Process files one by one since /detect endpoint expects single file
+    const allResults = [];
+    
+    for (const file of files) {
+      const formData = new FormData();
       
-      if (onUploadComplete) {
-        onUploadComplete([data]);
+      // Add single file
+      formData.append('file', file);
+      
+      // Add metadata
+      formData.append('user_id', 'current_user_id'); // Replace with actual user ID
+      formData.append('location_notes', 'User notes');
+      formData.append('location_hint', locationHint);
+
+      try {
+        const response = await fetch('http://localhost:5000/api/violations/detect', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.success && enableSatelliteAnalysis && data.location) {
+          // Получаем спутниковые данные для обнаруженного местоположения
+          await loadSatelliteData(data.location.coordinates[0], data.location.coordinates[1]);
+        }
+
+        if (!data.success) {
+          if (data.error === 'UNABLE_TO_DETERMINE_LOCATION' || data.suggest_manual_input) {
+            setShowManualInput(true);
+            alert('Unable to determine location automatically. Please enter coordinates manually.');
+          } else {
+            alert(`Error: ${data.message}`);
+          }
+          continue; // Skip to next file
+        }
+
+        // Add successful result
+        allResults.push(data);
+        
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert(`Error processing file ${file.name}: ${error.message}`);
       }
-    } catch (error) {
-      console.error('Upload error:', error);
-    } finally {
-      setIsUploading(false);
     }
+
+    // Process all results
+    setResults(allResults);
+    setFiles([]);
+    
+    if (onUploadComplete && allResults.length > 0) {
+      onUploadComplete(allResults);
+    }
+    
+    setIsUploading(false);
   };
 
   const loadSatelliteData = async (lat, lon) => {

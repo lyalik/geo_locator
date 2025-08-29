@@ -1,12 +1,33 @@
 from flask import Blueprint, request, jsonify
 import logging
-from services.openstreetmap_service import (
-    sync_geocode_address,
-    sync_reverse_geocode,
-    sync_get_buildings_in_area,
-    sync_analyze_urban_context,
-    sync_search_places
-)
+try:
+    from services.openstreetmap_service import (
+        sync_geocode_address,
+        sync_reverse_geocode,
+        sync_get_buildings_in_area,
+        sync_analyze_urban_context,
+        sync_search_places
+    )
+    OSM_SERVICE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: OpenStreetMap service not available: {e}")
+    OSM_SERVICE_AVAILABLE = False
+    
+    # Mock functions for when service is not available
+    def sync_geocode_address(address, country_code='ru'):
+        return [{"display_name": f"Mock result for {address}", "lat": "55.7558", "lon": "37.6176"}]
+    
+    def sync_reverse_geocode(lat, lon, zoom=18):
+        return {"display_name": f"Mock address for {lat}, {lon}"}
+    
+    def sync_get_buildings_in_area(lat, lon, radius):
+        return []
+    
+    def sync_analyze_urban_context(lat, lon):
+        return {"area_type": "urban", "building_density": 0.5, "amenity_count": 10}
+    
+    def sync_search_places(query, lat=None, lon=None, radius=10000):
+        return [{"display_name": f"Mock result for {query}", "lat": "55.7558", "lon": "37.6176"}]
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

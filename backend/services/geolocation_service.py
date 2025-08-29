@@ -15,7 +15,14 @@ from .maps import map_aggregator
 from .cache_service import GeolocationCache, MapCache
 from .yandex_maps_service import YandexMapsService
 from .dgis_service import DGISService
-from .sentinel_service import SentinelService
+try:
+    from .roscosmos_satellite_service import RoscosmosService
+    from .yandex_satellite_service import YandexSatelliteService
+    SATELLITE_SERVICES_AVAILABLE = True
+except ImportError:
+    RoscosmosService = None
+    YandexSatelliteService = None
+    SATELLITE_SERVICES_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

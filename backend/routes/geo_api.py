@@ -10,10 +10,10 @@ from flask_login import login_required, current_user
 import uuid
 from datetime import datetime
 
-from ..services.geo_aggregator_service import GeoAggregatorService
-from ..services.image_database_service import ImageDatabaseService
-from ..services.yandex_maps_service import YandexMapsService
-from ..services.dgis_service import DGISService
+from services.geo_aggregator_service import GeoAggregatorService
+from services.image_database_service import ImageDatabaseService
+from services.yandex_maps_service import YandexMapsService
+from services.dgis_service import DGISService
 
 logger = logging.getLogger(__name__)
 

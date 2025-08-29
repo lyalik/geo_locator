@@ -15,7 +15,7 @@ from .dgis_service import DGISService
 from .roscosmos_satellite_service import RoscosmosService
 from .yandex_satellite_service import YandexSatelliteService
 from .image_database_service import ImageDatabaseService
-from .geolocation_service import GeoLocationService
+# Circular import fix - import GeoLocationService only when needed
 
 logger = logging.getLogger(__name__)
 

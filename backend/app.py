@@ -143,25 +143,55 @@ os.makedirs(app.config.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(__file_
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# Register API blueprints
+# Register API blueprints individually
 try:
     from routes.maps import bp as maps_bp
-    from routes.violation_api import bp as violation_api_bp
-    from routes.cache_api import bp as cache_api_bp
-    from routes.rosreestr_api import bp as rosreestr_bp
-    from routes.openstreetmap_api import openstreetmap_api
-    from routes.sentinel_api import sentinel_api
-    from routes.geo_api import geo_bp
-    
     app.register_blueprint(maps_bp)
-    app.register_blueprint(violation_api_bp)
-    app.register_blueprint(cache_api_bp)
-    app.register_blueprint(rosreestr_bp)
-    app.register_blueprint(openstreetmap_api, url_prefix='/api/openstreetmap')
-    app.register_blueprint(sentinel_api, url_prefix='/api/sentinel')
-    app.register_blueprint(geo_bp)
+    print("✅ Maps API registered successfully")
 except Exception as e:
-    print(f"Warning: Some blueprints failed to import: {e}")
+    print(f"❌ Maps API registration failed: {e}")
+
+try:
+    from routes.violation_api import bp as violation_api_bp
+    app.register_blueprint(violation_api_bp)
+    print("✅ Violation API registered successfully")
+except Exception as e:
+    print(f"❌ Violation API registration failed: {e}")
+
+try:
+    from routes.geo_api import geo_bp
+    app.register_blueprint(geo_bp)
+    print("✅ Geo API registered successfully")
+except Exception as e:
+    print(f"❌ Geo API registration failed: {e}")
+
+try:
+    from routes.cache_api import bp as cache_api_bp
+    app.register_blueprint(cache_api_bp)
+    print("✅ Cache API registered successfully")
+except Exception as e:
+    print(f"❌ Cache API registration failed: {e}")
+
+try:
+    from routes.rosreestr_api import bp as rosreestr_bp
+    app.register_blueprint(rosreestr_bp)
+    print("✅ Rosreestr API registered successfully")
+except Exception as e:
+    print(f"❌ Rosreestr API registration failed: {e}")
+
+try:
+    from routes.openstreetmap_api import bp as openstreetmap_bp
+    app.register_blueprint(openstreetmap_bp)
+    print("✅ OpenStreetMap API registered successfully")
+except Exception as e:
+    print(f"❌ OpenStreetMap API registration failed: {e}")
+
+try:
+    from routes.sentinel_api import sentinel_api
+    app.register_blueprint(sentinel_api, url_prefix='/api/sentinel')
+    print("✅ Sentinel API registered successfully")
+except Exception as e:
+    print(f"❌ Sentinel API registration failed: {e}")
 
 # Register Satellite API separately
 try:

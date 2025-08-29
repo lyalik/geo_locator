@@ -6,21 +6,21 @@ from pathlib import Path
 import uuid
 
 try:
-    from ..services.geolocation_service import GeoLocationService
+    from services.geolocation_service import GeoLocationService
     geolocation_service = GeoLocationService()
 except ImportError as e:
     print(f"Warning: GeoLocationService not available: {e}")
     geolocation_service = None
 
 try:
-    from ..services.yolo_violation_detector import YOLOViolationDetector
+    from services.yolo_violation_detector import YOLOViolationDetector
     violation_detector = YOLOViolationDetector()
 except ImportError as e:
     print(f"Warning: YOLOViolationDetector not available: {e}")
     violation_detector = None
 
 try:
-    from ..services.notification_service import NotificationService
+    from services.notification_service import NotificationService
     notification_service = NotificationService()
 except ImportError as e:
     print(f"Warning: NotificationService not available: {e}")
