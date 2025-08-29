@@ -72,107 +72,107 @@ def locate_by_address():
         if not address:
             return jsonify({'error': 'Address parameter is required'}), 400
         
-        # Пробуем Yandex Maps сначала
+        # Параллельный поиск через Yandex и 2GIS
+        yandex_result = None
+        dgis_result = None
+        
+        # Пробуем Yandex Maps
         try:
-            result = yandex_service.geocode(address)
-            if result.get('success'):
-                return jsonify(result), 200
+            yandex_result = yandex_service.geocode(address)
         except Exception as e:
             logger.warning(f"Yandex geocoding failed: {e}")
         
         # Пробуем 2GIS
         try:
-            result = dgis_service.geocode(address)
-            if result.get('success') and result.get('results'):
-                return jsonify(result), 200
+            dgis_result = dgis_service.geocode(address)
         except Exception as e:
             logger.warning(f"2GIS geocoding failed: {e}")
         
-        # Fallback на OSM geocoding
-        try:
-            from services.openstreetmap_service import sync_geocode_address
-            
-            # Пробуем разные варианты адреса
-            search_variants = [
-                address,
-                address.replace('Красная площадь', 'Red Square'),
-                address.replace('Москва', 'Moscow'),
-                'Red Square, Moscow',
-                'Moscow'
-            ]
-            
-            for search_address in search_variants:
-                try:
-                    osm_results = sync_geocode_address(search_address)
-                    if osm_results and len(osm_results) > 0:
-                        place = osm_results[0]
-                        # Правильно извлекаем координаты из OSM результата
-                        if hasattr(place, 'lat') and hasattr(place, 'lon'):
-                            lat, lon = float(place.lat), float(place.lon)
-                        elif isinstance(place, dict):
-                            lat = float(place.get('lat', 0))
-                            lon = float(place.get('lon', 0))
-                        else:
-                            lat, lon = 0.0, 0.0
-                            
-                        result = {
-                            'success': True,
-                            'source': 'openstreetmap',
-                            'results': [{
-                                'formatted_address': getattr(place, 'display_name', place.get('display_name', str(place))),
-                                'latitude': lat,
-                                'longitude': lon,
-                                'type': getattr(place, 'type', place.get('type', 'place')),
-                                'confidence': 0.8
-                            }]
-                        }
-                        return jsonify(result), 200
-                except:
-                    continue
-                    
-        except Exception as e:
-            logger.warning(f"OSM geocoding failed: {e}")
-        
-        # Mock данные для демонстрации (Красная площадь)
-        if 'красная' in address.lower() or 'red square' in address.lower():
-            return jsonify({
-                'success': True,
-                'source': 'demo_data',
-                'results': [{
-                    'formatted_address': 'Красная площадь, Москва, Россия',
-                    'latitude': 55.7539,
-                    'longitude': 37.6208,
-                    'type': 'landmark',
-                    'confidence': 0.9,
-                    'demo': True
-                }]
-            }), 200
-        
-        # Mock данные для Москвы
-        if 'москва' in address.lower() or 'moscow' in address.lower():
-            return jsonify({
-                'success': True,
-                'source': 'demo_data', 
-                'results': [{
-                    'formatted_address': 'Москва, Россия',
-                    'latitude': 55.7558,
-                    'longitude': 37.6176,
-                    'type': 'city',
-                    'confidence': 0.8,
-                    'demo': True
-                }]
-            }), 200
-        
-        # Если все источники недоступны
+        # Возвращаем результаты от обоих сервисов
         return jsonify({
-            'success': False,
-            'error': 'Address not found',
-            'source': 'all_sources_failed'
-        }), 404
+            'success': True,
+            'yandex': yandex_result if yandex_result and yandex_result.get('success') else None,
+            'dgis': dgis_result if dgis_result and dgis_result.get('success') else None,
+            'query': address
+        }), 200
         
     except Exception as e:
         logger.error(f"Error in locate_by_address: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
+
+@geo_bp.route('/locate/cadastral', methods=['GET'])
+def locate_by_cadastral():
+    """
+    Поиск по кадастровому номеру через Yandex и 2GIS
+    """
+    try:
+        cadastral_number = request.args.get('cadastral_number', '')
+        if not cadastral_number:
+            return jsonify({'error': 'Cadastral number parameter is required'}), 400
+        
+        yandex_result = None
+        dgis_result = None
+        
+        # Поиск через Yandex Maps
+        try:
+            yandex_result = yandex_service.search(cadastral_number)
+        except Exception as e:
+            logger.warning(f"Yandex cadastral search failed: {e}")
+        
+        # Поиск через 2GIS
+        try:
+            dgis_result = dgis_service.search(cadastral_number)
+        except Exception as e:
+            logger.warning(f"2GIS cadastral search failed: {e}")
+        
+        return jsonify({
+            'success': True,
+            'yandex': yandex_result if yandex_result and yandex_result.get('success') else None,
+            'dgis': dgis_result if dgis_result and dgis_result.get('success') else None,
+            'query': cadastral_number
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error in locate_by_cadastral: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@geo_bp.route('/locate/coordinates', methods=['GET'])
+def locate_by_coordinates():
+    """
+    Поиск по координатам через Yandex и 2GIS
+    """
+    try:
+        lat = request.args.get('lat', type=float)
+        lon = request.args.get('lon', type=float)
+        
+        if lat is None or lon is None:
+            return jsonify({'error': 'Latitude and longitude parameters are required'}), 400
+        
+        yandex_result = None
+        dgis_result = None
+        
+        # Поиск через Yandex Maps
+        try:
+            yandex_result = yandex_service.reverse_geocode(lat, lon)
+        except Exception as e:
+            logger.warning(f"Yandex reverse geocoding failed: {e}")
+        
+        # Поиск через 2GIS
+        try:
+            dgis_result = dgis_service.reverse_geocode(lat, lon)
+        except Exception as e:
+            logger.warning(f"2GIS reverse geocoding failed: {e}")
+        
+        return jsonify({
+            'success': True,
+            'yandex': yandex_result if yandex_result and yandex_result.get('success') else None,
+            'dgis': dgis_result if dgis_result and dgis_result.get('success') else None,
+            'coordinates': {'lat': lat, 'lon': lon}
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error in locate_by_coordinates: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @geo_bp.route('/locate', methods=['POST'])
 def locate_image():

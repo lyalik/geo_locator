@@ -43,45 +43,57 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     setProperties([]);
     
     try {
-      // Используем российские геолокационные сервисы для поиска недвижимости
       const response = await api.get('/api/geo/locate', {
         params: { address: searchQuery }
       });
       
-      // Обрабатываем разные форматы ответов от API
-      let results = [];
-      
-      if (response.data.success && response.data.results && response.data.results.length > 0) {
-        // Формат с массивом results
-        results = response.data.results;
-      } else if (response.data.success && response.data.coordinates) {
-        // Формат Yandex API (одиночный результат)
-        results = [{
-          formatted_address: response.data.formatted_address || response.data.address,
-          latitude: response.data.coordinates.latitude,
-          longitude: response.data.coordinates.longitude,
-          type: response.data.kind || 'place',
-          confidence: response.data.precision === 'exact' ? 0.9 : 0.7
-        }];
-      }
-      
-      if (results.length > 0) {
-        const properties = results.map((result, index) => ({
-          id: result.id || `addr_${index}`,
-          address: result.formatted_address || result.address,
-          coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
-          category: result.type || result.kind || 'Объект недвижимости',
-          area: result.area || 'Не указано',
-          permitted_use: result.description || 'Не указано',
-          source: response.data.source || 'Геолокационный сервис',
-          confidence: result.confidence || 0.8,
-          cadastral_number: result.cadastral_number || `${Date.now()}_${index}`
-        }));
-        setProperties(properties);
+      if (response.data.success) {
+        const yandexResults = [];
+        const dgisResults = [];
         
-        // Дополнительно пытаемся получить детальную информацию о недвижимости
-        if (properties.length > 0 && properties[0].coordinates) {
-          await enrichPropertyData(properties[0].coordinates[0], properties[0].coordinates[1]);
+        // Обрабатываем результаты от Яндекс
+        if (response.data.yandex) {
+          const yandexData = response.data.yandex;
+          if (yandexData.coordinates) {
+            yandexResults.push({
+              id: 'yandex_1',
+              address: yandexData.formatted_address || yandexData.address,
+              coordinates: [yandexData.coordinates.latitude, yandexData.coordinates.longitude],
+              category: yandexData.kind || 'Объект недвижимости',
+              area: 'Не указано',
+              permitted_use: 'Не указано',
+              source: 'Яндекс Карты',
+              confidence: yandexData.precision === 'exact' ? 0.9 : 0.7,
+              cadastral_number: `yandex_${Date.now()}`,
+              provider: 'yandex'
+            });
+          }
+        }
+        
+        // Обрабатываем результаты от 2GIS
+        if (response.data.dgis && response.data.dgis.results) {
+          response.data.dgis.results.forEach((result, index) => {
+            dgisResults.push({
+              id: `dgis_${index}`,
+              address: result.formatted_address || result.address,
+              coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
+              category: result.type || 'Объект недвижимости',
+              area: 'Не указано',
+              permitted_use: 'Не указано',
+              source: '2GIS',
+              confidence: result.confidence || 0.8,
+              cadastral_number: `dgis_${Date.now()}_${index}`,
+              provider: 'dgis'
+            });
+          });
+        }
+        
+        // Объединяем результаты
+        const allResults = [...yandexResults, ...dgisResults];
+        setProperties(allResults);
+        
+        if (allResults.length === 0) {
+          setError('Не удалось найти объекты по указанному адресу');
         }
       } else {
         setError('Не удалось найти объекты по указанному адресу');
@@ -166,31 +178,55 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     setProperties([]);
     
     try {
-      // Поиск через российские сервисы по кадастровому номеру
-      const response = await api.get('/api/geo/search/places', {
-        params: { 
-          query: searchQuery,
-          type: 'cadastral'
-        }
+      const response = await api.get('/api/geo/locate/cadastral', {
+        params: { cadastral_number: searchQuery }
       });
       
-      if (response.data.success && response.data.places && response.data.places.length > 0) {
-        const properties = response.data.places.map((place, index) => ({
-          id: place.id || `cadastral_${index}`,
-          cadastral_number: searchQuery,
-          address: place.address || place.formatted_address,
-          coordinates: place.coordinates ? [place.coordinates.lat, place.coordinates.lon] : null,
-          category: place.category || 'Объект недвижимости',
-          area: place.area || 'Не указано',
-          permitted_use: place.description || 'Не указано',
-          source: place.source || 'Кадастровый поиск',
-          confidence: place.confidence || 0.9
-        }));
-        setProperties(properties);
+      if (response.data.success) {
+        const yandexResults = [];
+        const dgisResults = [];
         
-        // Обогащаем данными спутникового анализа
-        if (properties.length > 0 && properties[0].coordinates) {
-          await enrichPropertyData(properties[0].coordinates[0], properties[0].coordinates[1]);
+        // Обрабатываем результаты от Яндекс
+        if (response.data.yandex && response.data.yandex.results) {
+          response.data.yandex.results.forEach((result, index) => {
+            yandexResults.push({
+              id: `yandex_cad_${index}`,
+              address: result.formatted_address || result.address,
+              coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
+              category: result.type || 'Объект недвижимости',
+              area: result.area || 'Не указано',
+              permitted_use: result.description || 'Не указано',
+              source: 'Яндекс Карты',
+              confidence: result.confidence || 0.8,
+              cadastral_number: searchQuery,
+              provider: 'yandex'
+            });
+          });
+        }
+        
+        // Обрабатываем результаты от 2GIS
+        if (response.data.dgis && response.data.dgis.results) {
+          response.data.dgis.results.forEach((result, index) => {
+            dgisResults.push({
+              id: `dgis_cad_${index}`,
+              address: result.formatted_address || result.address,
+              coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
+              category: result.type || 'Объект недвижимости',
+              area: result.area || 'Не указано',
+              permitted_use: result.description || 'Не указано',
+              source: '2GIS',
+              confidence: result.confidence || 0.8,
+              cadastral_number: searchQuery,
+              provider: 'dgis'
+            });
+          });
+        }
+        
+        const allResults = [...yandexResults, ...dgisResults];
+        setProperties(allResults);
+        
+        if (allResults.length === 0) {
+          setError('Объект с указанным кадастровым номером не найден');
         }
       } else {
         setError('Объект с указанным кадастровым номером не найден');
@@ -209,47 +245,72 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     setProperties([]);
     
     try {
-      // Поиск через OSM buildings API
-      const response = await api.get('/api/osm/buildings', {
-        params: { 
-          lat, 
-          lon, 
-          radius
-        }
+      const response = await api.get('/api/geo/locate/coordinates', {
+        params: { lat, lon }
       });
       
-      if (response.data.success && response.data.buildings && response.data.buildings.length > 0) {
-        const properties = response.data.buildings.map((building, index) => ({
-          id: building.osm_id || `coord_${index}`,
-          address: building.address || `Координаты: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
-          coordinates: [building.lat || lat, building.lon || lon],
-          category: building.building_type || building.amenity || 'Здание',
-          area: building.area || 'Не указано',
-          permitted_use: building.amenity || building.building_type || 'Не указано',
-          distance: Math.round(Math.sqrt(Math.pow((building.lat - lat) * 111000, 2) + Math.pow((building.lon - lon) * 111000, 2))),
-          source: 'OpenStreetMap',
-          cadastral_number: `osm_${building.osm_id || index}`,
-          osm_data: {
-            levels: building.levels,
-            height: building.height,
-            name: building.name
+      if (response.data.success) {
+        const yandexResults = [];
+        const dgisResults = [];
+        
+        // Обрабатываем результаты от Яндекс
+        if (response.data.yandex) {
+          const yandexData = response.data.yandex;
+          if (yandexData.formatted_address || yandexData.address) {
+            yandexResults.push({
+              id: 'yandex_coord',
+              address: yandexData.formatted_address || yandexData.address,
+              coordinates: [lat, lon],
+              category: yandexData.kind || 'Местоположение',
+              area: 'Не указано',
+              permitted_use: 'Не указано',
+              source: 'Яндекс Карты',
+              confidence: yandexData.precision === 'exact' ? 0.9 : 0.7,
+              cadastral_number: `yandex_coord_${Date.now()}`,
+              provider: 'yandex'
+            });
           }
-        }));
-        setProperties(properties);
+        }
+        
+        // Обрабатываем результаты от 2GIS
+        if (response.data.dgis && response.data.dgis.results) {
+          response.data.dgis.results.forEach((result, index) => {
+            dgisResults.push({
+              id: `dgis_coord_${index}`,
+              address: result.formatted_address || result.address,
+              coordinates: [lat, lon],
+              category: result.type || 'Местоположение',
+              area: 'Не указано',
+              permitted_use: 'Не указано',
+              source: '2GIS',
+              confidence: result.confidence || 0.8,
+              cadastral_number: `dgis_coord_${Date.now()}_${index}`,
+              provider: 'dgis'
+            });
+          });
+        }
+        
+        const allResults = [...yandexResults, ...dgisResults];
+        
+        // Если нет результатов, создаем fallback
+        if (allResults.length === 0) {
+          allResults.push({
+            id: 'coord_fallback',
+            address: `Координаты: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+            coordinates: [lat, lon],
+            category: 'Местоположение',
+            area: 'Не указано',
+            permitted_use: 'Не указано',
+            source: 'Координаты',
+            confidence: 1.0,
+            cadastral_number: `coord_${Date.now()}`,
+            provider: 'coordinates'
+          });
+        }
+        
+        setProperties(allResults);
       } else {
-        // Fallback: создаем объект для указанных координат
-        const fallbackProperty = {
-          id: 'coord_fallback',
-          address: `Координаты: ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
-          coordinates: [lat, lon],
-          category: 'Местоположение',
-          area: 'Не указано',
-          permitted_use: 'Не указано',
-          distance: 0,
-          source: 'Координаты',
-          cadastral_number: `coord_${Date.now()}`
-        };
-        setProperties([fallbackProperty]);
+        setError('Ошибка при поиске объектов по координатам');
       }
     } catch (err) {
       setError('Ошибка при поиске объектов по координатам');
@@ -583,80 +644,187 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         </Card>
       )}
 
-      {/* Properties List */}
+      {/* Properties List - Dual Column Layout */}
       {properties.length > 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Найденные объекты недвижимости ({properties.length})
-            </Typography>
-            
-            <List>
-              {properties.map((property, index) => (
-                <React.Fragment key={property.id || property.cadastral_number || index}>
-                  <ListItem
-                    button
-                    onClick={() => handlePropertyClick(property)}
-                    sx={{ borderRadius: 1, mb: 1, bgcolor: 'background.paper' }}
-                  >
-                    <ListItemIcon>
-                      {getPropertyIcon(property.category)}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="subtitle1">
-                            {property.address || 'Адрес не указан'}
-                          </Typography>
-                          <Chip
-                            size="small"
-                            label={property.source || 'Источник'}
-                            color="default"
-                            variant="outlined"
+        <Grid container spacing={2}>
+          {/* Yandex Results Column */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Typography variant="h6" color="primary">
+                    Яндекс Карты
+                  </Typography>
+                  <Chip 
+                    size="small" 
+                    label={properties.filter(p => p.provider === 'yandex').length} 
+                    color="primary"
+                  />
+                </Box>
+                
+                <List dense>
+                  {properties.filter(p => p.provider === 'yandex').map((property, index) => (
+                    <React.Fragment key={property.id}>
+                      <ListItem
+                        button
+                        onClick={() => handlePropertyClick(property)}
+                        sx={{ borderRadius: 1, mb: 1, bgcolor: 'background.paper' }}
+                      >
+                        <ListItemIcon>
+                          {getPropertyIcon(property.category)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'medium' }}>
+                              {property.address || 'Адрес не указан'}
+                            </Typography>
+                          }
+                          secondary={
+                            <React.Fragment>
+                              <Typography variant="body2" color="textSecondary" component="div">
+                                {property.category}
+                              </Typography>
+                              {property.coordinates && (
+                                <Typography variant="caption" color="textSecondary" component="div">
+                                  {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
+                                </Typography>
+                              )}
+                              <Box sx={{ mt: 0.5 }}>
+                                <Chip
+                                  size="small"
+                                  label={`${Math.round(property.confidence * 100)}%`}
+                                  color={property.confidence > 0.8 ? 'success' : 'warning'}
+                                  variant="outlined"
+                                />
+                              </Box>
+                            </React.Fragment>
+                          }
+                        />
+                      </ListItem>
+                      {index < properties.filter(p => p.provider === 'yandex').length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+                  {properties.filter(p => p.provider === 'yandex').length === 0 && (
+                    <Typography variant="body2" color="textSecondary" sx={{ p: 2, textAlign: 'center' }}>
+                      Результаты не найдены
+                    </Typography>
+                  )}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* 2GIS Results Column */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <Typography variant="h6" color="secondary">
+                    2GIS
+                  </Typography>
+                  <Chip 
+                    size="small" 
+                    label={properties.filter(p => p.provider === 'dgis').length} 
+                    color="secondary"
+                  />
+                </Box>
+                
+                <List dense>
+                  {properties.filter(p => p.provider === 'dgis').map((property, index) => (
+                    <React.Fragment key={property.id}>
+                      <ListItem
+                        button
+                        onClick={() => handlePropertyClick(property)}
+                        sx={{ borderRadius: 1, mb: 1, bgcolor: 'background.paper' }}
+                      >
+                        <ListItemIcon>
+                          {getPropertyIcon(property.category)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'medium' }}>
+                              {property.address || 'Адрес не указан'}
+                            </Typography>
+                          }
+                          secondary={
+                            <React.Fragment>
+                              <Typography variant="body2" color="textSecondary" component="div">
+                                {property.category}
+                              </Typography>
+                              {property.coordinates && (
+                                <Typography variant="caption" color="textSecondary" component="div">
+                                  {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
+                                </Typography>
+                              )}
+                              <Box sx={{ mt: 0.5 }}>
+                                <Chip
+                                  size="small"
+                                  label={`${Math.round(property.confidence * 100)}%`}
+                                  color={property.confidence > 0.8 ? 'success' : 'warning'}
+                                  variant="outlined"
+                                />
+                              </Box>
+                            </React.Fragment>
+                          }
+                        />
+                      </ListItem>
+                      {index < properties.filter(p => p.provider === 'dgis').length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+                  {properties.filter(p => p.provider === 'dgis').length === 0 && (
+                    <Typography variant="body2" color="textSecondary" sx={{ p: 2, textAlign: 'center' }}>
+                      Результаты не найдены
+                    </Typography>
+                  )}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Fallback Results (coordinates, etc.) */}
+          {properties.filter(p => !['yandex', 'dgis'].includes(p.provider)).length > 0 && (
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Дополнительные результаты
+                  </Typography>
+                  <List>
+                    {properties.filter(p => !['yandex', 'dgis'].includes(p.provider)).map((property, index) => (
+                      <React.Fragment key={property.id}>
+                        <ListItem
+                          button
+                          onClick={() => handlePropertyClick(property)}
+                          sx={{ borderRadius: 1, mb: 1, bgcolor: 'background.paper' }}
+                        >
+                          <ListItemIcon>
+                            {getPropertyIcon(property.category)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={property.address || 'Адрес не указан'}
+                            secondary={
+                              <Box>
+                                <Typography variant="body2" color="textSecondary">
+                                  Источник: {property.source}
+                                </Typography>
+                                {property.coordinates && (
+                                  <Typography variant="body2" color="textSecondary">
+                                    Координаты: {property.coordinates[0].toFixed(6)}, {property.coordinates[1].toFixed(6)}
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
                           />
-                          {property.confidence && (
-                            <Chip
-                              size="small"
-                              label={`${Math.round(property.confidence * 100)}%`}
-                              color={property.confidence > 0.8 ? 'success' : 'warning'}
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-                      }
-                      secondary={
-                        <Box>
-                          {property.cadastral_number && (
-                            <Typography variant="body2" color="textSecondary">
-                              ID: {property.cadastral_number}
-                            </Typography>
-                          )}
-                          <Typography variant="body2" color="textSecondary">
-                            Категория: {property.category} • Площадь: {property.area}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            Использование: {property.permitted_use}
-                          </Typography>
-                          {property.coordinates && (
-                            <Typography variant="body2" color="textSecondary">
-                              Координаты: {property.coordinates[0].toFixed(6)}, {property.coordinates[1].toFixed(6)}
-                            </Typography>
-                          )}
-                          {property.distance !== undefined && (
-                            <Typography variant="body2" color="textSecondary">
-                              Расстояние: {property.distance} м
-                            </Typography>
-                          )}
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                  {index < properties.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          </CardContent>
-        </Card>
+                        </ListItem>
+                        {index < properties.filter(p => !['yandex', 'dgis'].includes(p.provider)).length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+        </Grid>
       )}
 
       {/* Property Detail Dialog */}

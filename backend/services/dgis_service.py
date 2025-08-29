@@ -157,8 +157,8 @@ class DGISService:
                 'key': self.api_key,
                 'q': address,
                 'region_id': region_id,
-                'type': 'adm_div.place,building.address',
-                'fields': 'items.point,items.adm_div,items.address'
+                'fields': 'items.point,items.adm_div,items.address',
+                'page_size': 10
             }
             
             response = requests.get(url, params=params, timeout=10)
@@ -170,20 +170,25 @@ class DGISService:
             if not items:
                 return {'success': False, 'error': 'Address not found', 'source': '2gis'}
             
-            item = items[0]  # Берем первый результат
-            coordinates = self._extract_coordinates(item.get('point', {}))
+            # Возвращаем результаты в формате, совместимом с фронтендом
+            results = []
+            for item in items:
+                coordinates = self._extract_coordinates(item.get('point', {}))
+                if coordinates:
+                    results.append({
+                        'formatted_address': item.get('address_name', item.get('name', address)),
+                        'latitude': coordinates['latitude'],
+                        'longitude': coordinates['longitude'],
+                        'type': item.get('type', 'place'),
+                        'confidence': 0.8,
+                        'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else ''
+                    })
             
-            result = {
+            return {
                 'success': True,
                 'source': '2gis',
-                'address': address,
-                'coordinates': coordinates,
-                'formatted_address': item.get('address_name', ''),
-                'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else '',
-                'type': item.get('type', '')
+                'results': results
             }
-            
-            return result
             
         except requests.RequestException as e:
             logger.error(f"2GIS geocoding error: {e}")
@@ -204,7 +209,7 @@ class DGISService:
                 'radius': radius,
                 'type': 'building.address',
                 'fields': 'items.point,items.adm_div,items.address',
-                'page_size': 1
+                'page_size': 5
             }
             
             response = requests.get(url, params=params, timeout=10)
@@ -216,25 +221,79 @@ class DGISService:
             if not items:
                 return {'success': False, 'error': 'Address not found', 'source': '2gis'}
             
-            item = items[0]
+            # Возвращаем результаты в формате, совместимом с фронтендом
+            results = []
+            for item in items:
+                results.append({
+                    'formatted_address': item.get('address_name', item.get('name', 'Неизвестный адрес')),
+                    'latitude': lat,
+                    'longitude': lon,
+                    'type': item.get('type', 'address'),
+                    'confidence': 0.8,
+                    'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else '',
+                    'building_name': item.get('name', '')
+                })
             
-            result = {
+            return {
                 'success': True,
                 'source': '2gis',
-                'coordinates': {'latitude': lat, 'longitude': lon},
-                'formatted_address': item.get('address_name', ''),
-                'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else '',
-                'building_name': item.get('name', ''),
-                'type': item.get('type', '')
+                'results': results
             }
-            
-            return result
             
         except requests.RequestException as e:
             logger.error(f"2GIS reverse geocoding error: {e}")
             return {'success': False, 'error': str(e), 'source': '2gis'}
         except Exception as e:
             logger.error(f"Unexpected error in 2GIS reverse geocoding: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+    
+    def search(self, query: str, region_id: int = 1) -> Dict[str, Any]:
+        """
+        Универсальный поиск (включая кадастровые номера)
+        """
+        try:
+            url = f"{self.base_url}/3.0/items"
+            params = {
+                'key': self.api_key,
+                'q': query,
+                'region_id': region_id,
+                'fields': 'items.point,items.adm_div,items.address',
+                'page_size': 10
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            items = data.get('result', {}).get('items', [])
+            
+            if not items:
+                return {'success': False, 'error': 'No results found', 'source': '2gis'}
+            
+            results = []
+            for item in items:
+                coordinates = self._extract_coordinates(item.get('point', {}))
+                if coordinates:
+                    results.append({
+                        'formatted_address': item.get('address_name', item.get('name', query)),
+                        'latitude': coordinates['latitude'],
+                        'longitude': coordinates['longitude'],
+                        'type': item.get('type', 'place'),
+                        'confidence': 0.7,
+                        'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else ''
+                    })
+            
+            return {
+                'success': True,
+                'source': '2gis',
+                'results': results
+            }
+            
+        except requests.RequestException as e:
+            logger.error(f"2GIS search error: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+        except Exception as e:
+            logger.error(f"Unexpected error in 2GIS search: {e}")
             return {'success': False, 'error': str(e), 'source': '2gis'}
     
     def find_nearby_places(self, lat: float, lon: float, category: str = None, 

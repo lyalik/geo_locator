@@ -138,6 +138,51 @@ class YandexMapsService:
             logger.error(f"Unexpected error in Yandex geocoding: {e}")
             return {'success': False, 'error': str(e), 'source': 'yandex_geocoder'}
     
+    def search(self, query: str) -> Dict[str, Any]:
+        """
+        Универсальный поиск (включая кадастровые номера)
+        """
+        try:
+            # Для кадастровых номеров используем поиск организаций
+            params = {
+                'apikey': self.api_key,
+                'text': query,
+                'lang': 'ru_RU',
+                'results': 10,
+                'format': 'json'
+            }
+            
+            response = requests.get(f"{self.base_url}/search/v1/", params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            results = []
+            for feature in data.get('features', []):
+                coords = feature.get('geometry', {}).get('coordinates', [])
+                if len(coords) >= 2:
+                    results.append({
+                        'formatted_address': feature.get('properties', {}).get('name', '') + ', ' + 
+                                           feature.get('properties', {}).get('description', ''),
+                        'latitude': coords[1],
+                        'longitude': coords[0],
+                        'type': 'organization',
+                        'confidence': 0.7
+                    })
+            
+            return {
+                'success': True,
+                'source': 'yandex_search',
+                'results': results
+            }
+            
+        except requests.RequestException as e:
+            logger.error(f"Yandex search error: {e}")
+            return {'success': False, 'error': str(e), 'source': 'yandex_search'}
+        except Exception as e:
+            logger.error(f"Unexpected error in Yandex search: {e}")
+            return {'success': False, 'error': str(e), 'source': 'yandex_search'}
+    
     def reverse_geocode(self, lat: float, lon: float) -> Dict[str, Any]:
         """
         Обратное геокодирование - получение адреса по координатам
