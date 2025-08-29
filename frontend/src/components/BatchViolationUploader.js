@@ -2,14 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, 
-  TextField, LinearProgress, IconButton, Chip, Alert, Dialog, DialogTitle,
-  DialogContent, DialogActions, List, ListItem, ListItemText, ListItemIcon,
-  Switch, FormControlLabel
+  TextField, LinearProgress, IconButton, Chip, Alert,  Switch, FormControlLabel
 } from '@mui/material';
 import {
   CloudUpload as UploadIcon, Image as ImageIcon, Delete as DeleteIcon,
   CheckCircle as CheckIcon, Error as ErrorIcon, Schedule as ScheduleIcon,
-  Visibility as ViewIcon, GetApp as DownloadIcon, Satellite as SatelliteIcon,
+  GetApp as DownloadIcon, Satellite as SatelliteIcon,
   Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 import { api } from '../services/api';
@@ -17,22 +15,19 @@ import { api } from '../services/api';
 const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
   const [files, setFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingQueue, setProcessingQueue] = useState([]);
   const [completedUploads, setCompletedUploads] = useState([]);
   const [locationHint, setLocationHint] = useState('');
-  const [showResults, setShowResults] = useState(false);
   const [globalProgress, setGlobalProgress] = useState(0);
   const [enableSatelliteAnalysis, setEnableSatelliteAnalysis] = useState(true);
   const [enableGeoAnalysis, setEnableGeoAnalysis] = useState(true);
   const [satelliteDataCache, setSatelliteDataCache] = useState({});
 
   const onDrop = useCallback(acceptedFiles => {
-    const newFiles = acceptedFiles
-      .filter(file => file.type.startsWith('image/'))
+    const imageFiles = acceptedFiles.filter(file => file.type.startsWith('image/'));
+    const newFiles = imageFiles
       .slice(0, maxFiles - files.length)
-      .map(file => ({
+      .map(file => Object.assign(file, {
         id: Math.random().toString(36).substr(2, 9),
-        file,
         preview: URL.createObjectURL(file),
         status: 'pending', // pending, processing, completed, error
         progress: 0,
@@ -59,7 +54,6 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
     if (files.length === 0) return;
 
     setIsProcessing(true);
-    setProcessingQueue([...files]);
     setGlobalProgress(0);
 
     const results = [];
@@ -115,7 +109,6 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
 
     setCompletedUploads(results);
     setIsProcessing(false);
-    setShowResults(true);
     
     if (onUploadComplete) {
       onUploadComplete(results);
@@ -154,10 +147,17 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
   };
 
   const uploadSingleFile = async (fileItem, onProgress) => {
+    // fileItem is now the actual File object with added properties
+    const actualFile = fileItem;
+    
     const formData = new FormData();
-    formData.append('file', fileItem.file);
+    formData.append('file', actualFile);
     formData.append('location_hint', locationHint);
     formData.append('user_id', 'current_user_id'); // Replace with actual user ID
+
+    // Debug logging
+    console.log('BatchUploader - Processing file:', actualFile.name, 'Size:', actualFile.size, 'Type:', actualFile.type);
+    console.log('BatchUploader - FormData entries:', [...formData.entries()]);
 
     return new Promise(async (resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -173,25 +173,39 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
         if (xhr.status === 200) {
           try {
             const response = JSON.parse(xhr.responseText);
+            console.log('BatchUploader - API Response:', response);
             onProgress(75);
             
             // Добавляем спутниковые данные если включен анализ
-            if (enableSatelliteAnalysis && response.location) {
+            if (enableSatelliteAnalysis && response.success && response.data?.location?.coordinates) {
               const satelliteData = await loadSatelliteData(
-                response.location.coordinates[0], 
-                response.location.coordinates[1]
+                response.data.location.coordinates.latitude, 
+                response.data.location.coordinates.longitude
               );
               if (satelliteData) {
-                response.satellite_data = satelliteData;
+                response.data.satellite_data = satelliteData;
               }
             }
             
             onProgress(100);
-            resolve(response);
+            
+            // Return processed result with proper structure
+            const processedResult = {
+              ...response.data,
+              image: response.data?.image_path || response.data?.annotated_image_path || fileItem.preview,
+              violations: response.data?.violations || [],
+              location: response.data?.location || {},
+              metadata: response.data?.metadata || {}
+            };
+            
+            console.log('BatchUploader - Processed result:', processedResult);
+            resolve(processedResult);
           } catch (error) {
+            console.error('BatchUploader - Response parsing error:', error);
             reject(new Error('Ошибка обработки ответа сервера'));
           }
         } else {
+          console.error('BatchUploader - Server error:', xhr.status, xhr.responseText);
           reject(new Error(`Ошибка сервера: ${xhr.status}`));
         }
       });
@@ -403,7 +417,7 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
                   <Box sx={{ position: 'relative' }}>
                     <img
                       src={fileItem.preview}
-                      alt={fileItem.file.name}
+                      alt={fileItem.name || 'Uploaded file'}
                       style={{
                         width: '100%',
                         height: 120,
@@ -431,7 +445,7 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       {getStatusIcon(fileItem.status)}
                       <Typography variant="body2" noWrap>
-                        {fileItem.file.name}
+                        {fileItem.name || 'Uploaded file'}
                       </Typography>
                     </Box>
                     
