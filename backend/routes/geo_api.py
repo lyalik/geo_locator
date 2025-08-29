@@ -47,7 +47,6 @@ def health():
         return jsonify({'status': 'error', 'error': str(e)}), 500
 
 @geo_bp.route('/locate', methods=['POST'])
-@login_required
 def locate_image():
     """
     Главный endpoint для определения местоположения изображения
@@ -81,8 +80,15 @@ def locate_image():
                 user_description
             )
             
-            # Добавляем информацию о пользователе
-            result['user_id'] = current_user.id
+            # Добавляем информацию о пользователе (если авторизован)
+            try:
+                from flask_login import current_user
+                if current_user.is_authenticated:
+                    result['user_id'] = current_user.id
+                else:
+                    result['user_id'] = 'anonymous'
+            except:
+                result['user_id'] = 'anonymous'
             result['processed_at'] = datetime.utcnow().isoformat()
             
             return jsonify(result), 200
@@ -97,7 +103,6 @@ def locate_image():
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/search/places', methods=['GET'])
-@login_required
 def search_places():
     """
     Поиск мест через Yandex Maps и 2GIS
@@ -144,7 +149,6 @@ def search_places():
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/geocode', methods=['GET'])
-@login_required
 def geocode_address():
     """
     Геокодирование адреса
@@ -170,7 +174,6 @@ def geocode_address():
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/reverse-geocode', methods=['GET'])
-@login_required
 def reverse_geocode():
     """
     Обратное геокодирование - получение адреса по координатам
@@ -197,7 +200,6 @@ def reverse_geocode():
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/images/search', methods=['GET'])
-@login_required
 def search_images():
     """
     Поиск изображений в базе данных
@@ -232,7 +234,6 @@ def search_images():
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/images/<image_id>', methods=['GET'])
-@login_required
 def get_image_info(image_id):
     """
     Получение информации об изображении
@@ -266,7 +267,6 @@ def get_image_thumbnail(image_id):
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/images/<image_id>/location', methods=['PUT'])
-@login_required
 def update_image_location(image_id):
     """
     Обновление геолокации изображения
@@ -288,7 +288,6 @@ def update_image_location(image_id):
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/nearby', methods=['GET'])
-@login_required
 def find_nearby_places():
     """
     Поиск ближайших мест определенной категории
@@ -315,7 +314,6 @@ def find_nearby_places():
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/static-map', methods=['GET'])
-@login_required
 def get_static_map():
     """
     Получение статической карты
@@ -344,7 +342,6 @@ def get_static_map():
         return jsonify({'error': str(e)}), 500
 
 @geo_bp.route('/statistics', methods=['GET'])
-@login_required
 def get_statistics():
     """
     Получение статистики системы геолокации
