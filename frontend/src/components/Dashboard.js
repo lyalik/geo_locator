@@ -70,7 +70,7 @@ const Dashboard = () => {
         confidence: result.confidence || 0,
         lat: result.location?.coordinates?.latitude || result.lat,
         lon: result.location?.coordinates?.longitude || result.lon,
-        address: result.location?.address || result.address,
+        address: result.location?.address?.formatted || result.location?.address || result.address,
         created_at: result.uploadTime || result.created_at || new Date().toISOString(),
         status: result.status || 'processed',
         image_path: result.image || result.annotated_image_path || result.image_path,
@@ -177,7 +177,7 @@ const Dashboard = () => {
             confidence: violation.confidence || 0,
             lat: result.location?.coordinates?.latitude || result.lat,
             lon: result.location?.coordinates?.longitude || result.lon,
-            address: result.location?.address || result.address,
+            address: result.location?.address?.formatted || result.location?.address || result.address,
             created_at: result.uploadTime || new Date().toISOString(),
             status: 'processed',
             image_path: result.image || result.annotated_image_path || result.image_path,
@@ -246,10 +246,8 @@ const Dashboard = () => {
 
   const tabs = [
     { label: 'Карта нарушений', icon: <MapIcon />, component: <InteractiveMap violations={violations} onViolationClick={handleViolationClick} height={600} /> },
-    { label: 'Загрузка одного', icon: <UploadIcon />, component: <ViolationUploader onUploadComplete={handleUploadComplete} /> },
-    { label: 'Пакетная загрузка', icon: <UploadIcon />, component: <BatchViolationUploader onUploadComplete={handleUploadComplete} /> },
+    { label: 'Анализ с ИИ', icon: <UploadIcon />, component: <ViolationUploader onUploadComplete={handleUploadComplete} /> },
     { label: 'Аналитика', icon: <AnalyticsIcon />, component: <AnalyticsDashboard violations={violations} /> },
-    { label: 'Mistral AI', icon: <OCRIcon />, component: <MistralAnalyzer /> },
     { label: 'Анализ недвижимости', icon: <PropertyIcon />, component: <PropertyAnalyzer /> },
     { label: 'Городской контекст', icon: <UrbanIcon />, component: <UrbanAnalyzer /> },
     { label: 'Спутниковый анализ', icon: <SatelliteIcon />, component: <SatelliteAnalyzer /> },
@@ -411,7 +409,9 @@ const Dashboard = () => {
                   {formatCategory(selectedViolation.category)}
                 </Typography>
                 <Typography variant="body1" paragraph>
-                  <strong>Адрес:</strong> {selectedViolation.address}
+                  <strong>Адрес:</strong> {typeof selectedViolation.address === 'object' ? 
+                    selectedViolation.address.formatted || JSON.stringify(selectedViolation.address) : 
+                    selectedViolation.address}
                 </Typography>
                 <Typography variant="body1" paragraph>
                   <strong>Координаты:</strong> {selectedViolation.lat}, {selectedViolation.lon}

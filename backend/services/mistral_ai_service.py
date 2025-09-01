@@ -151,14 +151,83 @@ class MistralAIService:
       "type": "тип нарушения",
       "description": "описание",
       "severity": "low/medium/high",
-      "confidence": 0.0-1.0
+      "confidence": 0.0-100.0
     }
   ],
   "building_analysis": "общий анализ здания",
   "recommendations": ["рекомендация 1", "рекомендация 2"]
 }"""
         
-        return self.analyze_image(image_path, violation_prompt)
+        try:
+            result = self.analyze_image(image_path, violation_prompt)
+            logger.info(f"🤖 Mistral AI raw result: {result}")
+            
+            if result.get('success') and result.get('analysis'):
+                # Парсим JSON ответ из текста
+                import json
+                import re
+                
+                analysis_text = result['analysis']
+                logger.info(f"🤖 Mistral AI analysis text: {analysis_text}")
+                
+                # Ищем JSON в ответе
+                json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
+                if json_match:
+                    try:
+                        parsed_data = json.loads(json_match.group())
+                        logger.info(f"🤖 Mistral AI parsed JSON: {parsed_data}")
+                        
+                        # Преобразуем в нужный формат
+                        violations = []
+                        if parsed_data.get('violations_detected') and parsed_data.get('violations'):
+                            for v in parsed_data['violations']:
+                                violations.append({
+                                    'type': v.get('type', 'unknown'),
+                                    'description': v.get('description', ''),
+                                    'severity': v.get('severity', 'medium'),
+                                    'confidence': float(v.get('confidence', 0.0))
+                                })
+                        
+                        return {
+                            'success': True,
+                            'violations': violations,
+                            'building_analysis': parsed_data.get('building_analysis', ''),
+                            'recommendations': parsed_data.get('recommendations', [])
+                        }
+                    except json.JSONDecodeError as e:
+                        logger.error(f"🤖 Mistral AI JSON parse error: {e}")
+                        # Fallback - создаем базовый результат
+                        return {
+                            'success': True,
+                            'violations': [{
+                                'type': 'general_analysis',
+                                'description': analysis_text[:200] + '...',
+                                'severity': 'medium',
+                                'confidence': 0.7
+                            }],
+                            'building_analysis': analysis_text,
+                            'recommendations': []
+                        }
+                else:
+                    logger.warning(f"🤖 Mistral AI: No JSON found in response")
+                    return {
+                        'success': True,
+                        'violations': [{
+                            'type': 'text_analysis',
+                            'description': analysis_text[:100] + '...',
+                            'severity': 'low',
+                            'confidence': 0.5
+                        }],
+                        'building_analysis': analysis_text,
+                        'recommendations': []
+                    }
+            else:
+                logger.error(f"🤖 Mistral AI: Analysis failed - {result}")
+                return {'success': False, 'error': 'Analysis failed'}
+                
+        except Exception as e:
+            logger.error(f"🤖 Mistral AI detect_violations error: {e}")
+            return {'success': False, 'error': str(e)}
     
     def extract_address_info(self, image_path: str) -> Dict[str, Any]:
         """

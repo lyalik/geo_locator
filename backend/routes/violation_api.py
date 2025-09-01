@@ -179,7 +179,7 @@ def detect_violations():
                         for violation in mistral_result['violations']:
                             mistral_violations.append({
                                 'category': violation.get('type', 'unknown_violation'),
-                                'confidence': violation.get('confidence', 0.0) / 100.0,  # Convert percentage to decimal
+                                'confidence': violation.get('confidence', 0.0) if violation.get('confidence', 0.0) <= 1.0 else violation.get('confidence', 0.0) / 100.0,
                                 'description': violation.get('description', ''),
                                 'severity': violation.get('severity', 'medium'),
                                 'source': 'mistral_ai',
@@ -229,6 +229,31 @@ def detect_violations():
                 }
                 current_app.logger.info(f"🌍 Geolocation - Mock result: {geo_result}")
             
+            # Check for manual coordinates from form
+            manual_lat = request.form.get('manual_lat')
+            manual_lon = request.form.get('manual_lon')
+            
+            # Use manual coordinates if provided, otherwise use geo_result
+            if manual_lat and manual_lon:
+                location_data = {
+                    'coordinates': {
+                        'latitude': float(manual_lat),
+                        'longitude': float(manual_lon)
+                    },
+                    'address': {'formatted': location_hint or 'Координаты заданы вручную'},
+                    'has_gps': True,
+                    'source': 'manual'
+                }
+                current_app.logger.info(f"📍 Using manual coordinates: {manual_lat}, {manual_lon}")
+            else:
+                location_data = {
+                    'coordinates': geo_result.get('coordinates'),
+                    'address': geo_result.get('address'),
+                    'has_gps': geo_result.get('has_gps', False),
+                    'source': 'auto'
+                }
+                current_app.logger.info(f"📍 Using auto-detected location: {location_data}")
+            
             # Prepare response data
             violation_id = str(uuid.uuid4())
             response_data = {
@@ -236,11 +261,7 @@ def detect_violations():
                 'image_path': f"/uploads/violations/{filename}",
                 'annotated_image_path': f"/uploads/violations/{Path(detection_result['annotated_image_path']).name}" if detection_result.get('annotated_image_path') else None,
                 'violations': detection_result.get('violations', []),
-                'location': {
-                    'coordinates': geo_result.get('coordinates'),
-                    'address': geo_result.get('address'),
-                    'has_gps': geo_result.get('has_gps', False)
-                },
+                'location': location_data,
                 'metadata': {
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
                     'user_id': user_id,

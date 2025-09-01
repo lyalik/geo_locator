@@ -513,7 +513,7 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
                         
                         {violation.address && (
                           <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                            📍 {violation.address}
+                            📍 {typeof violation.address === 'object' ? violation.address.formatted || JSON.stringify(violation.address) : violation.address}
                           </Typography>
                         )}
                         
@@ -572,7 +572,7 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
                       
                       {building.address && (
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                          📍 {building.address}
+                          📍 {typeof building.address === 'object' ? building.address.formatted || JSON.stringify(building.address) : building.address}
                         </Typography>
                       )}
                       

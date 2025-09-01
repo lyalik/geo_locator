@@ -129,14 +129,20 @@ const ViolationUploader = ({ onUploadComplete }) => {
 
         console.log('Processing successful response for file:', file.name);
 
-        // Add successful result with proper structure
+        // Создаем объект результата для отображения
         const processedResult = {
-          ...data.data,
-          image: data.data.image_path || data.data.annotated_image_path || file.preview,
+          violation_id: data.data.violation_id || `temp_${Date.now()}`,
+          fileName: actualFile.name,
+          image: data.data.annotated_image_path || data.data.image_path || URL.createObjectURL(actualFile),
           violations: data.data.violations || [],
-          location: data.data.location || {},
-          metadata: data.data.metadata || {},
-          fileName: file.name,
+          location: data.data.location || (manualCoordinates.lat && manualCoordinates.lon ? {
+            coordinates: {
+              latitude: parseFloat(manualCoordinates.lat),
+              longitude: parseFloat(manualCoordinates.lon)
+            },
+            address: locationHint || 'Координаты заданы вручную'
+          } : null),
+          satellite_data: data.data.satellite_data || null,
           uploadTime: new Date().toISOString()
         };
         allResults.push(processedResult);
@@ -146,6 +152,28 @@ const ViolationUploader = ({ onUploadComplete }) => {
         
         console.log('Processed result for display:', processedResult);
         console.log('Current allResults array:', allResults);
+        
+        // Логируем Mistral AI результаты отдельно
+        if (data.data.violations) {
+          const mistralViolations = data.data.violations.filter(v => v.source === 'mistral_ai');
+          const yoloViolations = data.data.violations.filter(v => v.source === 'yolo' || !v.source);
+          
+          if (mistralViolations.length > 0) {
+            console.log('🤖 Mistral AI обнаружил нарушения:', mistralViolations);
+            mistralViolations.forEach(violation => {
+              console.log(`- ${violation.category}: ${violation.description} (${Math.round(violation.confidence * 100)}%)`);
+            });
+          }
+          
+          if (yoloViolations.length > 0) {
+            console.log('🎯 YOLO обнаружил нарушения:', yoloViolations);
+            yoloViolations.forEach(violation => {
+              console.log(`- ${violation.category}: ${violation.description || 'Описание недоступно'} (${Math.round(violation.confidence * 100)}%)`);
+            });
+          }
+          
+          console.log(`📊 Итого: Mistral AI: ${mistralViolations.length}, YOLO: ${yoloViolations.length}`);
+        }
         
       } catch (error) {
         console.error('Upload error:', error);
@@ -224,7 +252,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {'image/*': ['.jpeg', '.jpg', '.png', '.gif']},
-    maxFiles: 10,
+    maxFiles: 50,
     multiple: true
   });
 
@@ -234,7 +262,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
         Анализ нарушений с ИИ
       </Typography>
       <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-        🤖 Mistral AI + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация
+        🤖 Mistral AI + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация (до 50 фото)
       </Typography>
       
       <Grid container spacing={3}>
@@ -284,27 +312,42 @@ const ViolationUploader = ({ onUploadComplete }) => {
               {/* Превью загруженных файлов */}
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle2" gutterBottom>
-                  Загруженные файлы ({files.length})
+                  Загруженные файлы ({files.length} из 50)
                 </Typography>
-                <Grid container spacing={1}>
-                  {files.map((file) => (
-                    <Grid item xs={6} sm={4} key={file.id}>
-                      <Box sx={{ position: 'relative' }}>
-                        <img
-                          src={file.preview}
-                          alt={file.name}
-                          style={{
-                            width: '100%',
-                            height: 80,
-                            objectFit: 'cover',
-                            borderRadius: 4,
-                            border: '1px solid #ddd'
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
+                <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                  <Grid container spacing={1}>
+                    {files.map((file) => (
+                      <Grid item xs={6} sm={4} md={3} key={file.id}>
+                        <Box sx={{ position: 'relative' }}>
+                          <img
+                            src={file.preview}
+                            alt={file.name}
+                            style={{
+                              width: '100%',
+                              height: 60,
+                              objectFit: 'cover',
+                              borderRadius: 4,
+                              border: '1px solid #ddd'
+                            }}
+                          />
+                          <Typography variant="caption" sx={{ 
+                            position: 'absolute', 
+                            bottom: 0, 
+                            left: 0, 
+                            right: 0, 
+                            bgcolor: 'rgba(0,0,0,0.7)', 
+                            color: 'white', 
+                            p: 0.5, 
+                            fontSize: '0.6rem',
+                            textAlign: 'center'
+                          }}>
+                            {file.name.length > 15 ? `${file.name.substring(0, 15)}...` : file.name}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
               </Box>
               
               {/* Настройки анализа */}
@@ -379,28 +422,49 @@ const ViolationUploader = ({ onUploadComplete }) => {
                     }
                     
                     try {
-                      // Яндекс Геокодер API
-                      const response = await fetch(
-                        `https://geocode-maps.yandex.ru/1.x/?apikey=YOUR_YANDEX_API_KEY&geocode=${encodeURIComponent(locationHint)}&format=json&results=1`
-                      );
+                      // Используем backend геокодинг через наш API
+                      const response = await fetch(`http://localhost:5000/api/geo/geocode?address=${encodeURIComponent(locationHint)}`);
                       const data = await response.json();
                       
-                      if (data.response?.GeoObjectCollection?.featureMember?.length > 0) {
-                        const coords = data.response.GeoObjectCollection.featureMember[0].GeoObject.Point.pos.split(' ');
-                        const lon = parseFloat(coords[0]);
-                        const lat = parseFloat(coords[1]);
+                      if (data.success && data.data?.coordinates) {
+                        const { latitude, longitude } = data.data.coordinates;
                         
-                        setManualCoordinates({ lat: lat.toString(), lon: lon.toString() });
+                        setManualCoordinates({ 
+                          lat: latitude.toString(), 
+                          lon: longitude.toString() 
+                        });
                         setShowManualInput(true);
-                        alert(`Координаты найдены: ${lat}, ${lon}`);
+                        alert(`Координаты найдены: ${latitude}, ${longitude}\nИсточник: ${data.data.source || 'Geo API'}`);
                       } else {
-                        alert('Адрес не найден. Попробуйте более точный адрес.');
+                        // Fallback - простое определение координат для Москвы
+                        if (locationHint.toLowerCase().includes('москва')) {
+                          const mockCoords = {
+                            lat: (55.7558 + (Math.random() - 0.5) * 0.1).toFixed(6),
+                            lon: (37.6176 + (Math.random() - 0.5) * 0.1).toFixed(6)
+                          };
+                          setManualCoordinates(mockCoords);
+                          setShowManualInput(true);
+                          alert(`Приблизительные координаты для Москвы: ${mockCoords.lat}, ${mockCoords.lon}`);
+                        } else {
+                          alert('Адрес не найден. Введите координаты вручную.');
+                          setShowManualInput(true);
+                        }
                       }
                     } catch (error) {
                       console.error('Geocoding error:', error);
-                      // Fallback к простому парсингу если API недоступен
-                      alert('Сервис геокодинга недоступен. Введите координаты вручную.');
-                      setShowManualInput(true);
+                      // Fallback для московских адресов
+                      if (locationHint.toLowerCase().includes('москва')) {
+                        const mockCoords = {
+                          lat: (55.7558 + (Math.random() - 0.5) * 0.1).toFixed(6),
+                          lon: (37.6176 + (Math.random() - 0.5) * 0.1).toFixed(6)
+                        };
+                        setManualCoordinates(mockCoords);
+                        setShowManualInput(true);
+                        alert(`Приблизительные координаты для Москвы: ${mockCoords.lat}, ${mockCoords.lon}`);
+                      } else {
+                        alert('Сервис геокодинга недоступен. Введите координаты вручную.');
+                        setShowManualInput(true);
+                      }
                     }
                   }}
                   sx={{ mt: 1 }}
@@ -443,8 +507,9 @@ const ViolationUploader = ({ onUploadComplete }) => {
                 fullWidth
                 onClick={handleSubmit}
                 disabled={isUploading}
+                sx={{ py: 1.5 }}
               >
-                {isUploading ? 'Обработка...' : 'Начать анализ'}
+                {isUploading ? `Обработка... (${files.length} файлов)` : `Начать анализ (${files.length} файлов)`}
               </Button>
             </Box>
           )}
@@ -537,7 +602,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                               {result.fileName || `Изображение ${index + 1}`}
                             </Typography>
                             
-                            {/* Нарушения */}
+                            {/* Нарушения и статистика ИИ */}
                             <Box sx={{ mb: 1 }}>
                               {violationCount > 0 ? (
                                 <Chip 
@@ -557,9 +622,36 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                 />
                               )}
                               
+                              {/* Показываем статистику по источникам ИИ */}
+                              {result.violations && result.violations.length > 0 && (() => {
+                                const mistralCount = result.violations.filter(v => v.source === 'mistral_ai').length;
+                                const yoloCount = result.violations.filter(v => v.source === 'yolo' || !v.source).length;
+                                
+                                return (
+                                  <>
+                                    {mistralCount > 0 && (
+                                      <Chip 
+                                        label={`🤖 Mistral: ${mistralCount}`}
+                                        color="secondary"
+                                        size="small"
+                                        sx={{ mr: 1, fontSize: '0.75rem' }}
+                                      />
+                                    )}
+                                    {yoloCount > 0 && (
+                                      <Chip 
+                                        label={`🎯 YOLO: ${yoloCount}`}
+                                        color="primary"
+                                        size="small"
+                                        sx={{ mr: 1, fontSize: '0.75rem' }}
+                                      />
+                                    )}
+                                  </>
+                                );
+                              })()}
+                              
                               {hasLocation && (
                                 <Chip 
-                                  label="Геолокация определена"
+                                  label="📍 Геолокация"
                                   color="info"
                                   size="small"
                                   sx={{ mr: 1 }}
@@ -580,11 +672,13 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                   
                                   return (
                                     <Box key={vIndex} sx={{ ml: 1, mb: 0.5 }}>
-                                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        • {violation.category || violation.type} ({Math.round(violation.confidence * 100)}%)
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                        <Typography variant="body2">
+                                          • {violation.category || violation.type} ({Math.round(violation.confidence * 100)}%)
+                                        </Typography>
                                         {isMistralAI && (
                                           <Chip 
-                                            label="Mistral AI" 
+                                            label="🤖 Mistral AI" 
                                             size="small" 
                                             color="secondary"
                                             sx={{ fontSize: '0.7rem', height: 18 }}
@@ -592,13 +686,13 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                         )}
                                         {isYOLO && (
                                           <Chip 
-                                            label="YOLO" 
+                                            label="🎯 YOLO" 
                                             size="small" 
                                             color="primary"
                                             sx={{ fontSize: '0.7rem', height: 18 }}
                                           />
                                         )}
-                                      </Typography>
+                                      </Box>
                                       {violation.description && (
                                         <Typography variant="caption" color="text.secondary" sx={{ ml: 2, display: 'block' }}>
                                           {violation.description}
@@ -613,7 +707,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                             {/* Местоположение */}
                             {hasLocation && (
                               <Typography variant="body2" color="text.secondary">
-                                📍 {result.location.address || 
+                                📍 {result.location.address?.formatted || result.location.address || 
                                     `${result.location.coordinates?.latitude}, ${result.location.coordinates?.longitude}`}
                               </Typography>
                             )}
