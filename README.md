@@ -467,6 +467,7 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```bash
 # Очистка кэша npm
 npm cache clean --force
+pkill -f "node.*react-scripts"
 
 # Пересоздание node_modules
 cd frontend

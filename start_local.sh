@@ -152,7 +152,7 @@ else
     echo "Please run: cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
     exit 1
 fi
-export POSTGRES_PASSWORD=postgres
+export POSTGRES_PASSWORD=3666599
 python run_local.py &
 BACKEND_PID=$!
 

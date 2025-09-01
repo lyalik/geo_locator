@@ -3,7 +3,7 @@
 Local development server startup script
 """
 import os
-import os
+import sys
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения из .env файла
