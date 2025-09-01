@@ -3,7 +3,12 @@
 Local development server startup script
 """
 import os
-import sys
+import os
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env файла
+load_dotenv('.env')
+
 from app import app, db
 
 def setup_database():

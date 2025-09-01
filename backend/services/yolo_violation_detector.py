@@ -178,7 +178,8 @@ class YOLOViolationDetector:
                         'y2': float(y2 / height)
                     },
                     'description': self.CATEGORY_DESCRIPTIONS.get(violation_category, violation_category),
-                    'severity': self._calculate_severity(conf, violation_category)
+                    'severity': self._calculate_severity(conf, violation_category),
+                    'source': 'yolo'
                 }
                 violations.append(violation)
         

@@ -85,6 +85,9 @@ const ViolationUploader = ({ onUploadComplete }) => {
       // Add single file
       formData.append('file', actualFile);
       
+      // Debug: проверяем что файл добавлен правильно
+      console.log('FormData file entry:', formData.get('file'));
+      
       // Add metadata
       formData.append('user_id', 'current_user_id'); // Replace with actual user ID
       formData.append('location_notes', 'User notes');
@@ -111,6 +114,30 @@ const ViolationUploader = ({ onUploadComplete }) => {
 
         const data = await response.json();
         console.log('API Response:', data);
+        
+        // КРИТИЧЕСКАЯ ДИАГНОСТИКА - проверяем весь ответ
+        console.log('🔍 Full API response structure:');
+        console.log('- success:', data.success);
+        console.log('- data exists:', !!data.data);
+        console.log('- data keys:', data.data ? Object.keys(data.data) : 'NO DATA');
+        console.log('- violations in data:', data.data?.violations ? data.data.violations.length : 'NO VIOLATIONS');
+        console.log('- raw violations:', data.data?.violations);
+        
+        // Debug: детальный анализ violations
+        if (data.success && data.data && data.data.violations) {
+          console.log('🔍 Raw violations from API:', data.data.violations);
+          data.data.violations.forEach((v, index) => {
+            console.log(`🔍 Violation ${index}:`, {
+              category: v.category,
+              source: v.source,
+              confidence: v.confidence,
+              description: v.description
+            });
+          });
+        } else {
+          console.log('❌ NO VIOLATIONS FOUND IN RESPONSE');
+          console.log('❌ Response structure:', JSON.stringify(data, null, 2));
+        }
 
         if (data.success && enableSatelliteAnalysis && data.data?.location?.coordinates) {
           // Получаем спутниковые данные для обнаруженного местоположения
@@ -153,16 +180,24 @@ const ViolationUploader = ({ onUploadComplete }) => {
         console.log('Processed result for display:', processedResult);
         console.log('Current allResults array:', allResults);
         
-        // Логируем Mistral AI результаты отдельно
-        if (data.data.violations) {
-          const mistralViolations = data.data.violations.filter(v => v.source === 'mistral_ai');
-          const yoloViolations = data.data.violations.filter(v => v.source === 'yolo' || !v.source);
+        // Логируем Mistral AI результаты отдельно - ИСПРАВЛЕНО
+        if (data.data && data.data.violations) {
+          console.log('🔧 Processing violations from data.data.violations');
+          const allViolations = data.data.violations;
+          const mistralViolations = allViolations.filter(v => v.source === 'mistral_ai');
+          const yoloViolations = allViolations.filter(v => v.source === 'yolo' || !v.source);
+          
+          console.log('🔧 All violations:', allViolations);
+          console.log('🔧 Mistral violations after filter:', mistralViolations);
+          console.log('🔧 YOLO violations after filter:', yoloViolations);
           
           if (mistralViolations.length > 0) {
             console.log('🤖 Mistral AI обнаружил нарушения:', mistralViolations);
             mistralViolations.forEach(violation => {
               console.log(`- ${violation.category}: ${violation.description} (${Math.round(violation.confidence * 100)}%)`);
             });
+          } else {
+            console.log('❌ Mistral AI нарушения не найдены после фильтрации');
           }
           
           if (yoloViolations.length > 0) {
@@ -173,6 +208,8 @@ const ViolationUploader = ({ onUploadComplete }) => {
           }
           
           console.log(`📊 Итого: Mistral AI: ${mistralViolations.length}, YOLO: ${yoloViolations.length}`);
+        } else {
+          console.log('❌ Нет violations в data.data');
         }
         
       } catch (error) {
