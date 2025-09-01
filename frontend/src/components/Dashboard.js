@@ -41,51 +41,74 @@ const Dashboard = () => {
   const loadViolations = async () => {
     try {
       setLoading(true);
-      // Mock data for now - replace with actual API call
-      const mockViolations = [
+      
+      // Загружаем реальные данные из глобальных хранилищ
+      const batchResults = window.GLOBAL_BATCH_RESULTS || [];
+      const singleResults = window.GLOBAL_SINGLE_RESULTS || [];
+      
+      // Преобразуем результаты загрузки в формат нарушений
+      const realViolations = [...batchResults, ...singleResults].flatMap((result, index) => {
+        if (result.violations && result.violations.length > 0) {
+          return result.violations.map((violation, vIndex) => ({
+            id: `real_${index}_${vIndex}`,
+            category: violation.category || 'unknown_violation',
+            confidence: violation.confidence || 0,
+            lat: result.location?.coordinates?.latitude || result.location?.coordinates?.[0] || null,
+            lon: result.location?.coordinates?.longitude || result.location?.coordinates?.[1] || null,
+            address: result.location?.address?.formatted || result.location?.address || 'Адрес не определен',
+            created_at: result.uploadTime || result.metadata?.timestamp || new Date().toISOString(),
+            status: 'processed',
+            image_path: result.image || result.image_path || '/uploads/default.jpg',
+            violation_id: result.violation_id,
+            source: violation.source || 'yolo',
+            description: violation.description || '',
+            severity: violation.severity || 'medium'
+          }));
+        }
+        return [];
+      });
+      
+      // Mock данные для демонстрации (если нет реальных)
+      const mockViolations = realViolations.length === 0 ? [
         {
-          id: 1,
-          category: 'illegal_construction',
-          confidence: 0.85,
+          id: 'mock_1',
+          category: 'parking_violation',
+          confidence: 0.94,
           lat: 55.7558,
           lon: 37.6176,
           address: 'Красная площадь, 1, Москва',
           created_at: '2024-01-15T10:30:00Z',
           status: 'processed',
-          image_path: '/uploads/violation1.jpg'
+          image_path: '/uploads/violation1.jpg',
+          source: 'mock',
+          description: 'Нарушение парковки в неположенном месте',
+          severity: 'high'
         },
         {
-          id: 2,
-          category: 'unauthorized_signage',
-          confidence: 0.92,
+          id: 'mock_2',
+          category: 'unauthorized_modification',
+          confidence: 0.71,
           lat: 55.7500,
           lon: 37.6200,
           address: 'Тверская улица, 15, Москва',
           created_at: '2024-01-14T15:45:00Z',
           status: 'processed',
-          image_path: '/uploads/violation2.jpg'
-        },
-        {
-          id: 3,
-          category: 'blocked_entrance',
-          confidence: 0.78,
-          lat: 55.7600,
-          lon: 37.6100,
-          address: 'Арбат, 25, Москва',
-          created_at: '2024-01-13T09:15:00Z',
-          status: 'pending',
-          image_path: '/uploads/violation3.jpg'
+          image_path: '/uploads/violation2.jpg',
+          source: 'mock',
+          description: 'Несанкционированные изменения фасада',
+          severity: 'medium'
         }
-      ];
+      ] : [];
       
-      setViolations(mockViolations);
+      const allViolations = [...realViolations, ...mockViolations];
+      setViolations(allViolations);
       
-      // Calculate stats
+      // Calculate stats from all violations
       const newStats = {
-        total: mockViolations.length,
-        pending: mockViolations.filter(v => v.status === 'pending').length,
-        processed: mockViolations.filter(v => v.status === 'processed').length,
-        errors: mockViolations.filter(v => v.status === 'error').length
+        total: allViolations.length,
+        pending: allViolations.filter(v => v.status === 'pending').length,
+        processed: allViolations.filter(v => v.status === 'processed').length,
+        errors: allViolations.filter(v => v.status === 'error').length
       };
       setStats(newStats);
       
@@ -102,16 +125,21 @@ const Dashboard = () => {
   };
 
   const handleUploadComplete = (results) => {
-    // Add new violations to the list
-    const newViolations = results.map((result, index) => ({
-      id: violations.length + index + 1,
-      ...result.data,
-      created_at: new Date().toISOString(),
-      status: 'processed'
-    }));
+    // Обновляем глобальные хранилища
+    if (!window.GLOBAL_SINGLE_RESULTS) window.GLOBAL_SINGLE_RESULTS = [];
+    if (!window.GLOBAL_BATCH_RESULTS) window.GLOBAL_BATCH_RESULTS = [];
     
-    setViolations(prev => [...prev, ...newViolations]);
-    loadViolations(); // Refresh stats
+    // Добавляем результаты в соответствующее хранилище
+    results.forEach(result => {
+      if (results.length === 1) {
+        window.GLOBAL_SINGLE_RESULTS.push(result);
+      } else {
+        window.GLOBAL_BATCH_RESULTS.push(result);
+      }
+    });
+    
+    // Перезагружаем данные для синхронизации
+    loadViolations();
   };
 
   const formatCategory = (category) => {

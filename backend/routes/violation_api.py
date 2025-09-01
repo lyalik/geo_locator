@@ -26,6 +26,13 @@ except ImportError as e:
     print(f"Warning: NotificationService not available: {e}")
     notification_service = None
 
+try:
+    from services.mistral_ai_service import MistralAIService
+    mistral_service = MistralAIService()
+except ImportError as e:
+    print(f"Warning: MistralAIService not available: {e}")
+    mistral_service = None
+
 # Create blueprint
 bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
 
@@ -142,28 +149,52 @@ def detect_violations():
         
         # Process the image
         try:
-            # Step 1: Detect violations in the image (mock if service unavailable)
-            current_app.logger.info(f"🔍 YOLO Detection - Starting violation detection for: {filename}")
+            # Step 1: Detect violations using YOLO + Mistral AI
+            current_app.logger.info(f"🔍 Detection - Starting violation detection for: {filename}")
+            
+            # YOLO Detection
             if violation_detector:
                 current_app.logger.info(f"🔍 YOLO Detection - Using real YOLO detector")
                 detection_result = violation_detector.detect_violations(filepath)
                 current_app.logger.info(f"🔍 YOLO Detection - Result: {detection_result}")
             else:
                 current_app.logger.warning(f"🔍 YOLO Detection - Using MOCK detector (service unavailable)")
-                # Mock detection result for testing
                 detection_result = {
                     'success': True,
-                    'violations': [
-                        {
-                            'category': 'unauthorized_signage',
-                            'confidence': 0.85,
-                            'bbox': {'x1': 100, 'y1': 100, 'x2': 200, 'y2': 200, 'width': 100, 'height': 100, 'center_x': 150, 'center_y': 150}
-                        }
-                    ],
+                    'violations': [],
                     'annotated_image_path': None,
                     'image_size': {'width': 800, 'height': 600}
                 }
-                current_app.logger.info(f"🔍 YOLO Detection - Mock result: {detection_result}")
+            
+            # Mistral AI Enhanced Analysis
+            mistral_violations = []
+            if mistral_service:
+                current_app.logger.info(f"🤖 Mistral AI - Starting enhanced violation analysis")
+                try:
+                    mistral_result = mistral_service.detect_violations(filepath)
+                    current_app.logger.info(f"🤖 Mistral AI - Result: {mistral_result}")
+                    
+                    if mistral_result.get('success') and mistral_result.get('violations'):
+                        # Convert Mistral violations to our format
+                        for violation in mistral_result['violations']:
+                            mistral_violations.append({
+                                'category': violation.get('type', 'unknown_violation'),
+                                'confidence': violation.get('confidence', 0.0) / 100.0,  # Convert percentage to decimal
+                                'description': violation.get('description', ''),
+                                'severity': violation.get('severity', 'medium'),
+                                'source': 'mistral_ai',
+                                'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}
+                            })
+                        current_app.logger.info(f"🤖 Mistral AI - Converted {len(mistral_violations)} violations")
+                except Exception as e:
+                    current_app.logger.error(f"🤖 Mistral AI - Error: {e}")
+            else:
+                current_app.logger.warning(f"🤖 Mistral AI - Service unavailable")
+            
+            # Combine YOLO and Mistral results
+            all_violations = detection_result.get('violations', []) + mistral_violations
+            detection_result['violations'] = all_violations
+            current_app.logger.info(f"🔍 Combined Detection - Total violations: {len(all_violations)}")
             
             if not detection_result['success']:
                 return jsonify({

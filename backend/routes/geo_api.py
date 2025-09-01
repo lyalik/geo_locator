@@ -14,6 +14,7 @@ from services.geo_aggregator_service import GeoAggregatorService
 from services.image_database_service import ImageDatabaseService
 from services.yandex_maps_service import YandexMapsService
 from services.dgis_service import DGISService
+from services.mistral_ai_service import MistralAIService
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ try:
     image_db = ImageDatabaseService()
     yandex_service = YandexMapsService()
     dgis_service = DGISService()
+    mistral_service = MistralAIService()
     logger.info("Geo services initialized successfully")
 except Exception as e:
     logger.error(f"Error initializing geo services: {e}")
@@ -33,6 +35,7 @@ except Exception as e:
     image_db = None
     yandex_service = None
     dgis_service = None
+    mistral_service = None
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'temp')
@@ -469,15 +472,150 @@ def get_static_map():
         logger.error(f"Error in get_static_map: {e}")
         return jsonify({'error': str(e)}), 500
 
-@geo_bp.route('/statistics', methods=['GET'])
-def get_statistics():
+@geo_bp.route('/mistral/analyze', methods=['POST'])
+def mistral_analyze_image():
     """
-    Получение статистики системы геолокации
+    Анализ изображения с помощью Mistral AI
     """
     try:
-        stats = geo_aggregator.get_location_statistics()
-        return jsonify(stats), 200
+        if mistral_service is None:
+            return jsonify({'error': 'Mistral AI service not available'}), 503
+        
+        # Проверяем наличие файла
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+        
+        # Сохраняем временный файл
+        filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        
+        try:
+            # Получаем тип анализа
+            analysis_type = request.form.get('analysis_type', 'general')  # 'general', 'violations', 'address', 'property'
+            
+            # Выполняем анализ в зависимости от типа
+            if analysis_type == 'violations':
+                result = mistral_service.detect_violations(file_path)
+            elif analysis_type == 'address':
+                result = mistral_service.extract_address_info(file_path)
+            elif analysis_type == 'property':
+                result = mistral_service.analyze_property_type(file_path)
+            else:
+                # Общий анализ
+                custom_prompt = request.form.get('prompt', None)
+                result = mistral_service.analyze_image(file_path, custom_prompt)
+            
+            return jsonify(result), 200
+            
+        finally:
+            # Удаляем временный файл
+            if os.path.exists(file_path):
+                os.remove(file_path)
     
     except Exception as e:
-        logger.error(f"Error in get_statistics: {e}")
+        logger.error(f"Error in mistral_analyze_image: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@geo_bp.route('/mistral/violations', methods=['POST'])
+def mistral_detect_violations():
+    """
+    Специализированная детекция нарушений с помощью Mistral AI
+    """
+    try:
+        if mistral_service is None:
+            return jsonify({'error': 'Mistral AI service not available'}), 503
+        
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+        
+        filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        
+        try:
+            result = mistral_service.detect_violations(file_path)
+            return jsonify(result), 200
+            
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    
+    except Exception as e:
+        logger.error(f"Error in mistral_detect_violations: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@geo_bp.route('/mistral/address', methods=['POST'])
+def mistral_extract_address():
+    """
+    Извлечение адресной информации с помощью Mistral AI
+    """
+    try:
+        if mistral_service is None:
+            return jsonify({'error': 'Mistral AI service not available'}), 503
+        
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+        
+        filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        
+        try:
+            result = mistral_service.extract_address_info(file_path)
+            return jsonify(result), 200
+            
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    
+    except Exception as e:
+        logger.error(f"Error in mistral_extract_address: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@geo_bp.route('/mistral/property', methods=['POST'])
+def mistral_analyze_property():
+    """
+    Анализ типа недвижимости с помощью Mistral AI
+    """
+    try:
+        if mistral_service is None:
+            return jsonify({'error': 'Mistral AI service not available'}), 503
+        
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+        
+        filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        
+        try:
+            result = mistral_service.analyze_property_type(file_path)
+            return jsonify(result), 200
+            
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    
+    except Exception as e:
+        logger.error(f"Error in mistral_analyze_property: {e}")
         return jsonify({'error': str(e)}), 500
