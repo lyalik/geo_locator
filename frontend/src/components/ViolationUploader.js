@@ -89,6 +89,12 @@ const ViolationUploader = ({ onUploadComplete }) => {
       formData.append('user_id', 'current_user_id'); // Replace with actual user ID
       formData.append('location_notes', 'User notes');
       formData.append('location_hint', locationHint);
+      
+      // Add manual coordinates if provided
+      if (manualCoordinates.lat && manualCoordinates.lon) {
+        formData.append('manual_lat', manualCoordinates.lat);
+        formData.append('manual_lon', manualCoordinates.lon);
+      }
 
       // Debug logging
       console.log('Original file object:', file);
@@ -225,7 +231,10 @@ const ViolationUploader = ({ onUploadComplete }) => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Report Property Violation
+        Анализ нарушений с ИИ
+      </Typography>
+      <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+        🤖 Mistral AI + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация
       </Typography>
       
       <Grid container spacing={3}>
@@ -303,34 +312,102 @@ const ViolationUploader = ({ onUploadComplete }) => {
                 <Typography variant="subtitle2" gutterBottom>
                   Настройки анализа
                 </Typography>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={enableSatelliteAnalysis}
-                      onChange={(e) => setEnableSatelliteAnalysis(e.target.checked)}
+                <Grid container spacing={1}>
+                  <Grid item xs={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={enableSatelliteAnalysis}
+                          onChange={(e) => setEnableSatelliteAnalysis(e.target.checked)}
+                        />
+                      }
+                      label="Спутниковый анализ"
                     />
-                  }
-                  label="Спутниковый анализ"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={enableGeoAnalysis}
-                      onChange={(e) => setEnableGeoAnalysis(e.target.checked)}
+                  </Grid>
+                  <Grid item xs={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={enableGeoAnalysis}
+                          onChange={(e) => setEnableGeoAnalysis(e.target.checked)}
+                        />
+                      }
+                      label="Геолокационный анализ"
                     />
-                  }
-                  label="Геолокационный анализ"
-                />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={true}
+                          disabled
+                        />
+                      }
+                      label="🤖 Mistral AI анализ"
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={true}
+                          disabled
+                        />
+                      }
+                      label="🎯 YOLO детекция"
+                    />
+                  </Grid>
+                </Grid>
               </Box>
               
-              <TextField
-                label="Location Hint (optional)"
-                placeholder="e.g., Moscow, Red Square, near Kremlin"
-                fullWidth
-                value={locationHint}
-                onChange={(e) => setLocationHint(e.target.value)}
-                sx={{ mb: 2 }}
-              />
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  label="Адрес для анализа (optional)"
+                  placeholder="Например: Москва, Красная площадь, 1"
+                  fullWidth
+                  value={locationHint}
+                  onChange={(e) => setLocationHint(e.target.value)}
+                  sx={{ mb: 1 }}
+                />
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={async () => {
+                    if (!locationHint.trim()) {
+                      alert('Введите адрес для поиска');
+                      return;
+                    }
+                    
+                    try {
+                      // Яндекс Геокодер API
+                      const response = await fetch(
+                        `https://geocode-maps.yandex.ru/1.x/?apikey=YOUR_YANDEX_API_KEY&geocode=${encodeURIComponent(locationHint)}&format=json&results=1`
+                      );
+                      const data = await response.json();
+                      
+                      if (data.response?.GeoObjectCollection?.featureMember?.length > 0) {
+                        const coords = data.response.GeoObjectCollection.featureMember[0].GeoObject.Point.pos.split(' ');
+                        const lon = parseFloat(coords[0]);
+                        const lat = parseFloat(coords[1]);
+                        
+                        setManualCoordinates({ lat: lat.toString(), lon: lon.toString() });
+                        setShowManualInput(true);
+                        alert(`Координаты найдены: ${lat}, ${lon}`);
+                      } else {
+                        alert('Адрес не найден. Попробуйте более точный адрес.');
+                      }
+                    } catch (error) {
+                      console.error('Geocoding error:', error);
+                      // Fallback к простому парсингу если API недоступен
+                      alert('Сервис геокодинга недоступен. Введите координаты вручную.');
+                      setShowManualInput(true);
+                    }
+                  }}
+                  sx={{ mt: 1 }}
+                >
+                  🗺️ Найти координаты
+                </Button>
+              </Box>
 
               {showManualInput && (
                 <Box sx={{ mb: 2 }}>

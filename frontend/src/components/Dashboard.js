@@ -195,31 +195,8 @@ const Dashboard = () => {
           
           console.log('Added violation to global storage:', normalizedResult);
         });
-      } else {
-        // Если нет нарушений, создаем одну запись
-        const normalizedResult = {
-          id: result.violation_id || result.id || `violation_${Date.now()}_${Math.random()}`,
-          category: result.category || 'no_violations',
-          confidence: result.confidence || 0,
-          lat: result.location?.coordinates?.latitude || result.lat,
-          lon: result.location?.coordinates?.longitude || result.lon,
-          address: result.location?.address || result.address,
-          created_at: result.uploadTime || new Date().toISOString(),
-          status: 'processed',
-          image_path: result.image || result.annotated_image_path || result.image_path,
-          source: result.source || 'upload',
-          description: result.description || 'Нарушений не обнаружено',
-          severity: result.severity || 'low',
-          violations: [],
-          metadata: result.metadata || {},
-          fileName: result.fileName
-        };
-
-        window.GLOBAL_SINGLE_RESULTS.push(normalizedResult);
-        window.GLOBAL_BATCH_RESULTS.push(normalizedResult);
-        
-        console.log('Added no-violation result to global storage:', normalizedResult);
       }
+      // НЕ добавляем запись если нарушений не найдено
     });
 
     console.log('Global storage now has:', window.GLOBAL_SINGLE_RESULTS.length, 'results');
