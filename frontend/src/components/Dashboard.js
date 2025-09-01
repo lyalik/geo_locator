@@ -42,18 +42,16 @@ const Dashboard = () => {
   const loadViolations = async () => {
     setLoading(true);
     try {
-      // Загружаем данные из localStorage
-      const savedViolations = localStorage.getItem('geo_locator_violations');
-      let persistedViolations = [];
+      // Загружаем данные из базы данных через API
+      console.log('🔄 Loading violations from database...');
+      const response = await api.get('/api/violations/list');
       
-      if (savedViolations) {
-        try {
-          persistedViolations = JSON.parse(savedViolations);
-          console.log('Loaded violations from localStorage:', persistedViolations.length);
-        } catch (e) {
-          console.error('Error parsing saved violations:', e);
-          localStorage.removeItem('geo_locator_violations');
-        }
+      let persistedViolations = [];
+      if (response.data && response.data.success) {
+        persistedViolations = response.data.data || [];
+        console.log('✅ Loaded violations from database:', persistedViolations.length);
+      } else {
+        console.warn('⚠️ Failed to load violations from database:', response.data);
       }
       
       // Загружаем данные из глобальных переменных
@@ -88,46 +86,13 @@ const Dashboard = () => {
       // Добавляем новые данные (перезаписывают существующие с тем же ID)
       realViolations.forEach(v => allViolationsMap.set(v.id, v));
       
-      // Добавляем mock данные только если нет других данных
-      if (allViolationsMap.size === 0) {
-        const mockViolations = [
-          {
-            id: 'mock_1',
-            category: 'illegal_construction',
-            confidence: 0.85,
-            lat: 55.7558,
-            lon: 37.6176,
-            address: 'Красная площадь, 1, Москва',
-            created_at: '2024-01-15T10:30:00Z',
-            status: 'processed',
-            image_path: '/uploads/violation1.jpg',
-            source: 'mock',
-            description: 'Нарушение парковки в неположенном месте',
-            severity: 'high'
-          },
-          {
-            id: 'mock_2',
-            category: 'unauthorized_modification',
-            confidence: 0.71,
-            lat: 55.7500,
-            lon: 37.6200,
-            address: 'Тверская улица, 15, Москва',
-            created_at: '2024-01-14T15:45:00Z',
-            status: 'processed',
-            image_path: '/uploads/violation2.jpg',
-            source: 'mock',
-            description: 'Несанкционированные изменения фасада',
-            severity: 'medium'
-          }
-        ];
-        mockViolations.forEach(v => allViolationsMap.set(v.id, v));
-      }
+      // Тестовые данные убраны - используем только реальные данные из базы
       
       const allViolations = Array.from(allViolationsMap.values());
       setViolations(allViolations);
       
-      // Сохраняем в localStorage
-      localStorage.setItem('geo_locator_violations', JSON.stringify(allViolations));
+      // Данные теперь хранятся в базе данных, localStorage не используется
+      console.log('📊 All violations loaded:', allViolations.length);
       
       // Calculate stats from all violations
       const newStats = {
@@ -201,36 +166,13 @@ const Dashboard = () => {
 
     console.log('Global storage now has:', window.GLOBAL_SINGLE_RESULTS.length, 'results');
     
-    // Сохраняем в localStorage сразу после добавления
-    const currentSaved = localStorage.getItem('geo_locator_violations');
-    let savedViolations = [];
-    if (currentSaved) {
-      try {
-        savedViolations = JSON.parse(currentSaved);
-      } catch (e) {
-        console.error('Error parsing saved violations:', e);
-      }
-    }
+    // Данные автоматически сохраняются в базу данных через API
+    console.log('💾 New violation automatically saved to database via API');
     
-    // Добавляем новые нарушения в сохраненные данные
-    const allSavedMap = new Map();
-    savedViolations.forEach(v => allSavedMap.set(v.id, v));
-    
-    // Добавляем новые данные из глобального хранилища
-    [...window.GLOBAL_SINGLE_RESULTS, ...window.GLOBAL_BATCH_RESULTS].forEach(result => {
-      if (result.id) {
-        allSavedMap.set(result.id, result);
-      }
-    });
-    
-    const updatedViolations = Array.from(allSavedMap.values());
-    localStorage.setItem('geo_locator_violations', JSON.stringify(updatedViolations));
-    console.log('Saved to localStorage:', updatedViolations.length, 'violations');
-    
-    // Принудительно обновляем состояние
+    // Обновляем данные из базы данных
     setTimeout(() => {
       loadViolations();
-    }, 100);
+    }, 1000);
   };
 
   const formatCategory = (category) => {

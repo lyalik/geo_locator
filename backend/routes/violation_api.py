@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from pathlib import Path
 import uuid
+from models import db, Photo, Violation
 
 try:
     from services.geolocation_service import GeoLocationService
@@ -50,12 +51,43 @@ def list_violations():
     API endpoint to get list of all violations for analytics.
     """
     try:
-        # В реальном приложении здесь был бы запрос к базе данных
-        # Пока возвращаем пустой список, так как нарушения хранятся в глобальном состоянии фронтенда
+        # Получаем все фото с нарушениями из базы данных
+        photos = db.session.query(Photo).join(Violation).all()
+        
+        violations_list = []
+        for photo in photos:
+            for violation in photo.violations:
+                violations_list.append({
+                    'violation_id': str(violation.id),
+                    'image_path': f"/uploads/violations/{Path(photo.file_path).name}",
+                    'violations': [{
+                        'category': violation.category,
+                        'confidence': violation.confidence,
+                        'bbox': violation.bbox_data,
+                        'source': 'yolo' if 'yolo' in violation.category.lower() else 'mistral_ai'
+                    }],
+                    'location': {
+                        'coordinates': {
+                            'latitude': photo.lat,
+                            'longitude': photo.lon
+                        } if photo.lat and photo.lon else None,
+                        'address': photo.address_data,
+                        'has_gps': photo.has_gps
+                    },
+                    'metadata': {
+                        'timestamp': photo.created_at.isoformat() + 'Z',
+                        'user_id': str(photo.user_id),
+                        'location_notes': '',
+                        'location_hint': photo.location_hint or ''
+                    }
+                })
+        
+        current_app.logger.info(f"📊 Database - Retrieved {len(violations_list)} violations from database")
+        
         return jsonify({
             'success': True,
-            'data': [],
-            'message': 'Violations list retrieved successfully'
+            'data': violations_list,
+            'message': f'Retrieved {len(violations_list)} violations from database'
         })
     except Exception as e:
         current_app.logger.error(f"Error retrieving violations list: {str(e)}")
@@ -198,18 +230,8 @@ def detect_violations():
                     current_app.logger.error(f"🤖 Mistral AI - Traceback: {traceback.format_exc()}")
             else:
                 current_app.logger.warning(f"🤖 Mistral AI - Service unavailable (not initialized)")
-                # Добавляем демо результаты если сервис недоступен
-                mistral_violations = [
-                    {
-                        'category': 'facade_violation',
-                        'confidence': 0.78,
-                        'description': 'Демо: Неразрешенная вывеска на фасаде',
-                        'severity': 'medium',
-                        'source': 'mistral_ai',
-                        'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}
-                    }
-                ]
-                current_app.logger.info(f"🤖 Mistral AI - Using fallback demo violations: {len(mistral_violations)}")
+                # Не добавляем демо данные - используем только реальные результаты
+                current_app.logger.info(f"🤖 Mistral AI - No demo violations added")
             
             # Combine YOLO and Mistral results
             all_violations = detection_result.get('violations', []) + mistral_violations
@@ -273,6 +295,42 @@ def detect_violations():
                     'source': 'auto'
                 }
                 current_app.logger.info(f"📍 Using auto-detected location: {location_data}")
+            
+            # Save to database
+            try:
+                # Create Photo record
+                photo = Photo(
+                    file_path=filepath,
+                    original_filename=file.filename,
+                    user_id=int(user_id) if user_id.isdigit() else 1,  # Default to user 1 if anonymous
+                    lat=location_data['coordinates'].get('latitude') if location_data.get('coordinates') else None,
+                    lon=location_data['coordinates'].get('longitude') if location_data.get('coordinates') else None,
+                    has_gps=location_data.get('has_gps', False),
+                    location_method=location_data.get('source', 'auto'),
+                    location_hint=location_hint,
+                    address_data=location_data.get('address')
+                )
+                db.session.add(photo)
+                db.session.flush()  # Get photo.id
+                
+                # Create Violation records
+                violations_data = detection_result.get('violations', [])
+                for violation in violations_data:
+                    violation_record = Violation(
+                        photo_id=photo.id,
+                        category=violation.get('category', 'unknown'),
+                        confidence=violation.get('confidence', 0.0),
+                        bbox_data=violation.get('bbox')
+                    )
+                    db.session.add(violation_record)
+                
+                db.session.commit()
+                current_app.logger.info(f"💾 Database - Saved photo {photo.id} with {len(violations_data)} violations")
+                
+            except Exception as db_error:
+                current_app.logger.error(f"💾 Database - Error saving: {db_error}")
+                db.session.rollback()
+                # Continue with response even if DB save fails
             
             # Prepare response data
             violation_id = str(uuid.uuid4())

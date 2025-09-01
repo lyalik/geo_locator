@@ -227,23 +227,8 @@ class MistralAIService:
                                     'confidence': float(v.get('confidence', 0.0))
                                 })
                         
-                        # Если нарушений не найдено, добавляем демо нарушения для тестирования
-                        if len(violations) == 0:
-                            violations = [
-                                {
-                                    'type': 'facade_violation',
-                                    'description': 'Mistral AI: Обнаружена неразрешенная вывеска',
-                                    'severity': 'medium',
-                                    'confidence': 0.82
-                                },
-                                {
-                                    'type': 'parking_violation',
-                                    'description': 'Mistral AI: Нарушение правил парковки',
-                                    'severity': 'low',
-                                    'confidence': 0.67
-                                }
-                            ]
-                            logger.info(f"🤖 Mistral AI - Added demo violations for testing: {len(violations)}")
+                        # Убираем демо нарушения - используем только реальные результаты анализа
+                        logger.info(f"🤖 Mistral AI - Found {len(violations)} real violations")
                         
                         return {
                             'success': True,
