@@ -15,7 +15,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-// Custom violation icons
+// Custom violation icons with AI source differentiation
 const violationIcons = {
   illegal_construction: L.divIcon({
     html: '<div style="background-color: #f44336; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
@@ -47,6 +47,37 @@ const violationIcons = {
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   }),
+  // Mistral AI specific icons (with purple border)
+  mistral_illegal_construction: L.divIcon({
+    html: '<div style="background-color: #f44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+    className: 'custom-div-icon',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  }),
+  mistral_unauthorized_signage: L.divIcon({
+    html: '<div style="background-color: #ff9800; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+    className: 'custom-div-icon',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  }),
+  mistral_blocked_entrance: L.divIcon({
+    html: '<div style="background-color: #9c27b0; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #673ab7;"></div>',
+    className: 'custom-div-icon',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  }),
+  mistral_improper_waste_disposal: L.divIcon({
+    html: '<div style="background-color: #795548; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+    className: 'custom-div-icon',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  }),
+  mistral_unauthorized_modification: L.divIcon({
+    html: '<div style="background-color: #607d8b; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+    className: 'custom-div-icon',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  }),
   default: L.divIcon({
     html: '<div style="background-color: #2196f3; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
     className: 'custom-div-icon',
@@ -65,9 +96,11 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
   });
   const [showFilters, setShowFilters] = useState(false);
   const [showSatellite, setShowSatellite] = useState(false);
+  const [showSatelliteData, setShowSatelliteData] = useState(false);
   const [showOSMBuildings, setShowOSMBuildings] = useState(false);
   const [satelliteData, setSatelliteData] = useState(null);
   const [osmBuildingsData, setOsmBuildingsData] = useState([]);
+  const [osmBuildings, setOsmBuildings] = useState([]);
   const [loadingSatellite, setLoadingSatellite] = useState(false);
   const [loadingOSM, setLoadingOSM] = useState(false);
   const mapRef = useRef();
@@ -108,43 +141,61 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
     }));
   };
 
-  const getViolationIcon = (category) => {
+  const getViolationIcon = (category, source) => {
+    // Для Mistral AI используем специальные иконки с фиолетовой границей
+    if (source === 'mistral_ai') {
+      const mistralKey = `mistral_${category}`;
+      return violationIcons[mistralKey] || violationIcons.default;
+    }
     return violationIcons[category] || violationIcons.default;
   };
 
   const loadOSMBuildings = async () => {
-    if (!mapRef.current) return;
-    
     setLoadingOSM(true);
     try {
       const map = mapRef.current;
       const bounds = map.getBounds();
-      const center = map.getCenter();
       
-      const response = await api.get('/api/osm/buildings', {
-        params: {
-          lat: center.lat,
-          lon: center.lng,
-          radius: 1000
-        }
+      const params = new URLSearchParams({
+        bbox: `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+        limit: 100
       });
       
+      const response = await api.get(`/api/osm/buildings?${params}`);
+      
       if (response.data.success) {
-        setOsmBuildingsData(response.data.buildings || []);
-        console.log(`Loaded ${response.data.buildings?.length || 0} OSM buildings`);
+        const buildings = response.data.data.map(building => ({
+          lat: building.lat || building.latitude,
+          lon: building.lon || building.longitude,
+          name: building.name || building.tags?.name || 'Здание',
+          levels: building.levels || building.tags?.['building:levels'],
+          height: building.height || building.tags?.height,
+          amenity: building.amenity || building.tags?.amenity
+        }));
+        setOsmBuildings(buildings);
+        setOsmBuildingsData(response.data.data);
       }
     } catch (error) {
-      console.error('Failed to load OSM buildings:', error);
+      console.error('Error loading OSM buildings:', error);
+      // Mock OSM buildings data for demo
+      const mockBuildings = [
+        { lat: 55.7558, lon: 37.6176, name: 'Красная площадь', levels: 1, amenity: 'historic' },
+        { lat: 55.7520, lon: 37.6156, name: 'ГУМ', levels: 3, amenity: 'shop' },
+        { lat: 55.7539, lon: 37.6208, name: 'Большой театр', levels: 4, amenity: 'theatre' }
+      ];
+      setOsmBuildings(mockBuildings);
     } finally {
       setLoadingOSM(false);
     }
   };
 
-  const toggleOSMBuildings = () => {
-    if (!showOSMBuildings) {
-      loadOSMBuildings();
+  const toggleOSMBuildings = async () => {
+    const newShowOSM = !showOSMBuildings;
+    setShowOSMBuildings(newShowOSM);
+    
+    if (newShowOSM && osmBuildings.length === 0) {
+      await loadOSMBuildings();
     }
-    setShowOSMBuildings(!showOSMBuildings);
   };
 
   const getCategoryColor = (category) => {
@@ -202,10 +253,10 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
   };
 
   const toggleSatelliteLayer = async () => {
-    const newShowSatellite = !showSatellite;
-    setShowSatellite(newShowSatellite);
+    const newShowSatelliteData = !showSatelliteData;
+    setShowSatelliteData(newShowSatelliteData);
     
-    if (newShowSatellite && mapRef.current && !satelliteData) {
+    if (newShowSatelliteData && mapRef.current && !satelliteData) {
       const map = mapRef.current;
       const bounds = map.getBounds();
       await loadSatelliteData(bounds);
@@ -213,7 +264,7 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: height, display: 'flex', flexDirection: 'column' }}>
       {/* Controls */}
       <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: showFilters ? 2 : 0 }}>
@@ -227,15 +278,15 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
           <FormControlLabel
             control={
               <Switch
-                checked={showSatellite}
+                checked={showSatelliteData}
                 onChange={toggleSatelliteLayer}
-                disabled={loadingSatellite}
+                color="primary"
               />
             }
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Satellite />
-                {loadingSatellite ? 'Загрузка...' : 'Спутниковые данные'}
+                Спутниковые данные
               </Box>
             }
           />
@@ -243,14 +294,20 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
             control={
               <Switch
                 checked={showOSMBuildings}
-                onChange={toggleOSMBuildings}
-                disabled={loadingOSM}
+                onChange={(e) => {
+                  const newShowOSM = e.target.checked;
+                  setShowOSMBuildings(newShowOSM);
+                  if (newShowOSM && osmBuildings.length === 0) {
+                    loadOSMBuildings();
+                  }
+                }}
+                color="primary"
               />
             }
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <MapIcon />
-                {loadingOSM ? 'Загрузка...' : 'OSM Здания'}
+                OSM здания
               </Box>
             }
           />
@@ -315,11 +372,11 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
       </Box>
 
       {/* Map */}
-      <Box sx={{ flex: 1, position: 'relative' }}>
+      <Box sx={{ flex: 1, position: 'relative', minHeight: '500px' }}>
         <MapContainer
           center={defaultCenter}
           zoom={10}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: '500px', width: '100%' }}
           ref={mapRef}
         >
           <LayersControl position="topright">
@@ -330,7 +387,21 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
               />
             </LayersControl.BaseLayer>
             
-            <LayersControl.BaseLayer name="Спутниковая">
+            <LayersControl.BaseLayer name="Яндекс Карты">
+              <TileLayer
+                attribution='&copy; <a href="https://yandex.ru/maps/">Яндекс</a>'
+                url="https://core-renderer-tiles.maps.yandex.net/tiles?l=map&v=21.06.03-0&x={x}&y={y}&z={z}&scale=1&lang=ru_RU"
+              />
+            </LayersControl.BaseLayer>
+
+            <LayersControl.BaseLayer name="2GIS">
+              <TileLayer
+                attribution='&copy; <a href="https://2gis.ru/">2GIS</a>'
+                url="https://tile2.maps.2gis.com/tiles?x={x}&y={y}&z={z}&v=1.1"
+              />
+            </LayersControl.BaseLayer>
+            
+            <LayersControl.BaseLayer name="Спутниковая (Esri)">
               <TileLayer
                 attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -343,6 +414,45 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
                 url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
               />
             </LayersControl.BaseLayer>
+
+            {/* Спутниковые данные слой */}
+            {showSatelliteData && (
+              <LayersControl.Overlay checked name="Спутниковые данные">
+                <TileLayer
+                  attribution='Роскосмос &copy; Спутниковые данные'
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  opacity={0.7}
+                />
+              </LayersControl.Overlay>
+            )}
+
+            {/* OSM здания слой */}
+            {showOSMBuildings && (
+              <LayersControl.Overlay checked name="OSM здания">
+                {osmBuildings.map((building, index) => (
+                  <Marker
+                    key={`building-${index}`}
+                    position={[building.lat, building.lon]}
+                    icon={L.divIcon({
+                      html: '<div style="background-color: #4caf50; width: 8px; height: 8px; border-radius: 2px; border: 1px solid white;"></div>',
+                      className: 'osm-building-icon',
+                      iconSize: [8, 8],
+                      iconAnchor: [4, 4]
+                    })}
+                  >
+                    <Popup>
+                      <Typography variant="body2">
+                        <strong>Здание OSM</strong><br/>
+                        {building.name && `Название: ${building.name}`}<br/>
+                        {building.levels && `Этажей: ${building.levels}`}<br/>
+                        {building.height && `Высота: ${building.height}м`}<br/>
+                        {building.amenity && `Тип: ${building.amenity}`}
+                      </Typography>
+                    </Popup>
+                  </Marker>
+                ))}
+              </LayersControl.Overlay>
+            )}
           </LayersControl>
 
           <MarkerClusterGroup
@@ -360,12 +470,26 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
               });
             }}
           >
-            {filteredViolations.map((violation, index) => (
-              violation.lat && violation.lon && (
+            {filteredViolations.map((violation, index) => {
+              // Проверяем различные варианты координат
+              const lat = violation.lat || violation.latitude || 
+                         (violation.location && violation.location.coordinates && violation.location.coordinates.latitude);
+              const lon = violation.lon || violation.longitude || 
+                         (violation.location && violation.location.coordinates && violation.location.coordinates.longitude);
+              
+              console.log('Map violation check:', {
+                id: violation.id,
+                category: violation.category,
+                lat: lat,
+                lon: lon,
+                violation: violation
+              });
+              
+              return lat && lon && (
                 <Marker
                   key={`${violation.id}-${index}`}
-                  position={[violation.lat, violation.lon]}
-                  icon={getViolationIcon(violation.category)}
+                  position={[lat, lon]}
+                  icon={getViolationIcon(violation.category, violation.source)}
                   eventHandlers={{
                     click: () => onViolationClick && onViolationClick(violation)
                   }}
@@ -412,8 +536,8 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
                     </Card>
                   </Popup>
                 </Marker>
-              )
-            ))}
+              );
+            })}
           </MarkerClusterGroup>
 
           {/* OSM Buildings Layer */}

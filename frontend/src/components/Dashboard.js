@@ -19,6 +19,7 @@ import PropertyAnalyzer from './PropertyAnalyzer';
 import UrbanAnalyzer from './UrbanAnalyzer';
 import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
+import MistralAnalyzer from './MistralAnalyzer';
 import { api } from '../services/api';
 
 const Dashboard = () => {
@@ -39,69 +40,94 @@ const Dashboard = () => {
   }, []);
 
   const loadViolations = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      // Загружаем данные из localStorage
+      const savedViolations = localStorage.getItem('geo_locator_violations');
+      let persistedViolations = [];
       
-      // Загружаем реальные данные из глобальных хранилищ
+      if (savedViolations) {
+        try {
+          persistedViolations = JSON.parse(savedViolations);
+          console.log('Loaded violations from localStorage:', persistedViolations.length);
+        } catch (e) {
+          console.error('Error parsing saved violations:', e);
+          localStorage.removeItem('geo_locator_violations');
+        }
+      }
+      
+      // Загружаем данные из глобальных переменных
       const batchResults = window.GLOBAL_BATCH_RESULTS || [];
       const singleResults = window.GLOBAL_SINGLE_RESULTS || [];
       
-      // Преобразуем результаты загрузки в формат нарушений
-      const realViolations = [...batchResults, ...singleResults].flatMap((result, index) => {
-        if (result.violations && result.violations.length > 0) {
-          return result.violations.map((violation, vIndex) => ({
-            id: `real_${index}_${vIndex}`,
-            category: violation.category || 'unknown_violation',
-            confidence: violation.confidence || 0,
-            lat: result.location?.coordinates?.latitude || result.location?.coordinates?.[0] || null,
-            lon: result.location?.coordinates?.longitude || result.location?.coordinates?.[1] || null,
-            address: result.location?.address?.formatted || result.location?.address || 'Адрес не определен',
-            created_at: result.uploadTime || result.metadata?.timestamp || new Date().toISOString(),
+      // Объединяем все результаты
+      const allGlobalResults = [...batchResults, ...singleResults];
+      
+      // Нормализуем данные для отображения
+      const realViolations = allGlobalResults.map(result => ({
+        id: result.violation_id || result.id || Math.random().toString(),
+        category: result.category || 'unknown',
+        confidence: result.confidence || 0,
+        lat: result.location?.coordinates?.latitude || result.lat,
+        lon: result.location?.coordinates?.longitude || result.lon,
+        address: result.location?.address || result.address,
+        created_at: result.uploadTime || result.created_at || new Date().toISOString(),
+        status: result.status || 'processed',
+        image_path: result.image || result.annotated_image_path || result.image_path,
+        source: result.source || 'api',
+        description: result.description || '',
+        severity: result.severity || 'medium'
+      }));
+      
+      // Объединяем сохраненные и новые данные, избегая дубликатов
+      const allViolationsMap = new Map();
+      
+      // Добавляем сохраненные данные
+      persistedViolations.forEach(v => allViolationsMap.set(v.id, v));
+      
+      // Добавляем новые данные (перезаписывают существующие с тем же ID)
+      realViolations.forEach(v => allViolationsMap.set(v.id, v));
+      
+      // Добавляем mock данные только если нет других данных
+      if (allViolationsMap.size === 0) {
+        const mockViolations = [
+          {
+            id: 'mock_1',
+            category: 'illegal_construction',
+            confidence: 0.85,
+            lat: 55.7558,
+            lon: 37.6176,
+            address: 'Красная площадь, 1, Москва',
+            created_at: '2024-01-15T10:30:00Z',
             status: 'processed',
-            image_path: result.image || result.image_path || '/uploads/default.jpg',
-            violation_id: result.violation_id,
-            source: violation.source || 'yolo',
-            description: violation.description || '',
-            severity: violation.severity || 'medium'
-          }));
-        }
-        return [];
-      });
+            image_path: '/uploads/violation1.jpg',
+            source: 'mock',
+            description: 'Нарушение парковки в неположенном месте',
+            severity: 'high'
+          },
+          {
+            id: 'mock_2',
+            category: 'unauthorized_modification',
+            confidence: 0.71,
+            lat: 55.7500,
+            lon: 37.6200,
+            address: 'Тверская улица, 15, Москва',
+            created_at: '2024-01-14T15:45:00Z',
+            status: 'processed',
+            image_path: '/uploads/violation2.jpg',
+            source: 'mock',
+            description: 'Несанкционированные изменения фасада',
+            severity: 'medium'
+          }
+        ];
+        mockViolations.forEach(v => allViolationsMap.set(v.id, v));
+      }
       
-      // Mock данные для демонстрации (если нет реальных)
-      const mockViolations = realViolations.length === 0 ? [
-        {
-          id: 'mock_1',
-          category: 'parking_violation',
-          confidence: 0.94,
-          lat: 55.7558,
-          lon: 37.6176,
-          address: 'Красная площадь, 1, Москва',
-          created_at: '2024-01-15T10:30:00Z',
-          status: 'processed',
-          image_path: '/uploads/violation1.jpg',
-          source: 'mock',
-          description: 'Нарушение парковки в неположенном месте',
-          severity: 'high'
-        },
-        {
-          id: 'mock_2',
-          category: 'unauthorized_modification',
-          confidence: 0.71,
-          lat: 55.7500,
-          lon: 37.6200,
-          address: 'Тверская улица, 15, Москва',
-          created_at: '2024-01-14T15:45:00Z',
-          status: 'processed',
-          image_path: '/uploads/violation2.jpg',
-          source: 'mock',
-          description: 'Несанкционированные изменения фасада',
-          severity: 'medium'
-        }
-      ] : [];
-      
-      const allViolations = [...realViolations, ...mockViolations];
+      const allViolations = Array.from(allViolationsMap.values());
       setViolations(allViolations);
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('geo_locator_violations', JSON.stringify(allViolations));
       
       // Calculate stats from all violations
       const newStats = {
@@ -125,33 +151,133 @@ const Dashboard = () => {
   };
 
   const handleUploadComplete = (results) => {
-    // Обновляем глобальные хранилища
-    if (!window.GLOBAL_SINGLE_RESULTS) window.GLOBAL_SINGLE_RESULTS = [];
-    if (!window.GLOBAL_BATCH_RESULTS) window.GLOBAL_BATCH_RESULTS = [];
+    console.log('Dashboard handleUploadComplete called with:', results);
     
-    // Добавляем результаты в соответствующее хранилище
-    results.forEach(result => {
-      if (results.length === 1) {
-        window.GLOBAL_SINGLE_RESULTS.push(result);
+    // Инициализируем глобальные хранилища если их нет
+    if (!window.GLOBAL_SINGLE_RESULTS) {
+      window.GLOBAL_SINGLE_RESULTS = [];
+    }
+    if (!window.GLOBAL_BATCH_RESULTS) {
+      window.GLOBAL_BATCH_RESULTS = [];
+    }
+
+    // Обрабатываем как массив результатов, так и одиночный результат
+    const resultsArray = Array.isArray(results) ? results : [results];
+    
+    resultsArray.forEach(result => {
+      // Извлекаем нарушения из результата
+      const resultViolations = result.violations || [];
+      
+      // Создаем отдельную запись для каждого нарушения
+      if (resultViolations.length > 0) {
+        resultViolations.forEach(violation => {
+          const normalizedResult = {
+            id: `${result.violation_id || result.id || Date.now()}_${violation.category || 'unknown'}`,
+            category: violation.category || violation.type || 'unknown',
+            confidence: violation.confidence || 0,
+            lat: result.location?.coordinates?.latitude || result.lat,
+            lon: result.location?.coordinates?.longitude || result.lon,
+            address: result.location?.address || result.address,
+            created_at: result.uploadTime || new Date().toISOString(),
+            status: 'processed',
+            image_path: result.image || result.annotated_image_path || result.image_path,
+            source: violation.source || result.source || 'upload',
+            description: violation.description || result.description || '',
+            severity: violation.severity || result.severity || 'medium',
+            violations: [violation],
+            metadata: result.metadata || {},
+            fileName: result.fileName
+          };
+
+          // Добавляем в оба глобальных хранилища
+          window.GLOBAL_SINGLE_RESULTS.push(normalizedResult);
+          window.GLOBAL_BATCH_RESULTS.push(normalizedResult);
+          
+          console.log('Added violation to global storage:', normalizedResult);
+        });
       } else {
-        window.GLOBAL_BATCH_RESULTS.push(result);
+        // Если нет нарушений, создаем одну запись
+        const normalizedResult = {
+          id: result.violation_id || result.id || `violation_${Date.now()}_${Math.random()}`,
+          category: result.category || 'no_violations',
+          confidence: result.confidence || 0,
+          lat: result.location?.coordinates?.latitude || result.lat,
+          lon: result.location?.coordinates?.longitude || result.lon,
+          address: result.location?.address || result.address,
+          created_at: result.uploadTime || new Date().toISOString(),
+          status: 'processed',
+          image_path: result.image || result.annotated_image_path || result.image_path,
+          source: result.source || 'upload',
+          description: result.description || 'Нарушений не обнаружено',
+          severity: result.severity || 'low',
+          violations: [],
+          metadata: result.metadata || {},
+          fileName: result.fileName
+        };
+
+        window.GLOBAL_SINGLE_RESULTS.push(normalizedResult);
+        window.GLOBAL_BATCH_RESULTS.push(normalizedResult);
+        
+        console.log('Added no-violation result to global storage:', normalizedResult);
+      }
+    });
+
+    console.log('Global storage now has:', window.GLOBAL_SINGLE_RESULTS.length, 'results');
+    
+    // Сохраняем в localStorage сразу после добавления
+    const currentSaved = localStorage.getItem('geo_locator_violations');
+    let savedViolations = [];
+    if (currentSaved) {
+      try {
+        savedViolations = JSON.parse(currentSaved);
+      } catch (e) {
+        console.error('Error parsing saved violations:', e);
+      }
+    }
+    
+    // Добавляем новые нарушения в сохраненные данные
+    const allSavedMap = new Map();
+    savedViolations.forEach(v => allSavedMap.set(v.id, v));
+    
+    // Добавляем новые данные из глобального хранилища
+    [...window.GLOBAL_SINGLE_RESULTS, ...window.GLOBAL_BATCH_RESULTS].forEach(result => {
+      if (result.id) {
+        allSavedMap.set(result.id, result);
       }
     });
     
-    // Перезагружаем данные для синхронизации
-    loadViolations();
+    const updatedViolations = Array.from(allSavedMap.values());
+    localStorage.setItem('geo_locator_violations', JSON.stringify(updatedViolations));
+    console.log('Saved to localStorage:', updatedViolations.length, 'violations');
+    
+    // Принудительно обновляем состояние
+    setTimeout(() => {
+      loadViolations();
+    }, 100);
   };
 
   const formatCategory = (category) => {
     const categories = {
       illegal_construction: 'Незаконное строительство',
-      unauthorized_signage: 'Несанкционированные вывески',
+      unauthorized_signage: 'Несанкционированная реклама',
       blocked_entrance: 'Заблокированный вход',
       improper_waste_disposal: 'Неправильная утилизация отходов',
       unauthorized_modification: 'Несанкционированные изменения'
     };
     return categories[category] || category;
   };
+
+  const tabs = [
+    { label: 'Карта нарушений', icon: <MapIcon />, component: <InteractiveMap violations={violations} onViolationClick={handleViolationClick} height={600} /> },
+    { label: 'Загрузка одного', icon: <UploadIcon />, component: <ViolationUploader onUploadComplete={handleUploadComplete} /> },
+    { label: 'Пакетная загрузка', icon: <UploadIcon />, component: <BatchViolationUploader onUploadComplete={handleUploadComplete} /> },
+    { label: 'Аналитика', icon: <AnalyticsIcon />, component: <AnalyticsDashboard violations={violations} /> },
+    { label: 'Mistral AI', icon: <OCRIcon />, component: <MistralAnalyzer /> },
+    { label: 'Анализ недвижимости', icon: <PropertyIcon />, component: <PropertyAnalyzer /> },
+    { label: 'Городской контекст', icon: <UrbanIcon />, component: <UrbanAnalyzer /> },
+    { label: 'Спутниковый анализ', icon: <SatelliteIcon />, component: <SatelliteAnalyzer /> },
+    { label: 'OCR анализ', icon: <OCRIcon />, component: <OCRAnalyzer /> }
+  ];
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -259,79 +385,20 @@ const Dashboard = () => {
           onChange={(e, newValue) => setActiveTab(newValue)}
           variant="fullWidth"
         >
-          <Tab icon={<MapIcon />} label="Карта нарушений" />
-          <Tab icon={<UploadIcon />} label="Загрузка одного фото" />
-          <Tab icon={<UploadIcon />} label="Пакетная загрузка" />
-          <Tab icon={<AnalyticsIcon />} label="Аналитика" />
-          <Tab icon={<PropertyIcon />} label="Анализ недвижимости" />
-          <Tab icon={<UrbanIcon />} label="Городской контекст" />
-          <Tab icon={<SatelliteIcon />} label="Спутниковые снимки" />
-          <Tab icon={<OCRIcon />} label="OCR Анализ" />
+          {tabs.map((tab, index) => (
+            <Tab key={index} icon={tab.icon} label={tab.label} />
+          ))}
         </Tabs>
       </Paper>
 
       {/* Tab Panels */}
-      <TabPanel value={activeTab} index={0}>
-        <Paper sx={{ height: 600 }}>
-          <InteractiveMap
-            violations={violations}
-            onViolationClick={handleViolationClick}
-            height={600}
-          />
-        </Paper>
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={1}>
-        <ViolationUploader onUploadComplete={handleUploadComplete} />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={2}>
-        <BatchViolationUploader onUploadComplete={handleUploadComplete} />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={3}>
-        <AnalyticsDashboard violations={violations} />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={4}>
-        <PropertyAnalyzer 
-          coordinates={violations.length > 0 ? {
-            lat: violations[0].location?.coordinates?.[0] || 55.7558,
-            lon: violations[0].location?.coordinates?.[1] || 37.6176
-          } : null}
-          onPropertySelect={(property) => {
-            console.log('Selected property:', property);
-          }}
-        />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={5}>
-        <UrbanAnalyzer 
-          coordinates={violations.length > 0 ? {
-            lat: violations[0].location?.coordinates?.[0] || 55.7558,
-            lon: violations[0].location?.coordinates?.[1] || 37.6176
-          } : null}
-          onLocationSelect={(location) => {
-            console.log('Selected location:', location);
-          }}
-        />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={6}>
-        <SatelliteAnalyzer 
-          coordinates={violations.length > 0 ? {
-            lat: violations[0].location?.coordinates?.[0] || 55.7558,
-            lon: violations[0].location?.coordinates?.[1] || 37.6176
-          } : null}
-          onImageSelect={(image) => {
-            console.log('Selected satellite image:', image);
-          }}
-        />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={7}>
-        <OCRAnalyzer />
-      </TabPanel>
+      {tabs.map((tab, index) => (
+        <TabPanel key={index} value={activeTab} index={index}>
+          <Box sx={{ height: '600px', width: '100%' }}>
+            {tab.component}
+          </Box>
+        </TabPanel>
+      ))}
 
       {/* Violation Detail Dialog */}
       <Dialog

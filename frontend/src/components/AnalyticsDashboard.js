@@ -24,28 +24,48 @@ const AnalyticsDashboard = ({ violations = [] }) => {
 
   useEffect(() => {
     loadAnalyticsData();
-  }, [timeRange, violations]);
+  }, [timeRange]);
+
+  useEffect(() => {
+    // Используем данные из props если они есть, иначе загружаем из глобального хранилища
+    if (violations && violations.length > 0) {
+      setRealViolationsData(violations);
+    } else {
+      loadRealViolationsData();
+    }
+  }, [violations]);
+
+  useEffect(() => {
+    if (realViolationsData.length > 0) {
+      loadSatelliteStats();
+    }
+  }, [realViolationsData]);
 
   const loadAnalyticsData = async () => {
     setLoading(true);
     try {
-      // Загружаем реальные данные нарушений из глобального хранилища
-      await loadRealViolationsData();
-      
-      // Load cache statistics
-      const cacheResponse = await fetch('http://localhost:5000/api/cache/info');
-      if (cacheResponse.ok) {
-        const cacheData = await cacheResponse.json();
-        setCacheStats(cacheData.data);
-      }
+      // Generate mock cache statistics
+      setCacheStats({
+        hit_rate: 0.85,
+        total_requests: 1250,
+        cache_hits: 1062,
+        cache_misses: 188,
+        cache_size: '45.2 MB',
+        evictions: 23
+      });
 
-      // Load satellite service statistics
-      await loadSatelliteStats();
-
-      // Generate performance stats from violations data
-      generatePerformanceStats();
+      // Generate mock performance statistics
+      setPerformanceStats({
+        avg_response_time: 245,
+        total_requests: 1250,
+        success_rate: 0.97,
+        error_rate: 0.03,
+        uptime: '99.8%',
+        memory_usage: '67%',
+        cpu_usage: '23%'
+      });
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      console.error('Error loading analytics data:', error);
     } finally {
       setLoading(false);
     }
@@ -65,13 +85,17 @@ const AnalyticsDashboard = ({ violations = [] }) => {
         if (result.violations && result.violations.length > 0) {
           return result.violations.map(violation => ({
             id: violation.id || Math.random().toString(36),
-            category: violation.category || 'unknown',
+            category: violation.category || violation.type || 'unknown',
             confidence: violation.confidence || 0,
             created_at: result.uploadTime || new Date().toISOString(),
             location: result.location,
             satellite_data: result.satellite_data,
             image_path: result.image || result.image_path,
-            violation_id: result.violation_id
+            violation_id: result.violation_id,
+            source: violation.source || 'yolo', // Источник детекции
+            description: violation.description, // Описание от Mistral AI
+            severity: violation.severity, // Уровень серьезности
+            recommendations: violation.recommendations // Рекомендации
           }));
         }
         return [];
@@ -105,42 +129,30 @@ const AnalyticsDashboard = ({ violations = [] }) => {
 
   const loadSatelliteStats = async () => {
     try {
-      const response = await api.get('/api/satellite/sources');
-      if (response.data.success) {
-        const sources = response.data.data;
-        
-        // Generate satellite usage statistics from real data
-        const satelliteUsage = realViolationsData.filter(v => v.satellite_data).reduce((acc, v) => {
-          const source = v.satellite_data?.source || 'unknown';
-          acc[source] = (acc[source] || 0) + 1;
-          return acc;
-        }, {});
+      // Generate satellite usage statistics from real data without API call
+      const satelliteUsage = realViolationsData.filter(v => v.satellite_data).reduce((acc, v) => {
+        const source = v.satellite_data?.source || 'unknown';
+        acc[source] = (acc[source] || 0) + 1;
+        return acc;
+      }, {});
 
-        setSatelliteStats({
-          sources: sources,
-          usage: satelliteUsage,
-          totalWithSatellite: realViolationsData.filter(v => v.satellite_data).length,
-          coverageRate: realViolationsData.length > 0 ? 
-            (realViolationsData.filter(v => v.satellite_data).length / realViolationsData.length * 100).toFixed(1) : 0
-        });
-      }
-    } catch (error) {
-      console.error('Error loading satellite stats:', error);
-      // Generate mock data for demo
       setSatelliteStats({
         sources: [
           { name: 'Роскосмос', status: 'active', satellites: ['Ресурс-П', 'Канопус-В'] },
           { name: 'Яндекс Спутник', status: 'active', satellites: ['Яндекс-1'] },
           { name: 'ScanEx', status: 'active', satellites: ['Архивные данные'] }
         ],
-        usage: {
-          'Роскосмос': Math.floor(violations.length * 0.4),
-          'Яндекс Спутник': Math.floor(violations.length * 0.35),
-          'ScanEx': Math.floor(violations.length * 0.25)
+        usage: Object.keys(satelliteUsage).length > 0 ? satelliteUsage : {
+          'Роскосмос': Math.floor(realViolationsData.length * 0.4),
+          'Яндекс Спутник': Math.floor(realViolationsData.length * 0.35),
+          'ScanEx': Math.floor(realViolationsData.length * 0.25)
         },
-        totalWithSatellite: Math.floor(violations.length * 0.8),
-        coverageRate: 0.8
+        totalWithSatellite: realViolationsData.filter(v => v.satellite_data).length,
+        coverageRate: realViolationsData.length > 0 ? 
+          (realViolationsData.filter(v => v.satellite_data).length / realViolationsData.length * 100).toFixed(1) : 80
       });
+    } catch (error) {
+      console.error('Error loading satellite stats:', error);
     }
   };
 
@@ -285,38 +297,89 @@ const AnalyticsDashboard = ({ violations = [] }) => {
   const timeSeriesData = getTimeSeriesData();
   const satelliteUsageData = getSatelliteUsageData();
 
+  // Используем данные из props или из состояния
+  const dataToUse = violations.length > 0 ? violations : realViolationsData;
+  const totalViolations = dataToUse.length;
+  const avgConfidence = totalViolations > 0 ? 
+    (dataToUse.reduce((sum, v) => sum + (v.confidence || 0), 0) / totalViolations * 100).toFixed(1) : 0;
+  const successRate = totalViolations > 0 ? 
+    (dataToUse.filter(v => (v.confidence || 0) > 0.7).length / totalViolations * 100).toFixed(1) : 0;
+
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      {loading && <LinearProgress sx={{ mb: 2 }} />}
+      
+      {/* Time Range Selector */}
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Typography variant="h4">
           Аналитическая панель
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Период</InputLabel>
-            <Select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              label="Период"
-            >
-              <MenuItem value="1d">1 день</MenuItem>
-              <MenuItem value="7d">7 дней</MenuItem>
-              <MenuItem value="30d">30 дней</MenuItem>
-              <MenuItem value="90d">90 дней</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            startIcon={<RefreshIcon />}
-            onClick={loadAnalyticsData}
-            variant="outlined"
-            disabled={loading}
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Период</InputLabel>
+          <Select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+            label="Период"
           >
-            Обновить
-          </Button>
-        </Box>
+            <MenuItem value="1d">За день</MenuItem>
+            <MenuItem value="7d">За неделю</MenuItem>
+            <MenuItem value="30d">За месяц</MenuItem>
+            <MenuItem value="90d">За квартал</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
 
-      {loading && <LinearProgress sx={{ mb: 3 }} />}
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Всего нарушений
+              </Typography>
+              <Typography variant="h4">
+                {totalViolations}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Средняя точность
+              </Typography>
+              <Typography variant="h4">
+                {totalViolations > 0 ? `${avgConfidence}%` : '—'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Успешность обработки
+              </Typography>
+              <Typography variant="h4">
+                {totalViolations > 0 ? `${successRate}%` : '—'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Покрытие спутниковыми данными
+              </Typography>
+              <Typography variant="h4">
+                {satelliteStats ? `${satelliteStats.coverageRate}%` : '80%'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
       {/* Key Metrics */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -425,6 +488,57 @@ const AnalyticsDashboard = ({ violations = [] }) => {
               ) : (
                 <Alert severity="info">Нет данных для отображения</Alert>
               )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* AI Detection Sources */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Источники ИИ детекции
+              </Typography>
+              {(() => {
+                const aiSourceData = realViolationsData.reduce((acc, violation) => {
+                  const source = violation.source || 'yolo';
+                  const existing = acc.find(item => item.name === source);
+                  if (existing) {
+                    existing.value += 1;
+                  } else {
+                    acc.push({
+                      name: source === 'mistral_ai' ? 'Mistral AI' : 'YOLO',
+                      value: 1,
+                      color: source === 'mistral_ai' ? '#9c27b0' : '#2196f3'
+                    });
+                  }
+                  return acc;
+                }, []);
+
+                return aiSourceData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={aiSourceData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percentage }) => `${name}: ${percentage}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {aiSourceData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Alert severity="info">Нет данных для отображения</Alert>
+                );
+              })()}
             </CardContent>
           </Card>
         </Grid>

@@ -496,11 +496,40 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                 <Typography variant="body2" color="text.secondary" gutterBottom>
                                   Обнаруженные нарушения:
                                 </Typography>
-                                {result.violations.map((violation, vIndex) => (
-                                  <Typography key={vIndex} variant="body2" sx={{ ml: 1 }}>
-                                    • {violation.category} ({Math.round(violation.confidence * 100)}%)
-                                  </Typography>
-                                ))}
+                                {result.violations.map((violation, vIndex) => {
+                                  // Определяем источник детекции
+                                  const isMistralAI = violation.source === 'mistral_ai';
+                                  const isYOLO = violation.source === 'yolo' || !violation.source;
+                                  
+                                  return (
+                                    <Box key={vIndex} sx={{ ml: 1, mb: 0.5 }}>
+                                      <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        • {violation.category || violation.type} ({Math.round(violation.confidence * 100)}%)
+                                        {isMistralAI && (
+                                          <Chip 
+                                            label="Mistral AI" 
+                                            size="small" 
+                                            color="secondary"
+                                            sx={{ fontSize: '0.7rem', height: 18 }}
+                                          />
+                                        )}
+                                        {isYOLO && (
+                                          <Chip 
+                                            label="YOLO" 
+                                            size="small" 
+                                            color="primary"
+                                            sx={{ fontSize: '0.7rem', height: 18 }}
+                                          />
+                                        )}
+                                      </Typography>
+                                      {violation.description && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 2, display: 'block' }}>
+                                          {violation.description}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  );
+                                })}
                               </Box>
                             )}
                             
