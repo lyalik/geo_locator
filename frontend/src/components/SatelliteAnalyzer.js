@@ -34,23 +34,33 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
     dateTo: '',
     resolution: 10,
     maxCloudCoverage: 20,
-    bands: 'RGB'
+    bands: 'RGB',
+    source: 'auto'  // Добавляем выбор источника
   });
   
   const [timeSeriesParams, setTimeSeriesParams] = useState({
     startDate: '',
     endDate: '',
-    intervalDays: 30
+    intervalDays: 30,
+    source: 'auto'  // Добавляем выбор источника для временного ряда
   });
   
   const [changeParams, setChangeParams] = useState({
     beforeDate: '',
-    afterDate: ''
+    afterDate: '',
+    source: 'auto'  // Добавляем выбор источника для детекции изменений
   });
   
   // Configuration
   const [showConfigDialog, setShowConfigDialog] = useState(false);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [zoomDialogOpen, setZoomDialogOpen] = useState(false);
+  const [availableSources, setAvailableSources] = useState({
+    roscosmos: true,
+    yandex: true,
+    dgis: true,
+    osm: true,
+    auto: true
+  });
   const [selectedImage, setSelectedImage] = useState(null);
   const [credentials, setCredentials] = useState({
     clientId: '',
@@ -130,19 +140,22 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       const latOffset = radiusKm / 111; // примерно 111 км на градус широты
       const lonOffset = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
       
-      const bbox = `${lon - lonOffset},${lat - latOffset},${lon + lonOffset},${lat + latOffset}`;
+      const lon_min = lon - lonOffset;
+      const lat_min = lat - latOffset;
+      const lon_max = lon + lonOffset;
+      const lat_max = lat + latOffset;
       
-      const params = {
-        bbox: bbox,
-        date_from: searchParams.dateFrom,
-        date_to: searchParams.dateTo,
-        resolution: searchParams.resolution,
-        max_cloud_coverage: searchParams.maxCloudCoverage,
-        bands: searchParams.bands,
-        source: 'roscosmos'
-      };
-      
-      const response = await api.get('/api/satellite/image', { params });
+      const response = await api.get('/api/satellite/image', {
+        params: {
+          bbox: `${lon_min},${lat_min},${lon_max},${lat_max}`,
+          date_from: searchParams.dateFrom,
+          date_to: searchParams.dateTo,
+          resolution: searchParams.resolution,
+          max_cloud_coverage: searchParams.maxCloudCoverage,
+          bands: searchParams.bands,
+          source: searchParams.source  // Передаем выбранный источник
+        }
+      });
       
       if (response.data.success) {
         const imageData = {
@@ -228,16 +241,20 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       const latOffset = radiusKm / 111;
       const lonOffset = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
       
-      const bbox = `${lon - lonOffset},${lat - latOffset},${lon + lonOffset},${lat + latOffset}`;
+      const lon_min = lon - lonOffset;
+      const lat_min = lat - latOffset;
+      const lon_max = lon + lonOffset;
+      const lat_max = lat + latOffset;
       
-      const params = new URLSearchParams({
-        bbox: bbox,
-        start_date: timeSeriesParams.startDate,
-        end_date: timeSeriesParams.endDate,
-        interval_days: timeSeriesParams.intervalDays
+      const response = await api.get('/api/satellite/time-series', {
+        params: {
+          bbox: `${lon_min},${lat_min},${lon_max},${lat_max}`,
+          start_date: timeSeriesParams.startDate,
+          end_date: timeSeriesParams.endDate,
+          interval_days: timeSeriesParams.intervalDays,
+          source: timeSeriesParams.source  // Передаем выбранный источник
+        }
       });
-      
-      const response = await api.get(`/api/satellite/time-series?${params}`);
       
       if (response.data.success) {
         setTimeSeriesData(response.data.data);
@@ -264,15 +281,19 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       const latOffset = radiusKm / 111;
       const lonOffset = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
       
-      const bbox = `${lon - lonOffset},${lat - latOffset},${lon + lonOffset},${lat + latOffset}`;
+      const lon_min = lon - lonOffset;
+      const lat_min = lat - latOffset;
+      const lon_max = lon + lonOffset;
+      const lat_max = lat + latOffset;
       
-      const params = new URLSearchParams({
-        bbox: bbox,
-        before_date: changeParams.beforeDate,
-        after_date: changeParams.afterDate
+      const response = await api.get('/api/satellite/change-detection', {
+        params: {
+          bbox: `${lon_min},${lat_min},${lon_max},${lat_max}`,
+          date1: changeParams.beforeDate,
+          date2: changeParams.afterDate,
+          source: changeParams.source  // Передаем выбранный источник
+        }
       });
-      
-      const response = await api.get(`/api/satellite/change-detection?${params}`);
       
       if (response.data.success) {
         setChangeDetection(response.data.data);
@@ -594,13 +615,13 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Индекс растительности (NDVI)"
                       secondary={
-                        <Box>
+                        <Box component="div">
                           <LinearProgress
                             variant="determinate"
                             value={imageAnalysis.vegetation_index * 100}
                             sx={{ mt: 1 }}
                           />
-                          <Typography variant="body2">
+                          <Typography variant="body2" component="span">
                             {(imageAnalysis.vegetation_index * 100).toFixed(1)}%
                           </Typography>
                         </Box>
@@ -613,13 +634,13 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Застроенная территория"
                       secondary={
-                        <Box>
+                        <Box component="div">
                           <LinearProgress
                             variant="determinate"
                             value={imageAnalysis.built_up_area * 100}
                             sx={{ mt: 1 }}
                           />
-                          <Typography variant="body2">
+                          <Typography variant="body2" component="span">
                             {(imageAnalysis.built_up_area * 100).toFixed(1)}%
                           </Typography>
                         </Box>
@@ -632,13 +653,13 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Водные объекты"
                       secondary={
-                        <Box>
+                        <Box component="div">
                           <LinearProgress
                             variant="determinate"
                             value={imageAnalysis.water_bodies * 100}
                             sx={{ mt: 1 }}
                           />
-                          <Typography variant="body2">
+                          <Typography variant="body2" component="span">
                             {(imageAnalysis.water_bodies * 100).toFixed(1)}%
                           </Typography>
                         </Box>
@@ -651,13 +672,13 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Открытая почва"
                       secondary={
-                        <Box>
+                        <Box component="div">
                           <LinearProgress
                             variant="determinate"
                             value={imageAnalysis.bare_soil * 100}
                             sx={{ mt: 1 }}
                           />
-                          <Typography variant="body2">
+                          <Typography variant="body2" component="span">
                             {(imageAnalysis.bare_soil * 100).toFixed(1)}%
                           </Typography>
                         </Box>
@@ -748,7 +769,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                   <Grid item xs={4}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h6">
-                        {(timeSeriesData.summary.avg_vegetation * 100).toFixed(1)}%
+                        {timeSeriesData.summary.averages ? (timeSeriesData.summary.averages.vegetation_index * 100).toFixed(1) : '0.0'}%
                       </Typography>
                       <Typography variant="body2">
                         Средняя растительность
@@ -758,7 +779,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                   <Grid item xs={4}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h6">
-                        {(timeSeriesData.summary.avg_built_up * 100).toFixed(1)}%
+                        {timeSeriesData.summary.averages ? (timeSeriesData.summary.averages.built_up_area * 100).toFixed(1) : '0.0'}%
                       </Typography>
                       <Typography variant="body2">
                         Средняя застройка
@@ -768,7 +789,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                   <Grid item xs={4}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h6">
-                        {timeSeriesData.summary.avg_cloud_coverage.toFixed(1)}%
+                        {timeSeriesData.summary.averages ? timeSeriesData.summary.averages.cloud_coverage.toFixed(1) : '0.0'}%
                       </Typography>
                       <Typography variant="body2">
                         Средняя облачность

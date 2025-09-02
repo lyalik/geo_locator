@@ -491,36 +491,68 @@ class GeoAggregatorService:
         
         return R * c
     
-    def _get_best_satellite_image(self, lat: float, lon: float) -> Dict[str, Any]:
+    def _get_best_satellite_image(self, lat: float, lon: float, zoom: int = 16) -> Dict[str, Any]:
         """
         Получение лучшего доступного спутникового снимка из российских источников
+        Приоритет: Роскосмос (основной) → Яндекс → 2ГИС → OSM (вспомогательные)
         """
         try:
-            # Пробуем источники в порядке приоритета
-            sources = [
-                ('roscosmos', self.roscosmos_service.get_satellite_image),
-                ('yandex_satellite', self.yandex_satellite_service.get_satellite_image)
-            ]
-            
-            for source_name, get_image_func in sources:
+            # 1. Основной источник - Роскосмос (максимальный приоритет)
+            if self.roscosmos_service:
                 try:
-                    result = get_image_func(lat, lon, zoom=16)
-                    if result.get('success'):
-                        result['preferred_source'] = source_name
+                    result = self.roscosmos_service.get_satellite_image(lat, lon, zoom)
+                    if result.get('success') and result.get('image_url'):
+                        logger.info(f"Successfully retrieved satellite image from Roscosmos (primary source)")
+                        result['priority'] = 'primary'
+                        result['quality_score'] = result.get('quality_score', 0.95)  # Высокое качество
                         return result
                 except Exception as e:
-                    logger.warning(f"Satellite source {source_name} failed: {e}")
-                    continue
+                    logger.warning(f"Roscosmos service failed: {e}, trying fallback sources")
+                    
+            # 2. Вспомогательные сервисы (по приоритету)
+            fallback_services = [
+                {
+                    'service': self.yandex_satellite_service,
+                    'name': 'Яндекс Спутник',
+                    'quality_score': 0.8
+                },
+                {
+                    'service': self.dgis_service if hasattr(self.dgis_service, 'get_satellite_image') else None,
+                    'name': '2ГИС',
+                    'quality_score': 0.75
+                }
+            ]
             
+            for fallback in fallback_services:
+                if fallback['service']:
+                    try:
+                        result = fallback['service'].get_satellite_image(lat, lon, zoom)
+                        if result.get('success') and result.get('image_url'):
+                            logger.info(f"Retrieved satellite image from {fallback['name']} (fallback)")
+                            result['priority'] = 'fallback'
+                            result['quality_score'] = fallback['quality_score']
+                            return result
+                    except Exception as e:
+                        logger.warning(f"{fallback['name']} service failed: {e}")
+                        continue
+                        
+            # 3. Последняя заглушка (аварийный режим)
+            logger.warning("Все спутниковые сервисы недоступны, используем аварийную заглушку")
             return {
-                'success': False,
-                'error': 'No satellite images available from Russian sources',
-                'source': 'russian_satellites'
+                'success': True,
+                'image_url': f'https://static-maps.yandex.ru/1.x/?ll={lon},{lat}&z={zoom}&l=sat&size=650,450&format=png',
+                'source': 'Аварийный режим (Яндекс)',
+                'priority': 'emergency',
+                'quality_score': 0.4
             }
             
         except Exception as e:
-            logger.error(f"Error getting satellite image: {e}")
-            return {'success': False, 'error': str(e), 'source': 'russian_satellites'}
+            logger.error(f"Critical error in satellite image retrieval: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'priority': 'error'
+            }
     
     def get_location_statistics(self) -> Dict[str, Any]:
         """Получение статистики по геолокации"""
