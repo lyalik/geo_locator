@@ -118,7 +118,9 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         api.get('/api/satellite/analyze', {
           params: {
             bbox: `${lon-0.001},${lat-0.001},${lon+0.001},${lat+0.001}`,
-            analysis_type: 'property_analysis'
+            analysis_type: 'property_analysis',
+            date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            date_to: new Date().toISOString().split('T')[0]
           }
         }).catch(() => ({ data: { success: false } })),
         
@@ -340,9 +342,11 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         api.get('/api/satellite/analyze', {
           params: {
             bbox: `${lon-0.001},${lat-0.001},${lon+0.001},${lat+0.001}`,
-            analysis_type: 'property_analysis'
+            analysis_type: 'property_analysis',
+            date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            date_to: new Date().toISOString().split('T')[0]
           }
-        })
+        }).catch(() => ({ data: { success: false } }))
       ]);
       
       const analysisData = {
@@ -388,11 +392,13 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
       }
       
       const [lat, lon] = property.coordinates;
-      const response = await api.post('/api/satellite/analyze', {
-        bbox: `${lon-0.0005},${lat-0.0005},${lon+0.0005},${lat+0.0005}`,
-        analysis_type: 'usage_validation',
-        current_usage: currentUsage,
-        property_data: property
+      const response = await api.get('/api/satellite/analyze', {
+        params: {
+          bbox: `${lon-0.0005},${lat-0.0005},${lon+0.0005},${lat+0.0005}`,
+          analysis_type: 'usage_validation',
+          date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          date_to: new Date().toISOString().split('T')[0]
+        }
       });
       
       console.log('Satellite API response:', response.data);

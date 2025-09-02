@@ -50,8 +50,6 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
   
   // Configuration
   const [showConfigDialog, setShowConfigDialog] = useState(false);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
   const [credentials, setCredentials] = useState({
     clientId: '',
     clientSecret: ''
@@ -221,17 +219,8 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       setLoading(true);
       setError(null);
       
-      // Создаем bbox из координат и радиуса
-      const lat = parseFloat(searchParams.lat);
-      const lon = parseFloat(searchParams.lon);
-      const radiusKm = searchParams.radius / 1000;
-      const latOffset = radiusKm / 111;
-      const lonOffset = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
-      
-      const bbox = `${lon - lonOffset},${lat - latOffset},${lon + lonOffset},${lat + latOffset}`;
-      
       const params = new URLSearchParams({
-        bbox: bbox,
+        bbox: searchParams.bbox,
         start_date: timeSeriesParams.startDate,
         end_date: timeSeriesParams.endDate,
         interval_days: timeSeriesParams.intervalDays
@@ -257,17 +246,8 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       setLoading(true);
       setError(null);
       
-      // Создаем bbox из координат и радиуса
-      const lat = parseFloat(searchParams.lat);
-      const lon = parseFloat(searchParams.lon);
-      const radiusKm = searchParams.radius / 1000;
-      const latOffset = radiusKm / 111;
-      const lonOffset = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
-      
-      const bbox = `${lon - lonOffset},${lat - latOffset},${lon + lonOffset},${lat + latOffset}`;
-      
       const params = new URLSearchParams({
-        bbox: bbox,
+        bbox: searchParams.bbox,
         before_date: changeParams.beforeDate,
         after_date: changeParams.afterDate
       });
@@ -305,9 +285,9 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     value={searchParams.lat}
                     onChange={(e) => setSearchParams(prev => ({ ...prev, lat: e.target.value }))}
                     margin="normal"
-                    placeholder="55.7558"
+                    placeholder="55.755277"
                     type="number"
-                    inputProps={{ step: 0.0001 }}
+                    inputProps={{ step: 0.000001 }}
                   />
                 </Grid>
                 <Grid item xs={4}>
@@ -317,9 +297,9 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     value={searchParams.lon}
                     onChange={(e) => setSearchParams(prev => ({ ...prev, lon: e.target.value }))}
                     margin="normal"
-                    placeholder="37.6176"
+                    placeholder="37.617680"
                     type="number"
-                    inputProps={{ step: 0.0001 }}
+                    inputProps={{ step: 0.000001 }}
                   />
                 </Grid>
                 <Grid item xs={4}>
@@ -327,11 +307,11 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     fullWidth
                     label="Радиус (м)"
                     value={searchParams.radius}
-                    onChange={(e) => setSearchParams(prev => ({ ...prev, radius: parseInt(e.target.value) || 1000 }))}
+                    onChange={(e) => setSearchParams(prev => ({ ...prev, radius: parseInt(e.target.value) }))}
                     margin="normal"
-                    placeholder="1000"
                     type="number"
                     inputProps={{ min: 100, max: 10000, step: 100 }}
+                    helperText="100-10000 метров"
                   />
                 </Grid>
               </Grid>
@@ -426,90 +406,49 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                 </Typography>
                 
                 <Box sx={{ mb: 2, position: 'relative' }}>
-                  {satelliteImage.image_url ? (
-                    <Box 
-                      sx={{ 
-                        cursor: 'pointer',
-                        '&:hover': { opacity: 0.8 },
-                        transition: 'opacity 0.2s'
-                      }}
-                      onClick={() => {
-                        setSelectedImage(satelliteImage.image_url);
-                        setImageDialogOpen(true);
-                      }}
-                    >
-                      <img
-                        src={satelliteImage.image_url}
-                        alt="Российский спутниковый снимок"
-                        style={{ 
-                          width: '100%', 
-                          maxHeight: '400px', 
-                          objectFit: 'contain', 
-                          borderRadius: '8px',
-                          border: '2px solid #e0e0e0'
-                        }}
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentNode.nextSibling.style.display = 'block';
-                        }}
-                      />
-                      <Box 
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          bgcolor: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                          p: 1,
-                          borderRadius: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 0.5
-                        }}
-                      >
-                        <ViewIcon fontSize="small" />
-                        <Typography variant="caption">Увеличить</Typography>
-                      </Box>
-                    </Box>
-                  ) : (
-                    <Box 
-                      sx={{ 
-                        p: 2, 
-                        textAlign: 'center', 
-                        bgcolor: 'grey.100', 
-                        borderRadius: '8px',
-                        border: '2px dashed',
-                        borderColor: 'grey.300'
-                      }}
-                    >
-                      <SatelliteIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        Изображение недоступно
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  <Box 
-                    sx={{ 
-                      display: 'none', 
-                      p: 2, 
-                      textAlign: 'center', 
-                      bgcolor: 'grey.100', 
-                      borderRadius: '8px',
-                      border: '2px dashed',
-                      borderColor: 'grey.300'
+                  <img
+                    src={satelliteImage.image_url}
+                    alt="Российский спутниковый снимок"
+                    style={{ width: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '8px' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
                     }}
                   >
-                    <SatelliteIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      Ошибка загрузки изображения
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Chip 
-                    icon={<SatelliteIcon />}
+                    <MenuItem value={10}>10м</MenuItem>
+                    <MenuItem value={20}>20м</MenuItem>
+                    <MenuItem value={60}>60м</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Макс. облачность (%)"
+                  value={searchParams.maxCloudCoverage}
+                  onChange={(e) => setSearchParams(prev => ({ ...prev, maxCloudCoverage: parseFloat(e.target.value) }))}
+                  margin="normal"
+                  inputProps={{ min: 0, max: 100 }}
+                />
+              </Grid>
+            </Grid>
+
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Тип снимка</InputLabel>
+              <Select
+                value={searchParams.bands}
+                onChange={(e) => setSearchParams(prev => ({ ...prev, bands: e.target.value }))}
+              >
+                <MenuItem value="RGB">RGB (видимый спектр)</MenuItem>
+                <MenuItem value="NIR">Ближний инфракрасный</MenuItem>
+                <MenuItem value="NDVI">Индекс растительности</MenuItem>
+                <MenuItem value="THERMAL">Тепловой канал</MenuItem>
+                <MenuItem value="MULTISPECTRAL">Мультиспектральный</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Box sx={{ mt: 2 }}>
                     label={`Источник: ${satelliteImage.source || 'Российские спутники'}`}
                     color="primary"
                     sx={{ mb: 1, mr: 1 }}
@@ -983,43 +922,6 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
           <Button onClick={handleConfigureCredentials} disabled={loading}>
             Сохранить
           </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Image Zoom Dialog */}
-      <Dialog 
-        open={imageDialogOpen} 
-        onClose={() => setImageDialogOpen(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>
-          Спутниковый снимок
-          <Button
-            onClick={() => selectedImage && window.open(selectedImage, '_blank')}
-            sx={{ float: 'right' }}
-            startIcon={<DownloadIcon />}
-          >
-            Открыть в новой вкладке
-          </Button>
-        </DialogTitle>
-        <DialogContent>
-          {selectedImage && (
-            <Box sx={{ textAlign: 'center' }}>
-              <img
-                src={selectedImage}
-                alt="Увеличенный спутниковый снимок"
-                style={{ 
-                  maxWidth: '100%', 
-                  maxHeight: '70vh', 
-                  objectFit: 'contain'
-                }}
-              />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImageDialogOpen(false)}>Закрыть</Button>
         </DialogActions>
       </Dialog>
     </Box>
