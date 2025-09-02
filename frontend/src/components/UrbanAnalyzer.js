@@ -241,7 +241,7 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
 
       const analysis = {
         address_info: null, // Will be filled by reverse geocoding if needed
-        area_type: satelliteResponse.data.analysis?.area_classification || 'mixed_use',
+        area_type: translateAreaType(satelliteResponse.data.analysis?.area_classification) || 'Смешанная застройка',
         building_count: allBuildings.length,
         building_density: Math.round(allBuildings.length / 0.25), // buildings per km² (500m radius ≈ 0.25 km²)
         amenity_count: allAmenities.length,
@@ -295,6 +295,36 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     if (total > 50) return 'Высокий';
     if (total > 20) return 'Средний';
     return 'Низкий';
+  };
+
+  const translateAreaType = (areaType) => {
+    const translations = {
+      'urban': 'Городской',
+      'residential': 'Жилой',
+      'commercial': 'Коммерческий',
+      'industrial': 'Промышленный',
+      'mixed_use': 'Смешанная застройка',
+      'rural': 'Сельский',
+      'park': 'Парковая зона'
+    };
+    return translations[areaType] || areaType || 'Смешанная застройка';
+  };
+
+  const translateCategory = (category) => {
+    const translations = {
+      'other': 'Другое',
+      'transport': 'Транспорт',
+      'education': 'Образование',
+      'healthcare': 'Медицина',
+      'shopping': 'Торговля',
+      'services': 'Услуги',
+      'entertainment': 'Развлечения',
+      'food': 'Питание',
+      'tourism': 'Туризм',
+      'finance': 'Финансы',
+      'government': 'Государственные услуги'
+    };
+    return translations[category] || category || 'Другое';
   };
 
   const searchPlaces = async (query, lat = null, lon = null) => {
@@ -354,10 +384,9 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
     try {
       // Анализируем каждую локацию через российские сервисы
       const analysisPromises = comparisonLocations.map(async (location) => {
-        const [geoResponse, nearbyResponse] = await Promise.all([
-          api.get('/api/geo/locate', { params: { lat: location.lat, lon: location.lon } }),
-          api.get('/api/geo/nearby', { params: { lat: location.lat, lon: location.lon, radius: 500 } })
-        ]);
+        const nearbyResponse = await api.get('/api/geo/nearby', { 
+          params: { lat: location.lat, lon: location.lon, radius: 500 } 
+        });
         
         const buildings = nearbyResponse.data.places?.filter(place => 
           place.category?.includes('здание') || place.category?.includes('building')
@@ -473,7 +502,7 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">
-              Анализ городского контекста (OpenStreetMap)
+              Анализ городского контекста
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
@@ -575,29 +604,41 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
                       <ListItemText
                         primary={result.display_name || result.name}
                         secondary={
-                          <Box>
-                            <Typography variant="body2" color="textSecondary">
+                          <span>
+                            <span style={{ display: 'block' }}>
                               Координаты: {result.lat?.toFixed(6)}, {result.lon?.toFixed(6)}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
+                            </span>
+                            <span style={{ display: 'block' }}>
                               Тип: {result.type || result.feature_type} • Класс: {result.class}
-                            </Typography>
-                          </Box>
+                            </span>
+                          </span>
                         }
                       />
-                      <Button
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addLocationForComparison(
-                            result.lat || result.coordinates?.[0],
-                            result.lon || result.coordinates?.[1],
-                            result.display_name || result.name
-                          );
-                        }}
-                      >
-                        + Сравнить
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLocationClick(result);
+                          }}
+                        >
+                          Выбрать
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addLocationForComparison(
+                              result.lat || result.coordinates?.[0],
+                              result.lon || result.coordinates?.[1],
+                              result.display_name || result.name
+                            );
+                          }}
+                        >
+                          + Сравнить
+                        </Button>
+                      </Box>
                     </ListItem>
                     {index < geocodeResults.length - 1 && <Divider />}
                   </React.Fragment>
@@ -700,7 +741,7 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
                   {Object.entries(urbanAnalysis.amenity_categories || {}).map(([category, count]) => (
                     <Box key={category} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="body2">
-                        {category}
+                        {translateCategory(category)}
                       </Typography>
                       <Chip label={count} size="small" />
                     </Box>
@@ -714,14 +755,14 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
 
       {/* Buildings Tab */}
       <TabPanel value={activeTab} index={2}>
-        {buildings.length > 0 && (
+        {urbanAnalysis && urbanAnalysis.buildings && urbanAnalysis.buildings.length > 0 ? (
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Здания в области ({buildings.length})
+                Здания в области ({urbanAnalysis.buildings.length})
               </Typography>
               <List>
-                {buildings.slice(0, 20).map((building, index) => (
+                {urbanAnalysis.buildings.slice(0, 20).map((building, index) => (
                   <React.Fragment key={building.osm_id || index}>
                     <ListItem
                       button
@@ -747,15 +788,26 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
                         }
                       />
                     </ListItem>
-                    {index < Math.min(buildings.length, 20) - 1 && <Divider />}
+                    {index < Math.min(urbanAnalysis.buildings.length, 20) - 1 && <Divider />}
                   </React.Fragment>
                 ))}
-                {buildings.length > 20 && (
+                {urbanAnalysis.buildings.length > 20 && (
                   <Typography variant="body2" color="textSecondary" sx={{ mt: 2, textAlign: 'center' }}>
-                    Показано 20 из {buildings.length} зданий
+                    Показано 20 из {urbanAnalysis.buildings.length} зданий
                   </Typography>
                 )}
               </List>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Здания в области
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Выберите адрес для анализа зданий в этой области
+              </Typography>
             </CardContent>
           </Card>
         )}
