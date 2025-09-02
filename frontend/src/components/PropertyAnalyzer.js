@@ -52,22 +52,24 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         const dgisResults = [];
         
         // Обрабатываем результаты от Яндекс
-        if (response.data.yandex) {
-          const yandexData = response.data.yandex;
-          if (yandexData.coordinates) {
+        if (response.data.yandex && response.data.yandex.results) {
+          response.data.yandex.results.forEach((result, index) => {
             yandexResults.push({
-              id: 'yandex_1',
-              address: yandexData.formatted_address || yandexData.address,
-              coordinates: [yandexData.coordinates.latitude, yandexData.coordinates.longitude],
-              category: yandexData.kind || 'Объект недвижимости',
-              area: 'Не указано',
-              permitted_use: 'Не указано',
+              id: `yandex_${index}`,
+              address: result.formatted_address || result.address || searchQuery,
+              coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
+              category: result.type || result.kind || 'Объект недвижимости',
+              area: result.area || 'Не указано',
+              permitted_use: result.permitted_use || result.description || 'Не указано',
               source: 'Яндекс Карты',
-              confidence: yandexData.precision === 'exact' ? 0.9 : 0.7,
-              cadastral_number: `yandex_${Date.now()}`,
-              provider: 'yandex'
+              confidence: result.confidence || 0.9,
+              cadastral_number: result.cadastral_number || `yandex_${Date.now()}`,
+              provider: 'yandex',
+              owner_type: result.owner_type || 'Не указано',
+              registration_date: result.registration_date || 'Не указано',
+              cadastral_value: result.cadastral_value || 'Не указано'
             });
-          }
+          });
         }
         
         // Обрабатываем результаты от 2GIS
@@ -75,15 +77,18 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
           response.data.dgis.results.forEach((result, index) => {
             dgisResults.push({
               id: `dgis_${index}`,
-              address: result.formatted_address || result.address,
+              address: result.formatted_address || result.address || searchQuery,
               coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
               category: result.type || 'Объект недвижимости',
-              area: 'Не указано',
-              permitted_use: 'Не указано',
+              area: result.area || 'Не указано',
+              permitted_use: result.permitted_use || result.description || 'Не указано',
               source: '2GIS',
               confidence: result.confidence || 0.8,
-              cadastral_number: `dgis_${Date.now()}_${index}`,
-              provider: 'dgis'
+              cadastral_number: result.cadastral_number || `dgis_${Date.now()}`,
+              provider: 'dgis',
+              owner_type: result.owner_type || 'Не указано',
+              registration_date: result.registration_date || 'Не указано',
+              cadastral_value: result.cadastral_value || 'Не указано'
             });
           });
         }
@@ -254,22 +259,24 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         const dgisResults = [];
         
         // Обрабатываем результаты от Яндекс
-        if (response.data.yandex) {
-          const yandexData = response.data.yandex;
-          if (yandexData.formatted_address || yandexData.address) {
+        if (response.data.yandex && response.data.yandex.results) {
+          response.data.yandex.results.forEach((result, index) => {
             yandexResults.push({
-              id: 'yandex_coord',
-              address: yandexData.formatted_address || yandexData.address,
+              id: `yandex_coord_${index}`,
+              address: result.formatted_address || result.address,
               coordinates: [lat, lon],
-              category: yandexData.kind || 'Местоположение',
-              area: 'Не указано',
-              permitted_use: 'Не указано',
+              category: result.type || result.kind || 'Местоположение',
+              area: result.area || 'Не указано',
+              permitted_use: result.permitted_use || 'Не указано',
               source: 'Яндекс Карты',
-              confidence: yandexData.precision === 'exact' ? 0.9 : 0.7,
-              cadastral_number: `yandex_coord_${Date.now()}`,
-              provider: 'yandex'
+              confidence: result.confidence || 0.9,
+              cadastral_number: result.cadastral_number || `yandex_coord_${Date.now()}_${index}`,
+              provider: 'yandex',
+              owner_type: result.owner_type || 'Не указано',
+              registration_date: result.registration_date || 'Не указано',
+              cadastral_value: result.cadastral_value || 'Не указано'
             });
-          }
+          });
         }
         
         // Обрабатываем результаты от 2GIS
@@ -541,7 +548,6 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                   variant={searchType === 'coordinates' ? 'contained' : 'outlined'}
                   size="small"
                   onClick={() => setSearchType('coordinates')}
-                  disabled={!coordinates}
                 >
                   Координаты
                 </Button>
@@ -681,11 +687,11 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                           }
                           secondary={
                             <React.Fragment>
-                              <Typography variant="body2" color="textSecondary" component="div">
+                              <Typography variant="body2" color="textSecondary" component="span">
                                 {property.category}
                               </Typography>
                               {property.coordinates && (
-                                <Typography variant="caption" color="textSecondary" component="div">
+                                <Typography variant="caption" color="textSecondary" component="span" sx={{ display: 'block' }}>
                                   {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
                                 </Typography>
                               )}
@@ -748,11 +754,11 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                           }
                           secondary={
                             <React.Fragment>
-                              <Typography variant="body2" color="textSecondary" component="div">
+                              <Typography variant="body2" color="textSecondary" component="span">
                                 {property.category}
                               </Typography>
                               {property.coordinates && (
-                                <Typography variant="caption" color="textSecondary" component="div">
+                                <Typography variant="caption" color="textSecondary" component="span" sx={{ display: 'block' }}>
                                   {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
                                 </Typography>
                               )}

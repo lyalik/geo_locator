@@ -82,12 +82,17 @@ def get_satellite_sources():
             'error': str(e)
         }), 500
 
-@satellite_bp.route('/analyze', methods=['GET'])
+@satellite_bp.route('/analyze', methods=['GET', 'POST'])
 def analyze_satellite_data():
     """Анализ спутниковых данных для указанной области"""
     try:
-        bbox = request.args.get('bbox', '')
-        analysis_type = request.args.get('analysis_type', 'comprehensive')
+        if request.method == 'POST':
+            data = request.get_json()
+            bbox = data.get('bbox', '')
+            analysis_type = data.get('analysis_type', 'comprehensive')
+        else:
+            bbox = request.args.get('bbox', '')
+            analysis_type = request.args.get('analysis_type', 'comprehensive')
         
         # Мок данные для анализа
         analysis_data = {

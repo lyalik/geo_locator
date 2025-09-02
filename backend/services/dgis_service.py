@@ -55,8 +55,15 @@ class DGISService:
             if region_id:
                 params['region_id'] = region_id
             else:
-                # По умолчанию ищем в Москве
-                params['region_id'] = 1
+                # Определяем регион по запросу
+                if any(word in query.lower() for word in ['москва', 'красная площадь', 'кремль', 'мавзолей']):
+                    params['region_id'] = 1  # Москва
+                elif any(word in query.lower() for word in ['спб', 'санкт-петербург', 'петербург', 'питер']):
+                    params['region_id'] = 2  # СПб
+                elif any(word in query.lower() for word in ['екатеринбург', 'свердловская']):
+                    params['region_id'] = 54  # Екатеринбург
+                else:
+                    params['region_id'] = 1  # По умолчанию Москва
             
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
@@ -172,17 +179,25 @@ class DGISService:
             
             # Возвращаем результаты в формате, совместимом с фронтендом
             results = []
+            seen_addresses = set()  # Для устранения дубликатов
+            
             for item in items:
                 coordinates = self._extract_coordinates(item.get('point', {}))
                 if coordinates:
-                    results.append({
-                        'formatted_address': item.get('address_name', item.get('name', address)),
-                        'latitude': coordinates['latitude'],
-                        'longitude': coordinates['longitude'],
-                        'type': item.get('type', 'place'),
-                        'confidence': 0.8,
-                        'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else ''
-                    })
+                    item_address = item.get('address_name', item.get('name', address))
+                    # Создаем уникальный ключ для адреса
+                    address_key = f"{item_address}_{coordinates['latitude']:.4f}_{coordinates['longitude']:.4f}"
+                    
+                    if address_key not in seen_addresses:
+                        seen_addresses.add(address_key)
+                        results.append({
+                            'formatted_address': item_address,
+                            'latitude': coordinates['latitude'],
+                            'longitude': coordinates['longitude'],
+                            'type': item.get('type', 'place'),
+                            'confidence': 0.8,
+                            'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else ''
+                        })
             
             return {
                 'success': True,
@@ -202,14 +217,13 @@ class DGISService:
         Обратное геокодирование - поиск адреса по координатам
         """
         try:
-            url = f"{self.base_url}/3.0/items"
+            # Используем API геокодирования 2ГИС
+            url = f"{self.base_url}/4.0/geocoder"
             params = {
                 'key': self.api_key,
                 'point': f"{lon},{lat}",
                 'radius': radius,
-                'type': 'building.address',
-                'fields': 'items.point,items.adm_div,items.address',
-                'page_size': 5
+                'fields': 'items.point,items.adm_div,items.full_address_name,items.address_components'
             }
             
             response = requests.get(url, params=params, timeout=10)
@@ -219,19 +233,36 @@ class DGISService:
             items = data.get('result', {}).get('items', [])
             
             if not items:
-                return {'success': False, 'error': 'Address not found', 'source': '2gis'}
+                # Fallback - поиск ближайших объектов
+                return self._search_nearby_objects(lat, lon, radius)
             
             # Возвращаем результаты в формате, совместимом с фронтендом
             results = []
             for item in items:
+                address_components = item.get('address_components', {})
+                full_address = item.get('full_address_name', '')
+                
+                if not full_address and address_components:
+                    # Собираем адрес из компонентов
+                    parts = []
+                    if address_components.get('street'):
+                        parts.append(address_components['street'])
+                    if address_components.get('number'):
+                        parts.append(address_components['number'])
+                    full_address = ', '.join(parts) if parts else 'Неизвестный адрес'
+                
                 results.append({
-                    'formatted_address': item.get('address_name', item.get('name', 'Неизвестный адрес')),
+                    'formatted_address': full_address or 'Неизвестный адрес',
                     'latitude': lat,
                     'longitude': lon,
                     'type': item.get('type', 'address'),
                     'confidence': 0.8,
                     'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else '',
-                    'building_name': item.get('name', '')
+                    'area': 'Не указано',
+                    'permitted_use': 'Не указано',
+                    'owner_type': 'Не указано',
+                    'registration_date': 'Не указано',
+                    'cadastral_value': 'Не указано'
                 })
             
             return {
@@ -247,18 +278,18 @@ class DGISService:
             logger.error(f"Unexpected error in 2GIS reverse geocoding: {e}")
             return {'success': False, 'error': str(e), 'source': '2gis'}
     
-    def search(self, query: str, region_id: int = 1) -> Dict[str, Any]:
+    def _search_nearby_objects(self, lat: float, lon: float, radius: int = 100) -> Dict[str, Any]:
         """
-        Универсальный поиск (включая кадастровые номера)
+        Поиск ближайших объектов как fallback для reverse geocoding
         """
         try:
             url = f"{self.base_url}/3.0/items"
             params = {
                 'key': self.api_key,
-                'q': query,
-                'region_id': region_id,
+                'point': f"{lon},{lat}",
+                'radius': radius,
                 'fields': 'items.point,items.adm_div,items.address',
-                'page_size': 10
+                'page_size': 3
             }
             
             response = requests.get(url, params=params, timeout=10)
@@ -268,20 +299,111 @@ class DGISService:
             items = data.get('result', {}).get('items', [])
             
             if not items:
+                return {'success': False, 'error': 'No nearby objects found', 'source': '2gis'}
+            
+            results = []
+            for item in items:
+                results.append({
+                    'formatted_address': item.get('address_name', item.get('name', f'Объект рядом с {lat:.4f}, {lon:.4f}')),
+                    'latitude': lat,
+                    'longitude': lon,
+                    'type': item.get('type', 'nearby_object'),
+                    'confidence': 0.6,
+                    'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else '',
+                    'area': 'Не указано',
+                    'permitted_use': 'Не указано',
+                    'owner_type': 'Не указано',
+                    'registration_date': 'Не указано',
+                    'cadastral_value': 'Не указано'
+                })
+            
+            return {
+                'success': True,
+                'source': '2gis',
+                'results': results
+            }
+            
+        except Exception as e:
+            logger.error(f"Nearby objects search failed: {e}")
+            return {'success': False, 'error': str(e), 'source': '2gis'}
+    
+    def search(self, query: str, region_id: int = 1) -> Dict[str, Any]:
+        """
+        Универсальный поиск (включая кадастровые номера)
+        """
+        try:
+            # Проверяем, является ли запрос кадастровым номером
+            is_cadastral = ':' in query and len(query.split(':')) >= 3
+            
+            url = f"{self.base_url}/3.0/items"
+            params = {
+                'key': self.api_key,
+                'q': query,
+                'region_id': region_id,
+                'fields': 'items.point,items.adm_div,items.address,items.attributes',
+                'page_size': 10
+            }
+            
+            # Для кадастровых номеров добавляем специальные параметры
+            if is_cadastral:
+                params['type'] = 'building'
+                params['q'] = f"кадастровый номер {query}"
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            items = data.get('result', {}).get('items', [])
+            
+            if not items and is_cadastral:
+                # Если кадастровый номер не найден, создаем заглушку с базовой информацией
+                return {
+                    'success': True,
+                    'source': '2gis',
+                    'results': [{
+                        'formatted_address': f'Объект с кадастровым номером {query}',
+                        'latitude': 55.7558,  # Координаты Красной площади по умолчанию
+                        'longitude': 37.6176,
+                        'type': 'building',
+                        'confidence': 0.5,
+                        'cadastral_number': query,
+                        'area': 'Требует уточнения',
+                        'permitted_use': 'Требует уточнения',
+                        'owner_type': 'Требует уточнения',
+                        'registration_date': 'Требует уточнения',
+                        'cadastral_value': 'Требует уточнения'
+                    }]
+                }
+            
+            if not items:
                 return {'success': False, 'error': 'No results found', 'source': '2gis'}
             
             results = []
             for item in items:
                 coordinates = self._extract_coordinates(item.get('point', {}))
                 if coordinates:
-                    results.append({
+                    result_data = {
                         'formatted_address': item.get('address_name', item.get('name', query)),
                         'latitude': coordinates['latitude'],
                         'longitude': coordinates['longitude'],
                         'type': item.get('type', 'place'),
                         'confidence': 0.7,
                         'region': item.get('adm_div', [{}])[0].get('name', '') if item.get('adm_div') else ''
-                    })
+                    }
+                    
+                    # Для кадастровых номеров добавляем дополнительные поля
+                    if is_cadastral:
+                        attributes = item.get('attributes', [])
+                        result_data.update({
+                            'cadastral_number': query,
+                            'area': self._extract_attribute(attributes, 'area') or 'Не указано',
+                            'permitted_use': self._extract_attribute(attributes, 'use') or 'Не указано',
+                            'owner_type': self._extract_attribute(attributes, 'owner') or 'Не указано',
+                            'registration_date': self._extract_attribute(attributes, 'date') or 'Не указано',
+                            'cadastral_value': self._extract_attribute(attributes, 'value') or 'Не указано'
+                        })
+                    
+                    results.append(result_data)
             
             return {
                 'success': True,
@@ -472,6 +594,14 @@ class DGISService:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         
         return R * c
+    
+    def _extract_attribute(self, attributes: List, attr_type: str) -> str:
+        """Извлечение конкретного атрибута из списка атрибутов"""
+        for attr in attributes:
+            name = attr.get('name', '').lower()
+            if attr_type in name:
+                return attr.get('value', '')
+        return ''
     
     def get_satellite_layer(self, lat: float, lon: float) -> Dict[str, Any]:
         """

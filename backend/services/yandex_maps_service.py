@@ -116,17 +116,26 @@ class YandexMapsService:
             geo_object = geo_objects[0]['GeoObject']
             coordinates = geo_object['Point']['pos'].split()
             
+            # Формируем результат в ожидаемом формате
+            formatted_address = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('text', address)
+            kind = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('kind', 'place')
+            
             result = {
                 'success': True,
                 'source': 'yandex_geocoder',
-                'address': address,
-                'coordinates': {
+                'results': [{
+                    'formatted_address': formatted_address,
                     'latitude': float(coordinates[1]),
-                    'longitude': float(coordinates[0])
-                },
-                'formatted_address': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('text', ''),
-                'precision': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('precision', ''),
-                'kind': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('kind', '')
+                    'longitude': float(coordinates[0]),
+                    'type': kind,
+                    'confidence': 0.9,
+                    'precision': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('precision', ''),
+                    'area': 'Не указано',
+                    'permitted_use': 'Не указано',
+                    'owner_type': 'Не указано',
+                    'registration_date': 'Не указано',
+                    'cadastral_value': 'Не указано'
+                }]
             }
             
             return result
@@ -143,32 +152,60 @@ class YandexMapsService:
         Универсальный поиск (включая кадастровые номера)
         """
         try:
-            # Для кадастровых номеров используем поиск организаций
-            params = {
-                'apikey': self.api_key,
-                'text': query,
-                'lang': 'ru_RU',
-                'results': 10,
-                'format': 'json'
-            }
+            # Проверяем, является ли запрос кадастровым номером
+            is_cadastral = ':' in query and len(query.split(':')) >= 3
+            
+            if is_cadastral:
+                # Для кадастровых номеров используем специальный поиск
+                params = {
+                    'apikey': self.api_key,
+                    'text': f"кадастровый номер {query}",
+                    'lang': 'ru_RU',
+                    'results': 5,
+                    'format': 'json',
+                    'type': 'biz'
+                }
+            else:
+                params = {
+                    'apikey': self.api_key,
+                    'text': query,
+                    'lang': 'ru_RU',
+                    'results': 10,
+                    'format': 'json'
+                }
             
             response = requests.get(f"{self.base_url}/search/v1/", params=params, timeout=10)
             response.raise_for_status()
             
             data = response.json()
-            
             results = []
-            for feature in data.get('features', []):
-                coords = feature.get('geometry', {}).get('coordinates', [])
-                if len(coords) >= 2:
-                    results.append({
-                        'formatted_address': feature.get('properties', {}).get('name', '') + ', ' + 
-                                           feature.get('properties', {}).get('description', ''),
+            
+            for item in data.get('features', []):
+                properties = item.get('properties', {})
+                geometry = item.get('geometry', {})
+                coords = geometry.get('coordinates', [])
+                
+                if coords:
+                    result_data = {
+                        'formatted_address': properties.get('description', query),
                         'latitude': coords[1],
                         'longitude': coords[0],
-                        'type': 'organization',
-                        'confidence': 0.7
-                    })
+                        'type': properties.get('CompanyMetaData', {}).get('Categories', [{}])[0].get('name', 'place'),
+                        'confidence': 0.8
+                    }
+                    
+                    # Для кадастровых номеров добавляем дополнительные поля
+                    if is_cadastral:
+                        result_data.update({
+                            'cadastral_number': query,
+                            'area': properties.get('area', 'Не указано'),
+                            'permitted_use': properties.get('permitted_use', 'Не указано'),
+                            'owner_type': properties.get('owner_type', 'Не указано'),
+                            'registration_date': properties.get('registration_date', 'Не указано'),
+                            'cadastral_value': properties.get('cadastral_value', 'Не указано')
+                        })
+                    
+                    results.append(result_data)
             
             return {
                 'success': True,
@@ -207,31 +244,27 @@ class YandexMapsService:
             
             geo_object = geo_objects[0]['GeoObject']
             
+            formatted_address = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('text', '')
+            kind = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('kind', 'place')
+            
             result = {
                 'success': True,
                 'source': 'yandex_geocoder',
-                'coordinates': {'latitude': lat, 'longitude': lon},
-                'formatted_address': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('text', ''),
-                'components': {},
-                'precision': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('precision', ''),
-                'kind': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('kind', '')
+                'results': [{
+                    'formatted_address': formatted_address,
+                    'latitude': lat,
+                    'longitude': lon,
+                    'type': kind,
+                    'confidence': 0.9,
+                    'precision': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('precision', ''),
+                    'area': 'Не указано',
+                    'permitted_use': 'Не указано',
+                    'owner_type': 'Не указано',
+                    'registration_date': 'Не указано',
+                    'cadastral_value': 'Не указано'
+                }]
             }
             
-            # Парсинг компонентов адреса
-            address_details = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('AddressDetails', {})
-            if address_details:
-                country = address_details.get('Country', {})
-                result['components']['country'] = country.get('CountryName', '')
-                
-                admin_area = country.get('AdministrativeArea', {})
-                result['components']['region'] = admin_area.get('AdministrativeAreaName', '')
-                
-                locality = admin_area.get('Locality', {}) or admin_area.get('SubAdministrativeArea', {}).get('Locality', {})
-                result['components']['city'] = locality.get('LocalityName', '')
-                
-                thoroughfare = locality.get('Thoroughfare', {})
-                result['components']['street'] = thoroughfare.get('ThoroughfareName', '')
-                result['components']['house'] = thoroughfare.get('Premise', {}).get('PremiseNumber', '')
             
             return result
             

@@ -75,21 +75,40 @@ def locate_by_address():
         if not address:
             return jsonify({'error': 'Address parameter is required'}), 400
         
+        # Исправляем кодировку
+        try:
+            address = address.encode('latin1').decode('utf-8')
+        except:
+            pass  # Если кодировка уже правильная
+        
         # Параллельный поиск через Yandex и 2GIS
         yandex_result = None
         dgis_result = None
         
         # Пробуем Yandex Maps
         try:
+            logger.info(f"Calling Yandex geocode for: {address}")
             yandex_result = yandex_service.geocode(address)
+            logger.info(f"Yandex result: {yandex_result}")
         except Exception as e:
-            logger.warning(f"Yandex geocoding failed: {e}")
+            logger.error(f"Yandex geocoding failed: {e}")
         
         # Пробуем 2GIS
         try:
-            dgis_result = dgis_service.geocode(address)
+            logger.info(f"Calling 2GIS geocode for: {address}")
+            # Определяем регион для 2GIS
+            region_id = 1  # Москва по умолчанию
+            if any(word in address.lower() for word in ['москва', 'красная площадь', 'кремль']):
+                region_id = 1  # Москва
+            elif any(word in address.lower() for word in ['спб', 'санкт-петербург', 'петербург']):
+                region_id = 2  # СПб
+            elif any(word in address.lower() for word in ['екатеринбург', 'свердловская']):
+                region_id = 54  # Екатеринбург
+            
+            dgis_result = dgis_service.geocode(address, region_id)
+            logger.info(f"2GIS result: {dgis_result}")
         except Exception as e:
-            logger.warning(f"2GIS geocoding failed: {e}")
+            logger.error(f"2GIS geocoding failed: {e}")
         
         # Возвращаем результаты от обоих сервисов
         return jsonify({
