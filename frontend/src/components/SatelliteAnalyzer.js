@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Card, CardContent, Typography, Button, TextField, Grid,
-  Tab, Tabs, Alert, CircularProgress, Dialog, DialogTitle,
-  DialogContent, DialogActions, FormControl, InputLabel, Select,
-  MenuItem, Chip, Paper, List, ListItem, ListItemText, Divider,
-  LinearProgress, Switch, FormControlLabel
+  Tab, Tabs, Alert, Dialog, DialogTitle, DialogContent, 
+  DialogActions, FormControl, InputLabel, Select, MenuItem, 
+  Chip, Paper, List, ListItem, ListItemText, Divider, LinearProgress
 } from '@mui/material';
 import {
   Satellite as SatelliteIcon, Timeline as TimelineIcon,
@@ -54,19 +53,9 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
   // Configuration
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [zoomDialogOpen, setZoomDialogOpen] = useState(false);
-  const [availableSources, setAvailableSources] = useState({
-    roscosmos: true,
-    yandex: true,
-    dgis: true,
-    osm: true,
-    auto: true
-  });
+  // Available sources are now tracked via API responses
   const [selectedImage, setSelectedImage] = useState(null);
-  const [credentials, setCredentials] = useState({
-    clientId: '',
-    clientSecret: ''
-  });
-  const [credentialsConfigured, setCredentialsConfigured] = useState(false);
+  // Credentials are managed by the backend
   
   // Initialize coordinates
   useEffect(() => {
@@ -100,33 +89,9 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
     setChangeParams(prev => ({
       ...prev,
       afterDate: today.toISOString().split('T')[0],
-      beforeDate: yearAgo.toISOString().split('T')[0]
+      beforeDate: monthAgo.toISOString().split('T')[0]
     }));
   }, []);
-  
-  // Check service health
-  useEffect(() => {
-    checkServiceHealth();
-  }, []);
-  
-  const checkServiceHealth = async () => {
-    try {
-      const response = await api.get('/api/satellite/health');
-      if (response.data.success) {
-        setCredentialsConfigured(true); // Российские сервисы всегда готовы
-      }
-    } catch (error) {
-      console.error('Error checking service health:', error);
-      setCredentialsConfigured(true); // Fallback - считаем готовыми
-    }
-  };
-  
-  const handleConfigureCredentials = async () => {
-    // Российские сервисы не требуют дополнительной настройки
-    setCredentialsConfigured(true);
-    setShowConfigDialog(false);
-    setError(null);
-  };
   
   const handleGetSatelliteImage = async () => {
     try {
@@ -427,7 +392,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                 <Button
                   variant="contained"
                   onClick={handleGetSatelliteImage}
-                  disabled={loading || !credentialsConfigured}
+                  disabled={loading}
                   startIcon={<SatelliteIcon />}
                   fullWidth
                 >
@@ -456,7 +421,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                       }}
                       onClick={() => {
                         setSelectedImage(satelliteImage.image_url);
-                        setImageDialogOpen(true);
+                        setZoomDialogOpen(true);
                       }}
                     >
                       <img
@@ -592,7 +557,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
               <Button
                 variant="contained"
                 onClick={handleAnalyzeImage}
-                disabled={loading || !credentialsConfigured}
+                disabled={loading}
                 startIcon={<AnalyticsIcon />}
                 fullWidth
               >
@@ -742,7 +707,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
               <Button
                 variant="contained"
                 onClick={handleGetTimeSeries}
-                disabled={loading || !credentialsConfigured}
+                disabled={loading}
                 startIcon={<TimelineIcon />}
                 fullWidth
                 sx={{ mt: 2 }}
@@ -838,7 +803,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
               <Button
                 variant="contained"
                 onClick={handleDetectChanges}
-                disabled={loading || !credentialsConfigured}
+                disabled={loading}
                 startIcon={<CompareIcon />}
                 fullWidth
                 sx={{ mt: 2 }}
@@ -948,20 +913,6 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
         </Alert>
       )}
       
-      {!credentialsConfigured && (
-        <Alert 
-          severity="info" 
-          sx={{ mb: 2 }}
-          action={
-            <Button color="inherit" size="small" onClick={() => setShowConfigDialog(true)}>
-              Проверить подключение
-            </Button>
-          }
-        >
-          Подключение к российским спутниковым сервисам
-        </Alert>
-      )}
-      
       {loading && <LinearProgress sx={{ mb: 2 }} />}
       
       <Paper sx={{ mb: 2 }}>
@@ -982,35 +933,11 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       {activeTab === 2 && renderTimeSeriesTab()}
       {activeTab === 3 && renderChangeDetectionTab()}
       
-      {/* Configuration Dialog */}
-      <Dialog open={showConfigDialog} onClose={() => setShowConfigDialog(false)}>
-        <DialogTitle>Настройка российских спутниковых сервисов</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Российские спутниковые сервисы (Роскосмос, Яндекс) готовы к использованию.
-            Дополнительная настройка не требуется.
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Доступные источники:
-          </Typography>
-          <ul>
-            <li>Роскосмос (Ресурс-П, Канопус-В)</li>
-            <li>Яндекс Спутник</li>
-            <li>ScanEx (Космоснимки)</li>
-          </ul>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowConfigDialog(false)}>Отмена</Button>
-          <Button onClick={handleConfigureCredentials} disabled={loading}>
-            Сохранить
-          </Button>
-        </DialogActions>
-      </Dialog>
       
       {/* Image Zoom Dialog */}
       <Dialog 
-        open={imageDialogOpen} 
-        onClose={() => setImageDialogOpen(false)}
+        open={zoomDialogOpen} 
+        onClose={() => setZoomDialogOpen(false)}
         maxWidth="lg"
         fullWidth
       >
@@ -1040,7 +967,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setImageDialogOpen(false)}>Закрыть</Button>
+          <Button onClick={() => setZoomDialogOpen(false)}>Закрыть</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@mistralai/mistralai": "^1.9.19",
+    "@types/axios": "^0.14.4"
+  }
+}
