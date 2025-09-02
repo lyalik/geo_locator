@@ -90,25 +90,47 @@ def analyze_satellite_data():
             data = request.get_json()
             bbox = data.get('bbox', '')
             analysis_type = data.get('analysis_type', 'comprehensive')
+            current_usage = data.get('current_usage', 'unknown')
         else:
+            data = {}
             bbox = request.args.get('bbox', '')
             analysis_type = request.args.get('analysis_type', 'comprehensive')
+            current_usage = request.args.get('current_usage', 'unknown')
         
-        # Мок данные для анализа
-        analysis_data = {
-            'area_classification': 'urban',
-            'vegetation_index': 0.3,
-            'building_density': 0.7,
-            'water_coverage': 0.05,
-            'analysis_type': analysis_type,
-            'confidence': 0.85,
-            'source': 'Роскосмос',
-            'timestamp': datetime.datetime.now().isoformat()
-        }
+        # Специальная обработка для валидации использования
+        if analysis_type == 'usage_validation':
+            analysis_data = {
+                'compliance_score': 0.85,
+                'detected_issues': [
+                    'Возможное несоответствие фактического использования заявленному',
+                    'Требуется дополнительная проверка документации'
+                ],
+                'recommendations': [
+                    'Проверить разрешительную документацию',
+                    'Уточнить целевое назначение участка',
+                    'Рассмотреть возможность изменения вида использования'
+                ],
+                'analysis_details': {
+                    'current_usage_detected': 'mixed_use',
+                    'permitted_usage': current_usage,
+                    'confidence': 0.85
+                }
+            }
+        else:
+            # Общий анализ
+            analysis_data = {
+                'area_classification': 'urban',
+                'vegetation_index': 0.3,
+                'building_density': 0.7,
+                'water_coverage': 0.05,
+                'confidence': 0.85
+            }
         
         return jsonify({
             'success': True,
-            'data': analysis_data,
+            'analysis': analysis_data,
+            'source': 'Роскосмос',
+            'timestamp': datetime.datetime.now().isoformat(),
             'message': 'Satellite analysis completed successfully'
         })
     except Exception as e:

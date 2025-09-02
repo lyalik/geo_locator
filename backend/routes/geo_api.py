@@ -98,12 +98,53 @@ def locate_by_address():
             logger.info(f"Calling 2GIS geocode for: {address}")
             # Определяем регион для 2GIS
             region_id = 1  # Москва по умолчанию
-            if any(word in address.lower() for word in ['москва', 'красная площадь', 'кремль']):
-                region_id = 1  # Москва
-            elif any(word in address.lower() for word in ['спб', 'санкт-петербург', 'петербург']):
-                region_id = 2  # СПб
-            elif any(word in address.lower() for word in ['екатеринбург', 'свердловская']):
-                region_id = 54  # Екатеринбург
+            address_lower = address.lower()
+            
+            # Москва и область
+            if any(word in address_lower for word in ['москва', 'московская', 'красная площадь', 'кремль', 'мск']):
+                region_id = 1
+            # Санкт-Петербург
+            elif any(word in address_lower for word in ['спб', 'санкт-петербург', 'петербург', 'ленинградская']):
+                region_id = 2
+            # Новосибирск
+            elif any(word in address_lower for word in ['новосибирск', 'новосибирская']):
+                region_id = 4
+            # Екатеринбург
+            elif any(word in address_lower for word in ['екатеринбург', 'свердловская']):
+                region_id = 54
+            # Нижний Новгород
+            elif any(word in address_lower for word in ['нижний новгород', 'нижегородская']):
+                region_id = 24
+            # Казань
+            elif any(word in address_lower for word in ['казань', 'татарстан']):
+                region_id = 88
+            # Самара
+            elif any(word in address_lower for word in ['самара', 'самарская']):
+                region_id = 42
+            # Омск
+            elif any(word in address_lower for word in ['омск', 'омская']):
+                region_id = 18
+            # Челябинск
+            elif any(word in address_lower for word in ['челябинск', 'челябинская']):
+                region_id = 56
+            # Ростов-на-Дону
+            elif any(word in address_lower for word in ['ростов', 'ростовская']):
+                region_id = 38
+            # Уфа
+            elif any(word in address_lower for word in ['уфа', 'башкортостан']):
+                region_id = 86
+            # Красноярск
+            elif any(word in address_lower for word in ['красноярск', 'красноярский']):
+                region_id = 62
+            # Воронеж
+            elif any(word in address_lower for word in ['воронеж', 'воронежская']):
+                region_id = 193
+            # Пермь
+            elif any(word in address_lower for word in ['пермь', 'пермский']):
+                region_id = 48
+            # Волгоград
+            elif any(word in address_lower for word in ['волгоград', 'волгоградская']):
+                region_id = 38
             
             dgis_result = dgis_service.geocode(address, region_id)
             logger.info(f"2GIS result: {dgis_result}")

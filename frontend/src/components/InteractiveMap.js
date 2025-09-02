@@ -210,6 +210,7 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
   };
 
   const formatCategory = (category) => {
+    if (!category) return 'Неизвестная категория';
     return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 

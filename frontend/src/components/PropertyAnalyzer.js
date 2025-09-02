@@ -395,6 +395,8 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         property_data: property
       });
       
+      console.log('Satellite API response:', response.data);
+      
       if (response.data.success) {
         const validation = {
           is_compliant: response.data.analysis.compliance_score > 0.7,
@@ -403,6 +405,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
           recommendations: response.data.analysis.recommendations || [],
           satellite_source: response.data.source
         };
+        console.log('Setting validation result:', validation);
         setValidationResult(validation);
       } else {
         setError('Не удалось проверить соответствие использования');
@@ -695,14 +698,14 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                                   {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
                                 </Typography>
                               )}
-                              <Box sx={{ mt: 0.5 }}>
+                              <span style={{ marginTop: '4px', display: 'inline-block' }}>
                                 <Chip
                                   size="small"
                                   label={`${Math.round(property.confidence * 100)}%`}
                                   color={property.confidence > 0.8 ? 'success' : 'warning'}
                                   variant="outlined"
                                 />
-                              </Box>
+                              </span>
                             </React.Fragment>
                           }
                         />
@@ -762,14 +765,14 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                                   {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
                                 </Typography>
                               )}
-                              <Box sx={{ mt: 0.5 }}>
+                              <span style={{ marginTop: '4px', display: 'inline-block' }}>
                                 <Chip
                                   size="small"
                                   label={`${Math.round(property.confidence * 100)}%`}
                                   color={property.confidence > 0.8 ? 'success' : 'warning'}
                                   variant="outlined"
                                 />
-                              </Box>
+                              </span>
                             </React.Fragment>
                           }
                         />
@@ -964,6 +967,58 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                       </Alert>
                     );
                   })()}
+                </Box>
+              )}
+
+              {/* Validation Result */}
+              {validationResult && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Результат проверки использования
+                  </Typography>
+                  <Alert 
+                    severity={validationResult.is_compliant ? 'success' : 'warning'}
+                    sx={{ mb: 2 }}
+                  >
+                    <Typography variant="body2">
+                      <strong>Соответствие:</strong> {validationResult.is_compliant ? 'Соответствует' : 'Требует внимания'} 
+                      ({Math.round(validationResult.compliance_score * 100)}%)
+                    </Typography>
+                  </Alert>
+                  
+                  {validationResult.issues && validationResult.issues.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" gutterBottom>
+                        <strong>Выявленные проблемы:</strong>
+                      </Typography>
+                      <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                        {validationResult.issues.map((issue, idx) => (
+                          <li key={idx}>
+                            <Typography variant="body2">{issue}</Typography>
+                          </li>
+                        ))}
+                      </ul>
+                    </Box>
+                  )}
+                  
+                  {validationResult.recommendations && validationResult.recommendations.length > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" gutterBottom>
+                        <strong>Рекомендации:</strong>
+                      </Typography>
+                      <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                        {validationResult.recommendations.map((rec, idx) => (
+                          <li key={idx}>
+                            <Typography variant="body2">{rec}</Typography>
+                          </li>
+                        ))}
+                      </ul>
+                    </Box>
+                  )}
+                  
+                  <Typography variant="caption" color="textSecondary">
+                    Источник: {validationResult.satellite_source}
+                  </Typography>
                 </Box>
               )}
             </Box>

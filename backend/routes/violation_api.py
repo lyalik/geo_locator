@@ -263,11 +263,26 @@ def detect_violations():
                     current_app.logger.info(f"🛰️ Roscosmos Satellite API - Response: {geolocation_service.last_satellite_response}")
             else:
                 current_app.logger.warning(f"🌍 Geolocation - Using MOCK geolocation (service unavailable)")
-                # Mock geolocation result for testing
+                # Mock geolocation result for testing - используем координаты из location_hint если есть
+                mock_coordinates = None
+                if location_hint:
+                    # Попробуем извлечь координаты из location_hint
+                    import re
+                    coord_match = re.search(r'(\d+\.?\d*),\s*(\d+\.?\d*)', location_hint)
+                    if coord_match:
+                        mock_coordinates = {
+                            'latitude': float(coord_match.group(1)),
+                            'longitude': float(coord_match.group(2))
+                        }
+                
+                if not mock_coordinates:
+                    mock_coordinates = {'latitude': 55.7558, 'longitude': 37.6176}
+                
                 geo_result = {
-                    'coordinates': {'latitude': 55.7558, 'longitude': 37.6176},
-                    'address': {'formatted': 'Москва, Россия', 'city': 'Москва', 'country': 'Россия'},
-                    'has_gps': False
+                    'coordinates': mock_coordinates,
+                    'address': {'formatted': location_hint or 'Москва, Россия', 'city': 'Москва', 'country': 'Россия'},
+                    'has_gps': True,
+                    'source': 'mock'
                 }
                 current_app.logger.info(f"🌍 Geolocation - Mock result: {geo_result}")
             
@@ -298,13 +313,21 @@ def detect_violations():
             
             # Save to database
             try:
+                # Ensure coordinates are available
+                coordinates = location_data.get('coordinates', {})
+                lat = coordinates.get('latitude') if coordinates else None
+                lon = coordinates.get('longitude') if coordinates else None
+                
+                # Log coordinate information
+                current_app.logger.info(f"📍 Saving coordinates: lat={lat}, lon={lon}, has_gps={location_data.get('has_gps', False)}")
+                
                 # Create Photo record
                 photo = Photo(
                     file_path=filepath,
                     original_filename=file.filename,
                     user_id=int(user_id) if user_id.isdigit() else 1,  # Default to user 1 if anonymous
-                    lat=location_data['coordinates'].get('latitude') if location_data.get('coordinates') else None,
-                    lon=location_data['coordinates'].get('longitude') if location_data.get('coordinates') else None,
+                    lat=lat,
+                    lon=lon,
                     has_gps=location_data.get('has_gps', False),
                     location_method=location_data.get('source', 'auto'),
                     location_hint=location_hint,

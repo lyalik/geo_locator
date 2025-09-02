@@ -48,16 +48,39 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
         params: { address: searchQuery }
       });
       
-      if (response.data.success && response.data.results.length > 0) {
-        const results = response.data.results.map(result => ({
+      console.log('Geocoding response:', response.data);
+      
+      // Обрабатываем ответ от разных источников (Yandex и 2GIS)
+      let allResults = [];
+      
+      if (response.data.yandex && response.data.yandex.results) {
+        const yandexResults = response.data.yandex.results.map(result => ({
           display_name: result.formatted_address,
-          lat: result.coordinates.lat,
-          lon: result.coordinates.lon,
+          lat: result.latitude,
+          lon: result.longitude,
           type: result.type,
-          class: result.source,
-          feature_type: result.type
+          class: 'yandex',
+          feature_type: result.type,
+          confidence: result.confidence
         }));
-        setGeocodeResults(results);
+        allResults = [...allResults, ...yandexResults];
+      }
+      
+      if (response.data.dgis && response.data.dgis.results) {
+        const dgisResults = response.data.dgis.results.map(result => ({
+          display_name: result.formatted_address,
+          lat: result.latitude,
+          lon: result.longitude,
+          type: result.type,
+          class: '2gis',
+          feature_type: result.type,
+          confidence: result.confidence
+        }));
+        allResults = [...allResults, ...dgisResults];
+      }
+      
+      if (allResults.length > 0) {
+        setGeocodeResults(allResults);
       } else {
         setError('Не удалось найти адрес');
       }
