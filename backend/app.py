@@ -261,4 +261,4 @@ def health():
 
 # This endpoint is now handled by the violation_api blueprint
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)

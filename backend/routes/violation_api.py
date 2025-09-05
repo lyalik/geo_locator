@@ -28,11 +28,11 @@ except ImportError as e:
     notification_service = None
 
 try:
-    from services.mistral_ai_service import MistralAIService
-    mistral_service = MistralAIService()
+    from services.google_vision_service import GoogleVisionService
+    google_vision_service = GoogleVisionService()
 except ImportError as e:
-    print(f"Warning: MistralAIService not available: {e}")
-    mistral_service = None
+    print(f"Warning: GoogleVisionService not available: {e}")
+    google_vision_service = None
 
 # Create blueprint
 bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
@@ -64,7 +64,7 @@ def list_violations():
                         'category': violation.category,
                         'confidence': violation.confidence,
                         'bbox': violation.bbox_data,
-                        'source': 'yolo' if 'yolo' in violation.category.lower() else 'mistral_ai'
+                        'source': 'yolo' if 'yolo' in violation.category.lower() else 'google_vision'
                     }],
                     'location': {
                         'coordinates': {
@@ -181,7 +181,7 @@ def detect_violations():
         
         # Process the image
         try:
-            # Step 1: Detect violations using YOLO + Mistral AI
+            # Step 1: Detect violations using YOLO + Google Vision/Gemini
             current_app.logger.info(f"🔍 Detection - Starting violation detection for: {filename}")
             
             # YOLO Detection
@@ -198,43 +198,42 @@ def detect_violations():
                     'image_size': {'width': 800, 'height': 600}
                 }
             
-            # Mistral AI Enhanced Analysis
-            mistral_violations = []
-            current_app.logger.info(f"🤖 Mistral AI - Starting enhanced violation analysis")
-            current_app.logger.info(f"🤖 Mistral AI - Service available: {mistral_service is not None}")
+            # Google Vision/Gemini Enhanced Analysis
+            google_violations = []
+            current_app.logger.info(f"🤖 Google Vision/Gemini - Starting enhanced violation analysis")
+            current_app.logger.info(f"🤖 Google Vision/Gemini - Service available: {google_vision_service is not None}")
             
-            if mistral_service:
+            if google_vision_service:
                 try:
-                    mistral_result = mistral_service.detect_violations(filepath)
-                    current_app.logger.info(f"🤖 Mistral AI - Raw result: {mistral_result}")
+                    google_result = google_vision_service.detect_violations(filepath)
+                    current_app.logger.info(f"🤖 Google Vision/Gemini - Raw result: {google_result}")
                     
-                    if mistral_result.get('success') and mistral_result.get('violations'):
-                        # Convert Mistral violations to our format
-                        for violation in mistral_result['violations']:
-                            mistral_violations.append({
+                    if google_result.get('success') and google_result.get('violations'):
+                        # Convert Google violations to our format
+                        for violation in google_result['violations']:
+                            google_violations.append({
                                 'category': violation.get('type', 'unknown_violation'),
                                 'confidence': violation.get('confidence', 0.0) if violation.get('confidence', 0.0) <= 1.0 else violation.get('confidence', 0.0) / 100.0,
                                 'description': violation.get('description', ''),
                                 'severity': violation.get('severity', 'medium'),
-                                'source': 'mistral_ai',
+                                'source': 'google_vision',
                                 'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}
                             })
-                        current_app.logger.info(f"🤖 Mistral AI - Converted {len(mistral_violations)} violations to standard format")
-                        current_app.logger.info(f"🤖 Mistral AI - Final violations: {mistral_violations}")
+                        current_app.logger.info(f"🤖 Google Vision/Gemini - Converted {len(google_violations)} violations to standard format")
+                        current_app.logger.info(f"🤖 Google Vision/Gemini - Final violations: {google_violations}")
                     else:
-                        current_app.logger.warning(f"🤖 Mistral AI - No violations found or analysis failed")
-                        current_app.logger.info(f"🤖 Mistral AI - Success: {mistral_result.get('success')}, Violations: {mistral_result.get('violations')}")
+                        current_app.logger.warning(f"🤖 Google Vision/Gemini - No violations found or analysis failed")
+                        current_app.logger.info(f"🤖 Google Vision/Gemini - Success: {google_result.get('success')}, Violations: {google_result.get('violations')}")
                 except Exception as e:
-                    current_app.logger.error(f"🤖 Mistral AI - Exception during analysis: {e}")
+                    current_app.logger.error(f"🤖 Google Vision/Gemini - Exception during analysis: {e}")
                     import traceback
-                    current_app.logger.error(f"🤖 Mistral AI - Traceback: {traceback.format_exc()}")
+                    current_app.logger.error(f"🤖 Google Vision/Gemini - Traceback: {traceback.format_exc()}")
             else:
-                current_app.logger.warning(f"🤖 Mistral AI - Service unavailable (not initialized)")
-                # Не добавляем демо данные - используем только реальные результаты
-                current_app.logger.info(f"🤖 Mistral AI - No demo violations added")
+                current_app.logger.warning(f"🤖 Google Vision/Gemini - Service unavailable (not initialized)")
+                current_app.logger.info(f"🤖 Google Vision/Gemini - No demo violations added")
             
-            # Combine YOLO and Mistral results
-            all_violations = detection_result.get('violations', []) + mistral_violations
+            # Combine YOLO and Google results
+            all_violations = detection_result.get('violations', []) + google_violations
             detection_result['violations'] = all_violations
             current_app.logger.info(f"🔍 Combined Detection - Total violations: {len(all_violations)}")
             

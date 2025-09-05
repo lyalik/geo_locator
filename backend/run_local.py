@@ -97,15 +97,15 @@ SECRET_KEY=your-secret-key-for-development
         sys.exit(1)
     
     print("\n🎉 All checks passed! Starting Flask development server...")
-    print(f"📍 Backend will be available at: http://localhost:5000")
-    print(f"📍 API endpoints at: http://localhost:5000/api/")
+    print(f"📍 Backend will be available at: http://localhost:5001")
+    print(f"📍 API endpoints at: http://localhost:5001/api/")
     print("\nPress Ctrl+C to stop the server")
     print("=" * 50)
     
     # Start the Flask development server
     app.run(
         host='0.0.0.0',
-        port=5000,
+        port=5001,
         debug=True,
         use_reloader=True
     )

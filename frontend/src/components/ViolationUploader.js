@@ -107,7 +107,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
       console.log('FormData entries:', [...formData.entries()]);
 
       try {
-        const response = await fetch('http://localhost:5000/api/violations/detect', {
+        const response = await fetch('http://localhost:5001/api/violations/detect', {
           method: 'POST',
           body: formData,
         });
@@ -460,7 +460,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                     
                     try {
                       // Используем backend геокодинг через наш API
-                      const response = await fetch(`http://localhost:5000/api/geo/geocode?address=${encodeURIComponent(locationHint)}`);
+                      const response = await fetch(`http://localhost:5001/api/geo/geocode?address=${encodeURIComponent(locationHint)}`);
                       const data = await response.json();
                       
                       if (data.success && data.data?.coordinates) {
