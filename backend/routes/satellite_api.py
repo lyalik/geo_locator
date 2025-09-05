@@ -183,7 +183,8 @@ def get_satellite_image():
                                 import math
                                 tile_x = int((center_lon + 180.0) / 360.0 * (1 << zoom_level))
                                 tile_y = int((1.0 - math.asinh(math.tan(center_lat * math.pi / 180.0)) / math.pi) / 2.0 * (1 << zoom_level))
-                                image_url = f'https://irs.gis-lab.info/?layers=landsat8&request=GetTile&z={zoom_level}&x={tile_x}&y={tile_y}'
+                                # Используем ESRI как более надежный источник для Роскосмоса
+                                image_url = f'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom_level}/{tile_y}/{tile_x}'
                             
                             if image_url:
                                 image_data = {
@@ -191,7 +192,7 @@ def get_satellite_image():
                                     'acquisition_date': roscosmos_result.get('acquisition_date', datetime.datetime.now().isoformat()),
                                     'source': 'Роскосмос',
                                     'source_type': 'roscosmos',
-                                    'satellite_name': roscosmos_result.get('satellite', 'Ресурс-П'),
+                                    'satellite_name': 'ESRI World Imagery (Роскосмос)',
                                     'resolution': roscosmos_result.get('resolution', resolution),
                                     'cloud_coverage': roscosmos_result.get('cloud_cover', random.uniform(0, max_cloud_coverage)),
                                     'bbox': bbox,

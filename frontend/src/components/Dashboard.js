@@ -1,30 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Tab, Tabs,
-  Chip, Alert, CircularProgress, Paper, List, ListItem, ListItemText,
-  ListItemIcon, IconButton, Dialog, DialogTitle, DialogContent, DialogActions
+  Chip, CircularProgress, Paper, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import {
   Map as MapIcon, Upload as UploadIcon, Analytics as AnalyticsIcon,
   Warning as WarningIcon, CheckCircle as CheckIcon, Schedule as ScheduleIcon,
-  Visibility as ViewIcon, GetApp as DownloadIcon, Refresh as RefreshIcon,
+  GetApp as DownloadIcon, Refresh as RefreshIcon,
   Home as PropertyIcon, LocationCity as UrbanIcon, Satellite as SatelliteIcon,
   TextFields as OCRIcon
 } from '@mui/icons-material';
 import InteractiveMap from './InteractiveMap';
-import BatchViolationUploader from './BatchViolationUploader';
 import ViolationUploader from './ViolationUploader';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import PropertyAnalyzer from './PropertyAnalyzer';
 import UrbanAnalyzer from './UrbanAnalyzer';
 import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
-import GoogleVisionAnalyzer from './GoogleVisionAnalyzer';
-import { api, violations } from '../services/api';
+import { violations } from '../services/api';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [violations, setViolations] = useState([]);
+  const [violationsData, setViolationsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedViolation, setSelectedViolation] = useState(null);
   const [showViolationDialog, setShowViolationDialog] = useState(false);
@@ -50,8 +47,9 @@ const Dashboard = () => {
       let dbViolations = [];
       let allDbViolations = [];
       
-      if (response.data && response.data.success) {
-        const rawViolations = response.data.data || [];
+      if (response.data) {
+        // API возвращает данные напрямую в response.data
+        const rawViolations = Array.isArray(response.data) ? response.data : (response.data.data || []);
         console.log('✅ Loaded violations from database:', rawViolations.length);
         
         // Нормализуем данные из базы данных для отображения
@@ -81,7 +79,7 @@ const Dashboard = () => {
         console.warn('⚠️ Failed to load violations from database:', response.data);
       }
       
-      setViolations(dbViolations);
+      setViolationsData(dbViolations);
       
       // Calculate stats from ALL violations (not just those with coordinates)
       const newStats = {
@@ -188,9 +186,9 @@ const Dashboard = () => {
   };
 
   const tabs = [
-    { label: 'Карта нарушений', icon: <MapIcon />, component: <InteractiveMap violations={violations} onViolationClick={handleViolationClick} onCoordinateSelect={setSelectedCoordinates} height={600} /> },
+    { label: 'Карта нарушений', icon: <MapIcon />, component: <InteractiveMap violations={violationsData} onViolationClick={handleViolationClick} onCoordinateSelect={setSelectedCoordinates} height={600} /> },
     { label: 'Анализ с ИИ', icon: <UploadIcon />, component: <ViolationUploader onUploadComplete={handleUploadComplete} /> },
-    { label: 'Аналитика', icon: <AnalyticsIcon />, component: <AnalyticsDashboard violations={violations} /> },
+    { label: 'Аналитика', icon: <AnalyticsIcon />, component: <AnalyticsDashboard violations={violationsData} /> },
     { label: 'Анализ недвижимости', icon: <PropertyIcon />, component: <PropertyAnalyzer coordinates={selectedCoordinates} onPropertySelect={(property) => { if (property.coordinates) setSelectedCoordinates({lat: property.coordinates[0], lon: property.coordinates[1]}); }} /> },
     { label: 'Городской контекст', icon: <UrbanIcon />, component: <UrbanAnalyzer coordinates={selectedCoordinates} /> },
     { label: 'Спутниковый анализ', icon: <SatelliteIcon />, component: <SatelliteAnalyzer coordinates={selectedCoordinates} /> },
