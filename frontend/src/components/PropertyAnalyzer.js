@@ -530,9 +530,9 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 disabled={loading}
                 placeholder={
-                  searchType === 'address' ? 'Введите адрес...' :
+                  searchType === 'address' ? 'Введите адрес (например: Москва, Красная площадь, 1)' :
                   searchType === 'cadastral' ? '77:01:0001001:1234' :
-                  coordinates ? `${coordinates.lat.toFixed(6)}, ${coordinates.lon.toFixed(6)}` : 'Координаты не заданы'
+                  'Введите координаты (например: 45.045279, 38.978583)'
                 }
               />
             </Grid>
@@ -569,7 +569,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                   variant="contained"
                   startIcon={<SearchIcon />}
                   onClick={handleSearch}
-                  disabled={loading || (searchType !== 'coordinates' && !searchQuery.trim())}
+                  disabled={loading || (!searchQuery.trim() && searchType !== 'coordinates') || (searchType === 'coordinates' && !coordinates && !searchQuery.trim())}
                   fullWidth
                 >
                   Поиск

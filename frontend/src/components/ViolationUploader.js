@@ -423,7 +423,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                           disabled
                         />
                       }
-                      label="🤖 Mistral AI анализ"
+                      label="🤖 Google Vision AI анализ"
                     />
                   </Grid>
                   <Grid item xs={6}>
@@ -434,7 +434,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                           disabled
                         />
                       }
-                      label="🎯 YOLO детекция"
+                      label="🎯 Google Gemini анализ"
                     />
                   </Grid>
                 </Grid>

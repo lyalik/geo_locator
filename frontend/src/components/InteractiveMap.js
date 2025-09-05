@@ -86,7 +86,7 @@ const violationIcons = {
   })
 };
 
-const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => {
+const InteractiveMap = ({ violations = [], onViolationClick, onCoordinateSelect, height = 600 }) => {
   const [filteredViolations, setFilteredViolations] = useState(violations);
   const [filters, setFilters] = useState({
     category: 'all',
@@ -107,6 +107,14 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
 
   // Default center (Moscow)
   const defaultCenter = [55.7558, 37.6176];
+
+  // Handle map click to get coordinates
+  const handleMapClick = (e) => {
+    if (onCoordinateSelect) {
+      const { lat, lng } = e.latlng;
+      onCoordinateSelect({ lat, lon: lng });
+    }
+  };
 
   useEffect(() => {
     applyFilters();
@@ -379,6 +387,9 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
           zoom={10}
           style={{ height: '500px', width: '100%' }}
           ref={mapRef}
+          eventHandlers={{
+            click: handleMapClick
+          }}
         >
           <LayersControl position="topright">
             <LayersControl.BaseLayer checked name="OpenStreetMap">

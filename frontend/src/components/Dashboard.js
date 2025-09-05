@@ -34,6 +34,7 @@ const Dashboard = () => {
     processed: 0,
     errors: 0
   });
+  const [selectedCoordinates, setSelectedCoordinates] = useState(null);
 
   useEffect(() => {
     loadViolations();
@@ -187,12 +188,12 @@ const Dashboard = () => {
   };
 
   const tabs = [
-    { label: 'Карта нарушений', icon: <MapIcon />, component: <InteractiveMap violations={violations} onViolationClick={handleViolationClick} height={600} /> },
+    { label: 'Карта нарушений', icon: <MapIcon />, component: <InteractiveMap violations={violations} onViolationClick={handleViolationClick} onCoordinateSelect={setSelectedCoordinates} height={600} /> },
     { label: 'Анализ с ИИ', icon: <UploadIcon />, component: <ViolationUploader onUploadComplete={handleUploadComplete} /> },
     { label: 'Аналитика', icon: <AnalyticsIcon />, component: <AnalyticsDashboard violations={violations} /> },
-    { label: 'Анализ недвижимости', icon: <PropertyIcon />, component: <PropertyAnalyzer /> },
-    { label: 'Городской контекст', icon: <UrbanIcon />, component: <UrbanAnalyzer /> },
-    { label: 'Спутниковый анализ', icon: <SatelliteIcon />, component: <SatelliteAnalyzer /> },
+    { label: 'Анализ недвижимости', icon: <PropertyIcon />, component: <PropertyAnalyzer coordinates={selectedCoordinates} onPropertySelect={(property) => { if (property.coordinates) setSelectedCoordinates({lat: property.coordinates[0], lon: property.coordinates[1]}); }} /> },
+    { label: 'Городской контекст', icon: <UrbanIcon />, component: <UrbanAnalyzer coordinates={selectedCoordinates} /> },
+    { label: 'Спутниковый анализ', icon: <SatelliteIcon />, component: <SatelliteAnalyzer coordinates={selectedCoordinates} /> },
     { label: 'OCR анализ', icon: <OCRIcon />, component: <OCRAnalyzer /> }
   ];
 
