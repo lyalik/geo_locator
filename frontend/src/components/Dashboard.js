@@ -47,12 +47,14 @@ const Dashboard = () => {
       const response = await violations.getList();
       
       let dbViolations = [];
+      let allDbViolations = [];
+      
       if (response.data && response.data.success) {
         const rawViolations = response.data.data || [];
         console.log('✅ Loaded violations from database:', rawViolations.length);
         
-        // Нормализуем данные из базы данных для отображения на карте
-        dbViolations = rawViolations.map(result => ({
+        // Нормализуем данные из базы данных для отображения
+        allDbViolations = rawViolations.map(result => ({
           id: result.violation_id || Math.random().toString(),
           category: result.violations?.[0]?.category || 'unknown',
           confidence: result.violations?.[0]?.confidence || 0,
@@ -65,22 +67,27 @@ const Dashboard = () => {
           source: result.violations?.[0]?.source || 'google_vision',
           description: result.violations?.[0]?.category || '',
           severity: 'medium',
-          bbox: result.violations?.[0]?.bbox
-        })).filter(v => v.lat && v.lon); // Только нарушения с координатами
+          bbox: result.violations?.[0]?.bbox,
+          has_coordinates: !!(result.location?.coordinates?.latitude && result.location?.coordinates?.longitude)
+        }));
+        
+        // Для карты используем только нарушения с координатами
+        dbViolations = allDbViolations.filter(v => v.has_coordinates);
         
         console.log('📍 Violations with coordinates:', dbViolations.length);
+        console.log('📊 Total violations:', allDbViolations.length);
       } else {
         console.warn('⚠️ Failed to load violations from database:', response.data);
       }
       
       setViolations(dbViolations);
       
-      // Calculate stats from violations
+      // Calculate stats from ALL violations (not just those with coordinates)
       const newStats = {
-        total: dbViolations.length,
-        pending: dbViolations.filter(v => v.status === 'pending').length,
-        processed: dbViolations.filter(v => v.status === 'processed').length,
-        errors: dbViolations.filter(v => v.status === 'error').length
+        total: allDbViolations.length,
+        pending: allDbViolations.filter(v => v.status === 'pending').length,
+        processed: allDbViolations.filter(v => v.status === 'processed').length,
+        errors: allDbViolations.filter(v => v.status === 'error').length
       };
       setStats(newStats);
       

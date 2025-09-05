@@ -661,14 +661,14 @@ const ViolationUploader = ({ onUploadComplete }) => {
                               
                               {/* Показываем статистику по источникам ИИ */}
                               {result.violations && result.violations.length > 0 && (() => {
-                                const mistralCount = result.violations.filter(v => v.source === 'mistral_ai').length;
+                                const googleCount = result.violations.filter(v => v.source === 'google_vision').length;
                                 const yoloCount = result.violations.filter(v => v.source === 'yolo' || !v.source).length;
                                 
                                 return (
                                   <>
-                                    {mistralCount > 0 && (
+                                    {googleCount > 0 && (
                                       <Chip 
-                                        label={`🤖 Mistral: ${mistralCount}`}
+                                        label={`🤖 Google Vision: ${googleCount}`}
                                         color="secondary"
                                         size="small"
                                         sx={{ mr: 1, fontSize: '0.75rem' }}
@@ -704,7 +704,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                 </Typography>
                                 {result.violations.map((violation, vIndex) => {
                                   // Определяем источник детекции
-                                  const isMistralAI = violation.source === 'mistral_ai';
+                                  const isGoogleVision = violation.source === 'google_vision';
                                   const isYOLO = violation.source === 'yolo' || !violation.source;
                                   
                                   return (
@@ -713,9 +713,9 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                         <Typography variant="body2">
                                           • {violation.category || violation.type} ({Math.round(violation.confidence * 100)}%)
                                         </Typography>
-                                        {isMistralAI && (
+                                        {isGoogleVision && (
                                           <Chip 
-                                            label="🤖 Mistral AI" 
+                                            label="🤖 Google Vision" 
                                             size="small" 
                                             color="secondary"
                                             sx={{ fontSize: '0.7rem', height: 18 }}

@@ -374,19 +374,38 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                 </Grid>
               </Grid>
               
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Тип снимка</InputLabel>
-                <Select
-                  value={searchParams.bands}
-                  onChange={(e) => setSearchParams(prev => ({ ...prev, bands: e.target.value }))}
-                >
-                  <MenuItem value="RGB">RGB (видимый спектр)</MenuItem>
-                  <MenuItem value="NIR">Ближний инфракрасный</MenuItem>
-                  <MenuItem value="NDVI">Индекс растительности</MenuItem>
-                  <MenuItem value="THERMAL">Тепловой канал</MenuItem>
-                  <MenuItem value="MULTISPECTRAL">Мультиспектральный</MenuItem>
-                </Select>
-              </FormControl>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel>Тип снимка</InputLabel>
+                    <Select
+                      value={searchParams.bands}
+                      onChange={(e) => setSearchParams(prev => ({ ...prev, bands: e.target.value }))}
+                    >
+                      <MenuItem value="RGB">RGB (видимый спектр)</MenuItem>
+                      <MenuItem value="NIR">Ближний инфракрасный</MenuItem>
+                      <MenuItem value="NDVI">Индекс растительности</MenuItem>
+                      <MenuItem value="THERMAL">Тепловой канал</MenuItem>
+                      <MenuItem value="MULTISPECTRAL">Мультиспектральный</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={6}>
+                  <FormControl fullWidth margin="normal">
+                    <InputLabel>Источник данных</InputLabel>
+                    <Select
+                      value={searchParams.source}
+                      onChange={(e) => setSearchParams(prev => ({ ...prev, source: e.target.value }))}
+                    >
+                      <MenuItem value="auto">🤖 Автоматический выбор</MenuItem>
+                      <MenuItem value="roscosmos">🛰️ Роскосмос</MenuItem>
+                      <MenuItem value="yandex">🗺️ Яндекс Спутник</MenuItem>
+                      <MenuItem value="dgis">📍 2ГИС</MenuItem>
+                      <MenuItem value="osm">🌍 OpenStreetMap</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
               
               <Box sx={{ mt: 2 }}>
                 <Button
@@ -704,6 +723,20 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                 inputProps={{ min: 1, max: 365 }}
               />
               
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Источник данных</InputLabel>
+                <Select
+                  value={timeSeriesParams.source}
+                  onChange={(e) => setTimeSeriesParams(prev => ({ ...prev, source: e.target.value }))}
+                >
+                  <MenuItem value="auto">🤖 Автоматический выбор</MenuItem>
+                  <MenuItem value="roscosmos">🛰️ Роскосмос</MenuItem>
+                  <MenuItem value="yandex">🗺️ Яндекс Спутник</MenuItem>
+                  <MenuItem value="dgis">📍 2ГИС</MenuItem>
+                  <MenuItem value="osm">🌍 OpenStreetMap</MenuItem>
+                </Select>
+              </FormControl>
+              
               <Button
                 variant="contained"
                 onClick={handleGetTimeSeries}
@@ -799,6 +832,20 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                 margin="normal"
                 InputLabelProps={{ shrink: true }}
               />
+              
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Источник данных</InputLabel>
+                <Select
+                  value={changeParams.source}
+                  onChange={(e) => setChangeParams(prev => ({ ...prev, source: e.target.value }))}
+                >
+                  <MenuItem value="auto">🤖 Автоматический выбор</MenuItem>
+                  <MenuItem value="roscosmos">🛰️ Роскосмос</MenuItem>
+                  <MenuItem value="yandex">🗺️ Яндекс Спутник</MenuItem>
+                  <MenuItem value="dgis">📍 2ГИС</MenuItem>
+                  <MenuItem value="osm">🌍 OpenStreetMap</MenuItem>
+                </Select>
+              </FormControl>
               
               <Button
                 variant="contained"

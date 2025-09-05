@@ -172,22 +172,37 @@ def get_satellite_image():
                             center_lat, center_lon, zoom_level, date_from, date_to
                         )
                         
-                        if roscosmos_result.get('success') and roscosmos_result.get('image_url'):
+                        if roscosmos_result.get('success'):
                             logger.info(f"Successfully retrieved image from Roscosmos (source: {source})")
-                            image_data = {
-                                'image_url': roscosmos_result['image_url'],
-                                'acquisition_date': roscosmos_result.get('acquisition_date', datetime.datetime.now().isoformat()),
-                                'source': 'Роскосмос',
-                                'source_type': 'roscosmos',
-                                'satellite_name': roscosmos_result.get('satellite_name', 'Ресурс-П'),
-                                'resolution': roscosmos_result.get('resolution', resolution),
-                                'cloud_coverage': roscosmos_result.get('cloud_coverage', random.uniform(0, max_cloud_coverage)),
-                                'bbox': bbox,
-                                'coordinates': {'lat': center_lat, 'lon': center_lon},
-                                'bands': roscosmos_result.get('bands', ['RGB']),
-                                'quality_score': roscosmos_result.get('quality_score', 0.9),
-                                'selected_source': source
-                            }
+                            
+                            # Конвертируем image_data в base64 URL если это binary data
+                            image_url = None
+                            if roscosmos_result.get('image_data'):
+                                import base64
+                                content_type = roscosmos_result.get('content_type', 'image/jpeg')
+                                image_b64 = base64.b64encode(roscosmos_result['image_data']).decode('utf-8')
+                                image_url = f"data:{content_type};base64,{image_b64}"
+                            elif roscosmos_result.get('image_url'):
+                                image_url = roscosmos_result['image_url']
+                            
+                            if image_url:
+                                image_data = {
+                                    'image_url': image_url,
+                                    'acquisition_date': roscosmos_result.get('acquisition_date', datetime.datetime.now().isoformat()),
+                                    'source': 'Роскосмос',
+                                    'source_type': 'roscosmos',
+                                    'satellite_name': roscosmos_result.get('satellite', 'Ресурс-П'),
+                                    'resolution': roscosmos_result.get('resolution', resolution),
+                                    'cloud_coverage': roscosmos_result.get('cloud_cover', random.uniform(0, max_cloud_coverage)),
+                                    'bbox': bbox,
+                                    'coordinates': {'lat': center_lat, 'lon': center_lon},
+                                    'bands': roscosmos_result.get('bands', ['RGB']),
+                                    'quality_score': 0.9,
+                                    'selected_source': source,
+                                    'roscosmos_source': roscosmos_result.get('source', 'roscosmos_geoportal')
+                                }
+                            else:
+                                raise Exception("Роскосмос не вернул изображение")
                         elif source == 'roscosmos':
                             raise Exception("Роскосмос выбран принудительно, но недоступен")
                         else:
@@ -403,9 +418,9 @@ def get_time_series():
                 'vegetation_index': max(0, min(1, vegetation_seasonal + vegetation_noise)),
                 'built_up_area': max(0, min(1, base_built_up + built_up_noise)),
                 'water_bodies': max(0, min(1, base_water + water_noise)),
-                'bare_soil': max(0, min(1, base_bare_soil + bare_soil_noise)),
+                'bare_soil': max(0, min(1, 0.05 + bare_soil_noise)),
                 'cloud_coverage': round(cloud_coverage, 1),
-                'temperature': round(base_temp + month_factor * 20 + random.uniform(-5, 5), 1),
+                'temperature': round(15 + month_factor * 20 + random.uniform(-5, 5), 1),
                 'data_quality': random.choice(['excellent', 'good', 'fair']) if cloud_coverage < 30 else 'poor'
             })
             current_date += datetime.timedelta(days=interval_days)
@@ -594,7 +609,7 @@ def get_change_detection():
                 'changes': changes,
                 'summary': {
                     'total_changes': len(changes),
-                    'significant_changes': len([c for c in changes if c['significance'] == 'высокая']),
+                    'significant_changes': len([c for c in changes.values() if c['significance'] in ['increase', 'decrease']]),
                     'date_range': {
                         'start': date1,
                         'end': date2
@@ -624,56 +639,6 @@ def get_change_detection():
             'error': str(e)
         }), 500
 
-@satellite_bp.route('/sources', methods=['GET'])
-def get_available_sources():
-    """Получение списка доступных спутниковых источников"""
-    try:
-        roscosmos_service = RoscosmosService()
-        yandex_service = YandexSatelliteService()
-        
-        sources = {
-            'roscosmos': {
-                'name': 'Роскосмос',
-                'satellite_name': random.choice(selected_config['satellites']),
-                'resolution': '1-3 метра',
-                'available': True,
-                'status': 'active'
-            },
-            'yandex': {
-                'name': 'Яндекс Спутник',
-                'satellites': ['Яндекс.Карты'],
-                'resolution': 'Переменное',
-                'available': True,
-                'status': 'active'
-            },
-            'scanex': {
-                'name': 'ScanEx (Космоснимки)',
-                'satellites': ['Архивные данные'],
-                'resolution': '0.5-30 метров',
-                'available': True,
-                'status': 'active'
-            },
-            'dgis': {
-                'name': '2GIS',
-                'satellites': ['Спутниковые слои 2GIS'],
-                'resolution': 'Высокое',
-                'available': True,
-                'status': 'active'
-            }
-        }
-        
-        return jsonify({
-            'success': True,
-            'data': sources,
-            'message': 'Список источников получен'
-        })
-        
-    except Exception as e:
-        logger.error(f"Sources error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
 def _get_change_description(category, significance, change_percent):
     """Генерирует описание изменений на русском языке"""

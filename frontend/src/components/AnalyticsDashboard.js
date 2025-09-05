@@ -428,12 +428,13 @@ const AnalyticsDashboard = ({ violations = [] }) => {
               {(() => {
                 const aiSourceData = realViolationsData.reduce((acc, violation) => {
                   const source = violation.source || 'yolo';
-                  const existing = acc.find(item => item.name === source);
+                  const sourceName = source === 'google_vision' ? 'Google Vision' : 'YOLO';
+                  const existing = acc.find(item => item.name === sourceName);
                   if (existing) {
                     existing.value += 1;
                   } else {
                     acc.push({
-                      name: source === 'google_vision' ? 'Google Vision' : 'YOLO',
+                      name: sourceName,
                       value: 1,
                       color: source === 'google_vision' ? '#4caf50' : '#2196f3'
                     });
@@ -441,26 +442,42 @@ const AnalyticsDashboard = ({ violations = [] }) => {
                   return acc;
                 }, []);
 
+                console.log('AI Source Data for chart:', aiSourceData);
+                
                 return aiSourceData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={aiSourceData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percentage }) => `${name}: ${percentage}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {aiSourceData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <Box>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={aiSourceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#8884d8">
+                          {aiSourceData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <Box sx={{ mt: 2 }}>
+                      {aiSourceData.map((item, index) => (
+                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Box 
+                            sx={{ 
+                              width: 16, 
+                              height: 16, 
+                              backgroundColor: item.color, 
+                              borderRadius: '50%', 
+                              mr: 1 
+                            }} 
+                          />
+                          <Typography variant="body2">
+                            {item.name}: {item.value} нарушений ({Math.round((item.value / aiSourceData.reduce((sum, d) => sum + d.value, 0)) * 100)}%)
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
                 ) : (
                   <Alert severity="info">Нет данных для отображения</Alert>
                 );
