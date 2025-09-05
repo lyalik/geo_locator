@@ -82,6 +82,21 @@ export const search = {
   getHistory: () => api.get('/search/history'),
 };
 
+// Violations API
+export const violations = {
+  getList: () => api.get('/api/violations/list'),
+  detect: (formData) => api.post('/api/violations/detect', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  batchDetect: (formData) => api.post('/api/violations/batch_detect', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+};
+
 // Maps API
 export const maps = {
   getYandexMap: (center = DEFAULT_MAP_CENTER, zoom = DEFAULT_ZOOM) => {

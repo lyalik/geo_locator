@@ -90,11 +90,15 @@ export function AuthProvider({ children }) {
   // Logout function
   const logout = async () => {
     try {
+      // Попытаться выполнить logout на backend
       await auth.logout();
+    } catch (error) {
+      // Даже если backend logout не удался, очищаем локальные данные
+      console.warn('Backend logout failed, clearing local data:', error);
+    } finally {
+      // Всегда очищаем локальные данные
       setCurrentUser(null);
       clearUserFromStorage();
-    } catch (error) {
-      throw error;
     }
   };
 

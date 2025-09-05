@@ -20,7 +20,7 @@ import UrbanAnalyzer from './UrbanAnalyzer';
 import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
 import GoogleVisionAnalyzer from './GoogleVisionAnalyzer';
-import { api } from '../services/api';
+import { api, violations } from '../services/api';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -44,94 +44,43 @@ const Dashboard = () => {
     try {
       // Загружаем данные из базы данных через API
       console.log('🔄 Loading violations from database...');
-      const response = await api.get('/api/violations/list');
+      const response = await violations.getList();
       
-      let persistedViolations = [];
+      let dbViolations = [];
       if (response.data && response.data.success) {
-        persistedViolations = response.data.data || [];
-        console.log('✅ Loaded violations from database:', persistedViolations.length);
+        const rawViolations = response.data.data || [];
+        console.log('✅ Loaded violations from database:', rawViolations.length);
+        
+        // Нормализуем данные из базы данных для отображения на карте
+        dbViolations = rawViolations.map(result => ({
+          id: result.violation_id || Math.random().toString(),
+          category: result.violations?.[0]?.category || 'unknown',
+          confidence: result.violations?.[0]?.confidence || 0,
+          lat: result.location?.coordinates?.latitude,
+          lon: result.location?.coordinates?.longitude,
+          address: result.location?.address?.formatted || result.location?.address || 'Адрес не указан',
+          created_at: result.metadata?.timestamp || new Date().toISOString(),
+          status: 'processed',
+          image_path: result.image_path,
+          source: result.violations?.[0]?.source || 'google_vision',
+          description: result.violations?.[0]?.category || '',
+          severity: 'medium',
+          bbox: result.violations?.[0]?.bbox
+        })).filter(v => v.lat && v.lon); // Только нарушения с координатами
+        
+        console.log('📍 Violations with coordinates:', dbViolations.length);
       } else {
         console.warn('⚠️ Failed to load violations from database:', response.data);
       }
       
-      // Восстанавливаем данные из localStorage при загрузке
-      try {
-        const savedData = localStorage.getItem('geo_locator_violations');
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          if (parsedData.single) window.GLOBAL_SINGLE_RESULTS = parsedData.single;
-          if (parsedData.batch) window.GLOBAL_BATCH_RESULTS = parsedData.batch;
-          console.log('Restored violations from localStorage:', {
-            single: parsedData.single?.length || 0,
-            batch: parsedData.batch?.length || 0
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to restore violations from localStorage:', error);
-      }
-
-      // Загружаем данные из глобальных переменных
-      const batchResults = window.GLOBAL_BATCH_RESULTS || [];
-      const singleResults = window.GLOBAL_SINGLE_RESULTS || [];
+      setViolations(dbViolations);
       
-      // Объединяем все результаты
-      const allGlobalResults = [...batchResults, ...singleResults];
-      
-      // Нормализуем данные для отображения
-      const realViolations = allGlobalResults.map(result => ({
-        id: result.violation_id || result.id || Math.random().toString(),
-        category: result.category || 'unknown',
-        confidence: result.confidence || 0,
-        lat: result.location?.coordinates?.latitude || result.lat,
-        lon: result.location?.coordinates?.longitude || result.lon,
-        address: result.location?.address?.formatted || result.location?.address || result.address,
-        created_at: result.uploadTime || result.created_at || new Date().toISOString(),
-        status: result.status || 'processed',
-        image_path: result.image || result.annotated_image_path || result.image_path,
-        source: result.source || 'api',
-        description: result.description || '',
-        severity: result.severity || 'medium'
-      }));
-
-      // Нормализуем данные из базы данных
-      const dbViolations = persistedViolations.map(result => ({
-        id: result.violation_id || result.id || Math.random().toString(),
-        category: result.violations?.[0]?.category || 'unknown',
-        confidence: result.violations?.[0]?.confidence || 0,
-        lat: result.location?.coordinates?.latitude,
-        lon: result.location?.coordinates?.longitude,
-        address: result.location?.address,
-        created_at: result.metadata?.timestamp || new Date().toISOString(),
-        status: 'processed',
-        image_path: result.image_path,
-        source: result.violations?.[0]?.source || 'database',
-        description: result.violations?.[0]?.category || '',
-        severity: 'medium'
-      })).filter(v => v.lat && v.lon); // Только с координатами
-      
-      // Объединяем сохраненные и новые данные, избегая дубликатов
-      const allViolationsMap = new Map();
-      
-      // Добавляем данные из базы данных
-      dbViolations.forEach(v => allViolationsMap.set(v.id, v));
-      
-      // Добавляем новые данные (перезаписывают существующие с тем же ID)
-      realViolations.forEach(v => allViolationsMap.set(v.id, v));
-      
-      // Тестовые данные убраны - используем только реальные данные из базы
-      
-      const allViolations = Array.from(allViolationsMap.values());
-      setViolations(allViolations);
-      
-      // Данные теперь хранятся в базе данных, localStorage не используется
-      console.log('📊 All violations loaded:', allViolations.length);
-      
-      // Calculate stats from all violations
+      // Calculate stats from violations
       const newStats = {
-        total: allViolations.length,
-        pending: allViolations.filter(v => v.status === 'pending').length,
-        processed: allViolations.filter(v => v.status === 'processed').length,
-        errors: allViolations.filter(v => v.status === 'error').length
+        total: dbViolations.length,
+        pending: dbViolations.filter(v => v.status === 'pending').length,
+        processed: dbViolations.filter(v => v.status === 'processed').length,
+        errors: dbViolations.filter(v => v.status === 'error').length
       };
       setStats(newStats);
       
