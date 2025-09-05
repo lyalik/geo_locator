@@ -180,34 +180,34 @@ const ViolationUploader = ({ onUploadComplete }) => {
         console.log('Processed result for display:', processedResult);
         console.log('Current allResults array:', allResults);
         
-        // Логируем Mistral AI результаты отдельно - ИСПРАВЛЕНО
+        // Логируем Google Vision результаты отдельно - ИСПРАВЛЕНО
         if (data.data && data.data.violations) {
           console.log('🔧 Processing violations from data.data.violations');
           const allViolations = data.data.violations;
-          const mistralViolations = allViolations.filter(v => v.source === 'mistral_ai');
+          const googleViolations = allViolations.filter(v => v.source === 'google_vision');
           const yoloViolations = allViolations.filter(v => v.source === 'yolo' || !v.source);
           
           console.log('🔧 All violations:', allViolations);
-          console.log('🔧 Mistral violations after filter:', mistralViolations);
+          console.log('🔧 Google Vision violations after filter:', googleViolations);
           console.log('🔧 YOLO violations after filter:', yoloViolations);
           
-          if (mistralViolations.length > 0) {
-            console.log('🤖 Mistral AI обнаружил нарушения:', mistralViolations);
-            mistralViolations.forEach(violation => {
+          if (googleViolations.length > 0) {
+            console.log('🤖 Google Vision обнаружил нарушения:', googleViolations);
+            googleViolations.forEach(violation => {
               console.log(`- ${violation.category}: ${violation.description} (${Math.round(violation.confidence * 100)}%)`);
             });
           } else {
-            console.log('❌ Mistral AI нарушения не найдены после фильтрации');
+            console.log('❌ Google Vision нарушения не найдены после фильтрации');
           }
           
           if (yoloViolations.length > 0) {
             console.log('🎯 YOLO обнаружил нарушения:', yoloViolations);
             yoloViolations.forEach(violation => {
-              console.log(`- ${violation.category}: ${violation.description || 'Описание недоступно'} (${Math.round(violation.confidence * 100)}%)`);
+              console.log(`- ${violation.category}: ${Math.round(violation.confidence * 100)}%`);
             });
           }
           
-          console.log(`📊 Итого: Mistral AI: ${mistralViolations.length}, YOLO: ${yoloViolations.length}`);
+          console.log(`📊 Итого: Google Vision: ${googleViolations.length}, YOLO: ${yoloViolations.length}`);
         } else {
           console.log('❌ Нет violations в data.data');
         }
@@ -299,7 +299,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
         Анализ нарушений с ИИ
       </Typography>
       <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-        🤖 Mistral AI + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация (до 50 фото)
+        🤖 Google Vision + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация (до 50 фото)
       </Typography>
       
       <Grid container spacing={3}>

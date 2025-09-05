@@ -19,7 +19,7 @@ import PropertyAnalyzer from './PropertyAnalyzer';
 import UrbanAnalyzer from './UrbanAnalyzer';
 import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
-import MistralAnalyzer from './MistralAnalyzer';
+import GoogleVisionAnalyzer from './GoogleVisionAnalyzer';
 import { api } from '../services/api';
 
 const Dashboard = () => {

@@ -93,7 +93,7 @@ const AnalyticsDashboard = ({ violations = [] }) => {
             image_path: result.image || result.image_path,
             violation_id: result.violation_id,
             source: violation.source || 'yolo', // Источник детекции
-            description: violation.description, // Описание от Mistral AI
+            description: violation.description, // Описание от Google Vision
             severity: violation.severity, // Уровень серьезности
             recommendations: violation.recommendations // Рекомендации
           }));
@@ -433,9 +433,9 @@ const AnalyticsDashboard = ({ violations = [] }) => {
                     existing.value += 1;
                   } else {
                     acc.push({
-                      name: source === 'mistral_ai' ? 'Mistral AI' : 'YOLO',
+                      name: source === 'google_vision' ? 'Google Vision' : 'YOLO',
                       value: 1,
-                      color: source === 'mistral_ai' ? '#9c27b0' : '#2196f3'
+                      color: source === 'google_vision' ? '#4caf50' : '#2196f3'
                     });
                   }
                   return acc;

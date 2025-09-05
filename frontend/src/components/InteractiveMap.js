@@ -47,33 +47,33 @@ const violationIcons = {
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   }),
-  // Mistral AI specific icons (with purple border)
-  mistral_illegal_construction: L.divIcon({
-    html: '<div style="background-color: #f44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+  // Google Vision specific icons (with green border)
+  google_vision_illegal_construction: L.divIcon({
+    html: '<div style="background-color: #f44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #4caf50;"></div>',
     className: 'custom-div-icon',
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   }),
-  mistral_unauthorized_signage: L.divIcon({
-    html: '<div style="background-color: #ff9800; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+  google_vision_unauthorized_signage: L.divIcon({
+    html: '<div style="background-color: #ff9800; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #4caf50;"></div>',
     className: 'custom-div-icon',
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   }),
-  mistral_blocked_entrance: L.divIcon({
-    html: '<div style="background-color: #9c27b0; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #673ab7;"></div>',
+  google_vision_blocked_entrance: L.divIcon({
+    html: '<div style="background-color: #9c27b0; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #4caf50;"></div>',
     className: 'custom-div-icon',
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   }),
-  mistral_improper_waste_disposal: L.divIcon({
-    html: '<div style="background-color: #795548; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+  google_vision_improper_waste_disposal: L.divIcon({
+    html: '<div style="background-color: #795548; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #4caf50;"></div>',
     className: 'custom-div-icon',
     iconSize: [20, 20],
     iconAnchor: [10, 10]
   }),
-  mistral_unauthorized_modification: L.divIcon({
-    html: '<div style="background-color: #607d8b; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #9c27b0;"></div>',
+  google_vision_unauthorized_modification: L.divIcon({
+    html: '<div style="background-color: #607d8b; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #4caf50;"></div>',
     className: 'custom-div-icon',
     iconSize: [20, 20],
     iconAnchor: [10, 10]
@@ -142,10 +142,10 @@ const InteractiveMap = ({ violations = [], onViolationClick, height = 600 }) => 
   };
 
   const getViolationIcon = (category, source) => {
-    // Для Mistral AI используем специальные иконки с фиолетовой границей
-    if (source === 'mistral_ai') {
-      const mistralKey = `mistral_${category}`;
-      return violationIcons[mistralKey] || violationIcons.default;
+    // Для Google Vision используем специальные иконки с зеленой границей
+    if (source === 'google_vision') {
+      const googleKey = `google_vision_${category}`;
+      return violationIcons[googleKey] || violationIcons.default;
     }
     return violationIcons[category] || violationIcons.default;
   };
