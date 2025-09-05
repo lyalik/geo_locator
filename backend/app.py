@@ -1,11 +1,13 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_migrate import Migrate
 from flask_cors import CORS
+from flask_migrate import Migrate
+import logging
+import os
+from dotenv import load_dotenv
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
 import json
-import os
 
 # Import models and db
 from models import db, User, Photo, Violation, ProcessingTask
@@ -243,6 +245,16 @@ def index():
         'name': 'Geo Locator API',
         'endpoints': routes
     })
+
+@app.route('/static/satellite_images/<filename>')
+def serve_satellite_image(filename):
+    """Serve satellite images from temporary directory"""
+    import os
+    temp_dir = '/tmp/satellite_images'
+    if os.path.exists(os.path.join(temp_dir, filename)):
+        return send_from_directory(temp_dir, filename)
+    else:
+        return jsonify({'error': 'Image not found'}), 404
 
 @app.route('/health', methods=['GET'])
 def health():

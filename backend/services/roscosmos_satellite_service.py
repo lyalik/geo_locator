@@ -156,16 +156,22 @@ class RoscosmosService:
             response = requests.get(tile_url, params=params, timeout=15)
             
             if response.status_code == 200 and response.content:
-                return {
-                    'success': True,
-                    'source': 'scanex_kosmosnimki',
-                    'image_data': response.content,
-                    'content_type': 'image/jpeg',
-                    'coordinates': {'latitude': lat, 'longitude': lon},
-                    'zoom': zoom,
-                    'tile_coords': {'x': tile_x, 'y': tile_y},
-                    'satellite': 'Mixed Russian satellites'
-                }
+                # Проверяем, что это действительно изображение, а не XML ошибка
+                content_type = response.headers.get('content-type', '').lower()
+                if 'image' in content_type or (response.content[:4] in [b'\xff\xd8\xff\xe0', b'\xff\xd8\xff\xe1', b'\x89PNG']):
+                    return {
+                        'success': True,
+                        'source': 'scanex_kosmosnimki',
+                        'image_data': response.content,
+                        'content_type': 'image/jpeg',
+                        'coordinates': {'latitude': lat, 'longitude': lon},
+                        'zoom': zoom,
+                        'tile_coords': {'x': tile_x, 'y': tile_y},
+                        'satellite': 'Mixed Russian satellites'
+                    }
+                else:
+                    logger.warning(f"ScanEx returned non-image content: {response.content[:100]}")
+                    return {'success': False, 'source': 'scanex_kosmosnimki', 'error': 'Invalid image format'}
             
             return {'success': False, 'source': 'scanex_kosmosnimki'}
             
@@ -185,26 +191,37 @@ class RoscosmosService:
             
             # Пробуем несколько открытых источников
             sources = [
-                f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{tile_y}/{tile_x}",
-                f"https://mt1.google.com/vt/lyrs=s&x={tile_x}&y={tile_y}&z={zoom}",
-                f"https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{zoom}/{tile_x}/{tile_y}?access_token=pk.test"
+                {
+                    'url': f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{tile_y}/{tile_x}",
+                    'name': 'ESRI World Imagery'
+                },
+                {
+                    'url': f"https://mt1.google.com/vt/lyrs=s&x={tile_x}&y={tile_y}&z={zoom}",
+                    'name': 'Google Satellite'
+                }
             ]
             
-            for source_url in sources:
+            for source in sources:
                 try:
-                    response = requests.get(source_url, timeout=10)
+                    response = requests.get(source['url'], timeout=10, headers={
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    })
                     if response.status_code == 200 and response.content:
-                        return {
-                            'success': True,
-                            'source': 'public_satellite',
-                            'image_data': response.content,
-                            'content_type': 'image/jpeg',
-                            'coordinates': {'latitude': lat, 'longitude': lon},
-                            'zoom': zoom,
-                            'tile_coords': {'x': tile_x, 'y': tile_y},
-                            'note': 'Public satellite imagery'
-                        }
-                except:
+                        # Проверяем, что это изображение
+                        content_type = response.headers.get('content-type', '').lower()
+                        if 'image' in content_type or (response.content[:4] in [b'\xff\xd8\xff\xe0', b'\xff\xd8\xff\xe1', b'\x89PNG']):
+                            return {
+                                'success': True,
+                                'source': f'public_satellite_{source["name"]}',
+                                'image_data': response.content,
+                                'content_type': content_type or 'image/jpeg',
+                                'coordinates': {'latitude': lat, 'longitude': lon},
+                                'zoom': zoom,
+                                'tile_coords': {'x': tile_x, 'y': tile_y},
+                                'satellite': source['name']
+                            }
+                except Exception as e:
+                    logger.warning(f"Public source {source['name']} failed: {e}")
                     continue
             
             return {'success': False, 'source': 'public_satellite'}
