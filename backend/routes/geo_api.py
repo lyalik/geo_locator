@@ -68,12 +68,19 @@ def health():
 @geo_bp.route('/locate', methods=['GET'])
 def locate_by_address():
     """
-    Поиск местоположения по адресу с использованием всех доступных источников
+    Поиск местоположения по адресу или кадастровому номеру с использованием всех доступных источников
     """
     try:
-        address = request.args.get('address', '')
+        # Поддерживаем как address, так и query параметры
+        address = request.args.get('address', '') or request.args.get('query', '')
+        search_type = request.args.get('search_type', 'address')
+        
         if not address:
-            return jsonify({'error': 'Address parameter is required'}), 400
+            return jsonify({'error': 'Address or query parameter is required'}), 400
+        
+        # Если это поиск по кадастровому номеру, используем специальную логику
+        if search_type == 'cadastral' or (':' in address and len(address.split(':')) >= 3):
+            return locate_by_cadastral_internal(address)
         
         # Исправляем кодировку
         try:
@@ -163,6 +170,32 @@ def locate_by_address():
         logger.error(f"Error in locate_by_address: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
+def locate_by_cadastral_internal(cadastral_number):
+    """
+    Внутренняя функция поиска по кадастровому номеру
+    """
+    yandex_result = None
+    dgis_result = None
+    
+    # Поиск через Yandex Maps
+    try:
+        yandex_result = yandex_service.search(cadastral_number)
+    except Exception as e:
+        logger.warning(f"Yandex cadastral search failed: {e}")
+    
+    # Поиск через 2GIS
+    try:
+        dgis_result = dgis_service.search(cadastral_number)
+    except Exception as e:
+        logger.warning(f"2GIS cadastral search failed: {e}")
+    
+    return jsonify({
+        'success': True,
+        'yandex': yandex_result if yandex_result and yandex_result.get('success') else None,
+        'dgis': dgis_result if dgis_result and dgis_result.get('success') else None,
+        'query': cadastral_number
+    }), 200
+
 @geo_bp.route('/locate/cadastral', methods=['GET'])
 def locate_by_cadastral():
     """
@@ -173,27 +206,7 @@ def locate_by_cadastral():
         if not cadastral_number:
             return jsonify({'error': 'Cadastral number parameter is required'}), 400
         
-        yandex_result = None
-        dgis_result = None
-        
-        # Поиск через Yandex Maps
-        try:
-            yandex_result = yandex_service.search(cadastral_number)
-        except Exception as e:
-            logger.warning(f"Yandex cadastral search failed: {e}")
-        
-        # Поиск через 2GIS
-        try:
-            dgis_result = dgis_service.search(cadastral_number)
-        except Exception as e:
-            logger.warning(f"2GIS cadastral search failed: {e}")
-        
-        return jsonify({
-            'success': True,
-            'yandex': yandex_result if yandex_result and yandex_result.get('success') else None,
-            'dgis': dgis_result if dgis_result and dgis_result.get('success') else None,
-            'query': cadastral_number
-        }), 200
+        return locate_by_cadastral_internal(cadastral_number)
         
     except Exception as e:
         logger.error(f"Error in locate_by_cadastral: {e}")
