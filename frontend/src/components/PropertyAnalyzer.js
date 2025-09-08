@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Grid,
   List, ListItem, ListItemText, ListItemIcon, Chip, Alert,
@@ -35,12 +35,22 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     }
   }, [coordinates]);
 
+  // Debug effect to track state changes
+  useEffect(() => {
+    console.log('🔄 PropertyAnalyzer state changed:');
+    console.log('selectedProperty:', selectedProperty);
+    console.log('showPropertyDialog:', showPropertyDialog);
+  }, [selectedProperty, showPropertyDialog]);
+
   const searchByAddress = async () => {
     if (!searchQuery.trim()) return;
     
     setLoading(true);
     setError(null);
     setProperties([]);
+    // Сбрасываем состояние диалога при новом поиске
+    setSelectedProperty(null);
+    setShowPropertyDialog(false);
     
     try {
       const response = await api.get('/api/geo/locate', {
@@ -450,16 +460,23 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     }
   };
 
-  const handlePropertyClick = (property) => {
+  const handlePropertyClick = useCallback((property) => {
     console.log('🏠 Property clicked:', property);
     console.log('🔧 Setting selectedProperty and opening dialog');
-    setSelectedProperty(property);
-    setShowPropertyDialog(true);
+    
+    // Используем функциональные обновления для предотвращения race conditions
+    setSelectedProperty(() => {
+      console.log('Setting selectedProperty to:', property);
+      return property;
+    });
+    
+    setShowPropertyDialog(() => {
+      console.log('Setting showPropertyDialog to: true');
+      return true;
+    });
+    
     console.log('✅ Dialog should be open now');
-    if (onPropertySelect) {
-      onPropertySelect(property);
-    }
-  };
+  }, []);
 
   const getPropertyIcon = (category) => {
     if (category.includes('жилая') || category.includes('дом')) {
@@ -707,13 +724,8 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                                   {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
                                 </Typography>
                               )}
-                              <span style={{ marginTop: '4px', display: 'inline-block' }}>
-                                <Chip
-                                  size="small"
-                                  label={`${Math.round(property.confidence * 100)}%`}
-                                  color={property.confidence > 0.8 ? 'success' : 'warning'}
-                                  variant="outlined"
-                                />
+                              <span style={{ marginTop: '4px', display: 'inline-block', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', backgroundColor: property.confidence > 0.8 ? '#e8f5e8' : '#fff3e0', color: property.confidence > 0.8 ? '#2e7d32' : '#f57c00', border: `1px solid ${property.confidence > 0.8 ? '#4caf50' : '#ff9800'}` }}>
+                                {Math.round(property.confidence * 100)}%
                               </span>
                             </React.Fragment>
                           }
@@ -774,13 +786,8 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                                   {property.coordinates[0].toFixed(4)}, {property.coordinates[1].toFixed(4)}
                                 </Typography>
                               )}
-                              <span style={{ marginTop: '4px', display: 'inline-block' }}>
-                                <Chip
-                                  size="small"
-                                  label={`${Math.round(property.confidence * 100)}%`}
-                                  color={property.confidence > 0.8 ? 'success' : 'warning'}
-                                  variant="outlined"
-                                />
+                              <span style={{ marginTop: '4px', display: 'inline-block', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', backgroundColor: property.confidence > 0.8 ? '#e8f5e8' : '#fff3e0', color: property.confidence > 0.8 ? '#2e7d32' : '#f57c00', border: `1px solid ${property.confidence > 0.8 ? '#4caf50' : '#ff9800'}` }}>
+                                {Math.round(property.confidence * 100)}%
                               </span>
                             </React.Fragment>
                           }
@@ -847,8 +854,12 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
 
       {/* Property Detail Dialog */}
       <Dialog
-        open={showPropertyDialog}
-        onClose={() => setShowPropertyDialog(false)}
+        open={Boolean(selectedProperty && showPropertyDialog)}
+        onClose={() => {
+          console.log('🚪 Closing dialog');
+          setShowPropertyDialog(false);
+          setSelectedProperty(null);
+        }}
         maxWidth="md"
         fullWidth
       >

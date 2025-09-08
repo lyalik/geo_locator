@@ -240,15 +240,12 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       });
       
       if (response.data.success && response.data.data) {
-        // Добавляем mock данные если API не возвращает полные данные
-        const timeSeriesWithDefaults = response.data.data.length > 0 ? response.data.data : [
-          { date: '2024-01-01', ndvi: 0.45, cloud_coverage: 15, source: 'Роскосмос' },
-          { date: '2024-02-01', ndvi: 0.52, cloud_coverage: 8, source: 'Роскосмос' },
-          { date: '2024-03-01', ndvi: 0.68, cloud_coverage: 12, source: 'Яндекс' },
-          { date: '2024-04-01', ndvi: 0.75, cloud_coverage: 5, source: 'Роскосмос' }
-        ];
-        setTimeSeriesData(timeSeriesWithDefaults);
+        // Используем данные временного ряда из API
+        const timeSeriesData = response.data.data.time_series || response.data.data;
+        console.log('Time series data received:', timeSeriesData);
+        setTimeSeriesData(timeSeriesData);
       } else {
+        console.log('Time series API response:', response.data);
         setError(response.data.error || 'Не удалось получить временной ряд');
       }
     } catch (error) {
