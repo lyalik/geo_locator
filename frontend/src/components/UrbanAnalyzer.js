@@ -775,16 +775,16 @@ const UrbanAnalyzer = ({ coordinates, onLocationSelect }) => {
                       <ListItemText
                         primary={building.name || `${building.building_type} здание`}
                         secondary={
-                          <Box>
-                            <Typography variant="body2" color="textSecondary">
+                          <span>
+                            <span style={{ display: 'block', fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)' }}>
                               Адрес: {building.address || 'Не указан'}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
+                            </span>
+                            <span style={{ display: 'block', fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)' }}>
                               Тип: {building.building_type}
                               {building.levels && ` • Этажей: ${building.levels}`}
                               {building.amenity && ` • Назначение: ${building.amenity}`}
-                            </Typography>
-                          </Box>
+                            </span>
+                          </span>
                         }
                       />
                     </ListItem>

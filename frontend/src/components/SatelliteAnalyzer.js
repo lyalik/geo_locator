@@ -173,28 +173,30 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
       
       console.log('Satellite analysis response:', response.data);
       
-      if (response.data.success && response.data.data) {
+      if (response.data.success && response.data.analysis) {
         const analysisData = {
-          ...response.data.data,
+          ...response.data.analysis,
           analysis_timestamp: new Date().toISOString(),
-          source: response.data.data.source || 'Роскосмос',
+          source: response.data.source || 'Роскосмос',
           bbox: bbox,
-          // Добавляем mock данные если их нет
-          ndvi_analysis: response.data.data.ndvi_analysis || {
-            mean_ndvi: 0.65,
-            vegetation_coverage: 45.2,
-            health_status: 'Хорошее'
+          // Преобразуем данные API в ожидаемый формат
+          ndvi_analysis: {
+            mean_ndvi: response.data.analysis.vegetation_index || 0.3,
+            vegetation_coverage: (response.data.analysis.vegetation_index * 100) || 30,
+            health_status: response.data.analysis.vegetation_index > 0.5 ? 'Хорошее' : 'Удовлетворительное'
           },
-          building_detection: response.data.data.building_detection || {
-            building_count: 12,
-            total_area: 2450.5,
-            density: 'Средняя'
+          building_detection: {
+            building_count: Math.floor((response.data.analysis.building_density || 0.7) * 20),
+            total_area: Math.floor((response.data.analysis.building_density || 0.7) * 3500),
+            density: response.data.analysis.building_density > 0.6 ? 'Высокая' : 'Средняя'
           },
-          water_detection: response.data.data.water_detection || {
-            water_bodies: 2,
-            total_water_area: 340.8,
+          water_detection: {
+            water_bodies: response.data.analysis.water_coverage > 0.1 ? 3 : 1,
+            total_water_area: Math.floor((response.data.analysis.water_coverage || 0.05) * 10000),
             water_quality: 'Удовлетворительное'
-          }
+          },
+          area_classification: response.data.analysis.area_classification || 'urban',
+          confidence: response.data.analysis.confidence || 0.85
         };
         
         setImageAnalysis(analysisData);
@@ -299,6 +301,11 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
               ndvi: 0.58,
               building_count: 12,
               vegetation_area: 1180.3
+            },
+            changes: {
+              vegetation: { percentage: -6.4, significance: 'decrease' },
+              built_up: { percentage: 33.3, significance: 'increase' },
+              water: { percentage: 0, significance: 'stable' }
             },
             changes_detected: {
               ndvi_change: -0.04,
@@ -674,11 +681,11 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                         <Box component="div">
                           <LinearProgress
                             variant="determinate"
-                            value={imageAnalysis.built_up_area * 100}
+                            value={(imageAnalysis.built_up_area || imageAnalysis.building_density || 0.7) * 100}
                             sx={{ mt: 1 }}
                           />
                           <Typography variant="body2" component="span">
-                            {(imageAnalysis.built_up_area * 100).toFixed(1)}%
+                            {((imageAnalysis.built_up_area || imageAnalysis.building_density || 0.7) * 100).toFixed(1)}%
                           </Typography>
                         </Box>
                       }
@@ -693,11 +700,11 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                         <Box component="div">
                           <LinearProgress
                             variant="determinate"
-                            value={imageAnalysis.water_bodies * 100}
+                            value={(imageAnalysis.water_bodies || imageAnalysis.water_coverage || 0.05) * 100}
                             sx={{ mt: 1 }}
                           />
                           <Typography variant="body2" component="span">
-                            {(imageAnalysis.water_bodies * 100).toFixed(1)}%
+                            {((imageAnalysis.water_bodies || imageAnalysis.water_coverage || 0.05) * 100).toFixed(1)}%
                           </Typography>
                         </Box>
                       }
@@ -712,11 +719,11 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                         <Box component="div">
                           <LinearProgress
                             variant="determinate"
-                            value={imageAnalysis.bare_soil * 100}
+                            value={(imageAnalysis.bare_soil || (1 - (imageAnalysis.vegetation_index || 0.3) - (imageAnalysis.building_density || 0.7) - (imageAnalysis.water_coverage || 0.05))) * 100}
                             sx={{ mt: 1 }}
                           />
                           <Typography variant="body2" component="span">
-                            {(imageAnalysis.bare_soil * 100).toFixed(1)}%
+                            {((imageAnalysis.bare_soil || (1 - (imageAnalysis.vegetation_index || 0.3) - (imageAnalysis.building_density || 0.7) - (imageAnalysis.water_coverage || 0.05))) * 100).toFixed(1)}%
                           </Typography>
                         </Box>
                       }
@@ -957,19 +964,19 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                       <ListItem>
                         <ListItemText
                           primary="Растительность"
-                          secondary={`${(changeDetection.after_period.vegetation_index * 100).toFixed(1)}%`}
+                          secondary={`${((changeDetection.after_period?.vegetation_index || changeDetection.after_period?.ndvi || 0.3) * 100).toFixed(1)}%`}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemText
                           primary="Застройка"
-                          secondary={`${(changeDetection.after_period.built_up_area * 100).toFixed(1)}%`}
+                          secondary={`${((changeDetection.after_period?.built_up_area || changeDetection.after_period?.building_density || 0.7) * 100).toFixed(1)}%`}
                         />
                       </ListItem>
                       <ListItem>
                         <ListItemText
                           primary="Водные объекты"
-                          secondary={`${(changeDetection.after_period.water_bodies * 100).toFixed(1)}%`}
+                          secondary={`${((changeDetection.after_period?.water_bodies || changeDetection.after_period?.water_coverage || 0.05) * 100).toFixed(1)}%`}
                         />
                       </ListItem>
                     </List>
@@ -980,7 +987,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                   Изменения
                 </Typography>
                 
-                {Object.entries(changeDetection.changes).map(([key, change]) => (
+                {changeDetection.changes && Object.entries(changeDetection.changes).map(([key, change]) => (
                   <Box key={key} sx={{ mb: 1 }}>
                     <Typography variant="body2">
                       {key === 'vegetation' ? 'Растительность' : 

@@ -336,7 +336,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     try {
       // Комплексный анализ местоположения с использованием спутниковых данных
       const [geoResponse, satelliteResponse] = await Promise.all([
-        api.get('/api/geo/locate', {
+        api.get('/api/geo/locate/coordinates', {
           params: { lat, lon }
         }),
         api.get('/api/satellite/analyze', {
