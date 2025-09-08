@@ -933,7 +933,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                         </TableRow>
                         <TableRow>
                           <TableCell><strong>Адрес</strong></TableCell>
-                          <TableCell>{selectedProperty.address}</TableCell>
+                          <TableCell>{selectedProperty.address || 'Не указан'}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell><strong>Категория</strong></TableCell>
@@ -941,11 +941,16 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                         </TableRow>
                         <TableRow>
                           <TableCell><strong>Площадь</strong></TableCell>
-                          <TableCell>{selectedProperty.area} м²</TableCell>
+                          <TableCell>
+                            {selectedProperty.area && selectedProperty.area !== 'Не указано' ? 
+                              `${selectedProperty.area} м²` : 
+                              'Не указано'
+                            }
+                          </TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell><strong>Разрешенное использование</strong></TableCell>
-                          <TableCell>{selectedProperty.permitted_use}</TableCell>
+                          <TableCell>{selectedProperty.permitted_use || 'Не указано'}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -960,6 +965,10 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                     <Table size="small">
                       <TableBody>
                         <TableRow>
+                          <TableCell><strong>Источник данных</strong></TableCell>
+                          <TableCell>{selectedProperty.source || 'Не указан'}</TableCell>
+                        </TableRow>
+                        <TableRow>
                           <TableCell><strong>Форма собственности</strong></TableCell>
                           <TableCell>{selectedProperty.owner_type || 'Не указано'}</TableCell>
                         </TableRow>
@@ -970,9 +979,12 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                         <TableRow>
                           <TableCell><strong>Кадастровая стоимость</strong></TableCell>
                           <TableCell>
-                            {selectedProperty.cost ? 
-                              `${selectedProperty.cost.toLocaleString()} руб.` : 
-                              'Не указано'
+                            {selectedProperty.cadastral_value && selectedProperty.cadastral_value !== 'Не указано' ? 
+                              selectedProperty.cadastral_value : 
+                              (selectedProperty.cost ? 
+                                `${selectedProperty.cost.toLocaleString()} руб.` : 
+                                'Не указано'
+                              )
                             }
                           </TableCell>
                         </TableRow>
@@ -981,6 +993,15 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                           <TableCell>
                             {selectedProperty.coordinates ? 
                               `${selectedProperty.coordinates[0].toFixed(6)}, ${selectedProperty.coordinates[1].toFixed(6)}` : 
+                              'Не указано'
+                            }
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><strong>Уровень доверия</strong></TableCell>
+                          <TableCell>
+                            {selectedProperty.confidence ? 
+                              `${Math.round(selectedProperty.confidence * 100)}%` : 
                               'Не указано'
                             }
                           </TableCell>
