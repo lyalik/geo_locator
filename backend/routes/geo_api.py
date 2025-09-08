@@ -312,7 +312,8 @@ def search_places():
     Поиск мест через Yandex Maps и 2GIS
     """
     try:
-        query = request.args.get('q', '')
+        # Поддерживаем оба варианта параметра запроса
+        query = request.args.get('query', '') or request.args.get('q', '')
         lat = request.args.get('lat', type=float)
         lon = request.args.get('lon', type=float)
         radius = request.args.get('radius', 1000, type=int)
@@ -325,13 +326,21 @@ def search_places():
         
         # Поиск через Yandex Maps
         if source in ['yandex', 'all']:
-            yandex_result = yandex_service.search_places(query, lat, lon, radius)
-            results['sources']['yandex'] = yandex_result
+            try:
+                yandex_result = yandex_service.search_places(query, lat, lon, radius)
+                results['sources']['yandex'] = yandex_result
+            except Exception as e:
+                logger.error(f"Yandex search_places error: {e}")
+                results['sources']['yandex'] = {'success': False, 'error': str(e)}
         
         # Поиск через 2GIS
         if source in ['dgis', 'all']:
-            dgis_result = dgis_service.search_places(query, lat, lon, radius)
-            results['sources']['dgis'] = dgis_result
+            try:
+                dgis_result = dgis_service.search_places(query, lat, lon, radius)
+                results['sources']['dgis'] = dgis_result
+            except Exception as e:
+                logger.error(f"2GIS search_places error: {e}")
+                results['sources']['dgis'] = {'success': False, 'error': str(e)}
         
         # Объединяем результаты
         all_places = []
@@ -345,6 +354,10 @@ def search_places():
             'total_found': len(all_places),
             'places': all_places[:20]  # Топ 20 результатов
         }
+        
+        # Добавляем поля для совместимости с фронтендом
+        results['success'] = True
+        results['places'] = all_places[:20]
         
         return jsonify(results), 200
     
