@@ -68,9 +68,17 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         // Обрабатываем результаты от Яндекс
         if (response.data.yandex && response.data.yandex.results) {
           response.data.yandex.results.forEach((result, index) => {
+            // Улучшаем обработку адреса для Яндекс
+            let address = result.formatted_address || result.address || searchQuery;
+            
+            // Если адрес совпадает с запросом (адресом), делаем его более читаемым
+            if (address === searchQuery || address.length < 10) {
+              address = `Объект по адресу: ${searchQuery}`;
+            }
+            
             yandexResults.push({
               id: `yandex_${index}`,
-              address: result.formatted_address || result.address || searchQuery,
+              address: address,
               coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
               category: result.type || result.kind || 'Объект недвижимости',
               area: result.area || 'Не указано',
@@ -89,11 +97,19 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         // Обрабатываем результаты от 2GIS
         if (response.data.dgis && response.data.dgis.results) {
           response.data.dgis.results.forEach((result, index) => {
+            // Улучшаем обработку адреса для 2GIS
+            let address = result.formatted_address || result.address || 'Адрес не найден';
+            
+            // Если адрес совпадает с запросом (адресом), делаем его более читаемым
+            if (address === searchQuery || address.length < 10) {
+              address = `Объект по адресу: ${searchQuery}`;
+            }
+            
             dgisResults.push({
               id: `dgis_${index}`,
-              address: result.formatted_address || result.address || searchQuery,
+              address: address,
               coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
-              category: result.type || 'Объект недвижимости',
+              category: result.type || result.kind || 'Объект недвижимости',
               area: result.area || 'Не указано',
               permitted_use: result.permitted_use || result.description || 'Не указано',
               source: '2GIS',
@@ -229,14 +245,17 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
               source: 'Яндекс Карты',
               confidence: result.confidence || 0.8,
               cadastral_number: searchQuery,
-              provider: 'yandex'
+              provider: 'yandex',
+              owner_type: result.owner_type || 'Не указано',
+              registration_date: result.registration_date || 'Не указано',
+              cadastral_value: result.cadastral_value || 'Не указано'
             });
           });
         } else {
           // Создаём fallback результат для кадастрового номера
           yandexResults.push({
             id: `cadastral_fallback`,
-            address: 'Объект по кадастровому номеру',
+            address: `Объект по кадастровому номеру ${searchQuery}`,
             coordinates: null,
             category: 'house',
             area: 'Не указано',
@@ -244,16 +263,27 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
             source: 'Кадастровый номер',
             confidence: 0.5,
             cadastral_number: searchQuery,
-            provider: 'yandex'
+            provider: 'yandex',
+            owner_type: 'Не указано',
+            registration_date: 'Не указано',
+            cadastral_value: 'Не указано'
           });
         }
         
         // Обрабатываем результаты от 2GIS
         if (response.data.dgis && response.data.dgis.results) {
           response.data.dgis.results.forEach((result, index) => {
+            // Улучшаем обработку адреса для 2GIS
+            let address = result.formatted_address || result.address || 'Адрес не найден';
+            
+            // Если адрес содержит кадастровый номер, заменяем на более читаемый формат
+            if (address.includes('кадастровым номером') || address === searchQuery) {
+              address = `Объект по кадастровому номеру ${searchQuery}`;
+            }
+            
             dgisResults.push({
               id: `dgis_cad_${index}`,
-              address: result.formatted_address || result.address,
+              address: address,
               coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
               category: result.type || 'house',
               area: result.area || 'Не указано',
@@ -261,7 +291,10 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
               source: '2GIS',
               confidence: result.confidence || 0.8,
               cadastral_number: searchQuery,
-              provider: 'dgis'
+              provider: 'dgis',
+              owner_type: result.owner_type || 'Не указано',
+              registration_date: result.registration_date || 'Не указано',
+              cadastral_value: result.cadastral_value || 'Не указано'
             });
           });
         }
