@@ -451,8 +451,11 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
   };
 
   const handlePropertyClick = (property) => {
+    console.log('🏠 Property clicked:', property);
+    console.log('🔧 Setting selectedProperty and opening dialog');
     setSelectedProperty(property);
     setShowPropertyDialog(true);
+    console.log('✅ Dialog should be open now');
     if (onPropertySelect) {
       onPropertySelect(property);
     }

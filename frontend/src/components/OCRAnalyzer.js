@@ -109,10 +109,10 @@ const OCRAnalyzer = () => {
     setAddressResults(null);
 
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('file', file);
 
     try {
-      const response = await axios.post(`${API_URL}/api/ocr/analyze-image`, formData, {
+      const response = await axios.post(`${API_URL}/api/ocr/analyze-address-image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

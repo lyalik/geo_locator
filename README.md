@@ -277,14 +277,14 @@ npm start
 
 ```bash
 # Проверка backend API
-curl http://localhost:5000/health
+curl http://localhost:5001/health
 
 # Проверка подключения к базе данных
-curl http://localhost:5000/api/health
+curl http://localhost:5001/api/health
 
 # Открыть в браузере
 # Frontend: http://localhost:3000
-# Backend API: http://localhost:5000
+# Backend API: http://localhost:5001
 ```
 
 ### Ручная установка
@@ -352,8 +352,8 @@ npm start
 
 После успешного запуска:
 - 🌐 **Фронтенд**: http://localhost:3000
-- 🔧 **Backend API**: http://localhost:5000
-- ❤️ **Проверка здоровья**: http://localhost:5000/health
+- 🔧 **Backend API**: http://localhost:5001
+- ❤️ **Проверка здоровья**: http://localhost:5001/health
 
 ---
 
@@ -370,7 +370,7 @@ npm start
 
 #### Пример запроса на `/api/violations/detect`:
 ```bash
-curl -X POST -F "file=@photo.jpg" -F "location_hint=Москва, Кремль" http://localhost:5000/api/violations/detect
+curl -X POST -F "file=@photo.jpg" -F "location_hint=Москва, Кремль" http://localhost:5001/api/violations/detect
 ```
 
 **Ответ**:
@@ -487,11 +487,11 @@ sudo apt install -y nodejs
 
 ```bash
 # Проверка занятых портов
-sudo netstat -tlnp | grep :5000
+sudo netstat -tlnp | grep :5001
 sudo netstat -tlnp | grep :3000
 
 # Освобождение порта (если занят)
-sudo lsof -ti:5000 | xargs sudo kill -9
+sudo lsof -ti:5001 | xargs sudo kill -9
 sudo lsof -ti:3000 | xargs sudo kill -9
 ```
 
@@ -761,7 +761,7 @@ Denis Lyalik — [lyalik.denis@gmail.com](mailto:lyalik.denis@gmail.com)
 
 5. После успешного запуска откройте в браузере:
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
+   - Backend API: http://localhost:5001
    - Flower (мониторинг Celery): опционально, не включен в docker-compose по умолчанию
 
 ## 🔧 Разработка
@@ -779,8 +779,7 @@ pip install -r requirements.txt
 # Frontend
 cd ../frontend
 npm install
-```
-flask run --host=0.0.0.0 --port=5000
+
 ### Запуск в режиме разработки
 
 ```bash
@@ -795,7 +794,7 @@ npm start
 
 ## 📚 API Документация
 
-Документация API доступна по адресу `http://localhost:5000/api/docs` после запуска приложения.
+Документация API доступна по адресу `http://localhost:5001/api/docs` после запуска приложения.
 
 ## 🐛 Поиск и устранение неисправностей
 
@@ -937,7 +936,7 @@ Denis Lyalik - lyalik.denis@gmail.com
 
 ## **Немедленные действия:**
 1. **Запуск системы**: Выполнить `./start_local.sh` для запуска всех сервисов
-2. **Проверка API**: Протестировать все endpoints через `http://localhost:5000/health`
+2. **Проверка API**: Протестировать все endpoints через `http://localhost:5001/health`
 3. **Тестирование UI**: Открыть `http://localhost:3000` и проверить все компоненты
 
 ## **Краткосрочные цели (1-2 недели):**

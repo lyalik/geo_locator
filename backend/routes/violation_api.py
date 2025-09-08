@@ -79,7 +79,9 @@ def list_violations():
                         'user_id': str(photo.user_id),
                         'location_notes': '',
                         'location_hint': photo.location_hint or ''
-                    }
+                    },
+                    'status': 'processed',  # Добавляем статус для статистики
+                    'has_coordinates': bool(photo.lat and photo.lon)  # Для фильтрации
                 })
         
         current_app.logger.info(f"📊 Database - Retrieved {len(violations_list)} violations from database")

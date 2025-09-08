@@ -29,7 +29,9 @@ const Dashboard = () => {
     total: 0,
     pending: 0,
     processed: 0,
-    errors: 0
+    errors: 0,
+    withCoordinates: 0,
+    withoutCoordinates: 0
   });
   const [selectedCoordinates, setSelectedCoordinates] = useState(null);
 
@@ -82,13 +84,27 @@ const Dashboard = () => {
       setViolationsData(dbViolations);
       
       // Calculate stats from ALL violations (not just those with coordinates)
+      const withCoordinates = allDbViolations.filter(v => v.has_coordinates).length;
+      const withoutCoordinates = allDbViolations.length - withCoordinates;
+      
       const newStats = {
         total: allDbViolations.length,
         pending: allDbViolations.filter(v => v.status === 'pending').length,
         processed: allDbViolations.filter(v => v.status === 'processed').length,
-        errors: allDbViolations.filter(v => v.status === 'error').length
+        errors: allDbViolations.filter(v => v.status === 'error').length,
+        withCoordinates: withCoordinates,
+        withoutCoordinates: withoutCoordinates
       };
       setStats(newStats);
+      
+      console.log('📊 Статистика нарушений:', {
+        'Всего': newStats.total,
+        'Обработано': newStats.processed,
+        'В ожидании': newStats.pending,
+        'Ошибки': newStats.errors,
+        'С координатами': newStats.withCoordinates,
+        'Без координат': newStats.withoutCoordinates
+      });
       
     } catch (error) {
       console.error('Error loading violations:', error);

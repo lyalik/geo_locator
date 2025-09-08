@@ -289,11 +289,48 @@ class OCRService:
     def analyze_address_text(self, text: str) -> AddressAnalysis:
         """Analyze text for addresses and building information from signage"""
         try:
-            # Extract addresses using patterns
+            # Extract addresses using improved patterns
             addresses = []
-            for pattern in self.address_patterns:
+            
+            # Улучшенные паттерны для адресов
+            address_patterns = [
+                r'г\.?\s*([А-Я][а-я]+(?:-[А-Я][а-я]+)?)',  # г. Краснодар
+                r'([А-Я][а-я]+(?:-[А-Я][а-я]+)?),?\s*ул\.?\s*([А-Я][а-я\s]+)',  # Краснодар, ул. Красная
+                r'ул\.?\s*([А-Я][а-я\s]+),?\s*(\d+(?:/\d+)?)',  # ул. Красная, 176/2
+                r'([А-Я][а-я\s]+\s+улица),?\s*(\d+(?:/\d+)?)',  # Красная улица, 176/2
+                r'([А-Я][а-я]+(?:-[А-Я][а-я]+)?)[,\s]+([А-Я][а-я\s]+\s+улица)[,\s]+(\d+(?:/\d+)?)'  # Краснодар, Красная улица, 176/2
+            ]
+            
+            for pattern in address_patterns:
                 matches = re.findall(pattern, text, re.IGNORECASE)
-                addresses.extend(matches)
+                for match in matches:
+                    if isinstance(match, tuple):
+                        address_parts = [part.strip() for part in match if part.strip()]
+                        if address_parts:
+                            addresses.append(' '.join(address_parts))
+                    else:
+                        addresses.append(match.strip())
+            
+            # Extract building names and organizations
+            building_names = []
+            organization_names = []
+            
+            # Паттерны для названий зданий и организаций
+            org_patterns = [
+                r'(ООО\s+[А-Я][а-я\s"]+)',
+                r'(ЗАО\s+[А-Я][а-я\s"]+)',
+                r'(ИП\s+[А-Я][а-я\s]+)',
+                r'([А-Я][а-я]+\s+центр)',
+                r'([А-Я][а-я]+\s+магазин)',
+                r'([А-Я][а-я]+\s+офис)'
+            ]
+            
+            for pattern in org_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                organization_names.extend([match.strip() for match in matches])
+            
+            # Extract street numbers
+            street_numbers = re.findall(r'\b(\d+(?:/\d+)?)\b', text)
             
             # Extract phone numbers
             phone_numbers = []
@@ -331,28 +368,19 @@ class OCRService:
             english_chars = len(re.findall(r'[a-z]', text.lower()))
             detected_language = 'rus' if russian_chars > english_chars else 'eng'
             
-            # Calculate confidence score
-            confidence_score = min(1.0, (
-                len(addresses) * 0.4 +
-                len(building_names) * 0.2 +
-                len(organization_names) * 0.2 +
-                len(phone_numbers) * 0.1 +
-                len(street_numbers) * 0.1
-            ) / 5.0)
-            
             return AddressAnalysis(
-                addresses=list(set(addresses)),  # Remove duplicates
+                addresses=list(set(addresses)),
                 building_names=list(set(building_names)),
                 street_numbers=list(set(street_numbers)),
                 organization_names=list(set(organization_names)),
                 phone_numbers=list(set(phone_numbers)),
-                confidence_score=confidence_score,
-                detected_language=detected_language
+                confidence_score=max(0.1, (len(addresses) + len(organization_names) + len(phone_numbers)) / max(1, len(text.split()) / 5)),
+                detected_language='rus' if self._is_cyrillic(text) else 'eng'
             )
             
         except Exception as e:
             logger.error(f"Error analyzing address text: {e}")
-            return AddressAnalysis([], [], [], [], [], 0.0, 'unknown')
+            return AddressAnalysis([], [], [], [], [], 0.0, 'rus')
     
     async def process_image_async(self, image_path: str) -> DocumentAnalysis:
         """Asynchronously process image for OCR analysis"""
