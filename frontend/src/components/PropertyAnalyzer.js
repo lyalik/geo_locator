@@ -461,14 +461,14 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
   const handleSearch = () => {
     switch (searchType) {
       case 'address':
-        searchByAddress();
+        searchByAddress(searchQuery);
         break;
       case 'cadastral':
-        searchByCadastralNumber();
+        searchByCadastralNumber(searchQuery);
         break;
       case 'coordinates':
         // Парсим координаты из поля ввода или используем переданные координаты
-        if (searchQuery.trim()) {
+        if (searchQuery && searchQuery.trim()) {
           const coords = searchQuery.split(',').map(c => parseFloat(c.trim()));
           if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
             searchByCoordinates(coords[0], coords[1]);
