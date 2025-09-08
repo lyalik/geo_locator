@@ -656,16 +656,16 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Индекс растительности (NDVI)"
                       secondary={
-                        <Box component="div">
+                        <span>
                           <LinearProgress
                             variant="determinate"
-                            value={imageAnalysis.vegetation_index * 100}
-                            sx={{ mt: 1 }}
+                            value={(imageAnalysis.vegetation_index || imageAnalysis.ndvi || 0.3) * 100}
+                            sx={{ mt: 1, display: 'block' }}
                           />
                           <Typography variant="body2" component="span">
-                            {(imageAnalysis.vegetation_index * 100).toFixed(1)}%
+                            {((imageAnalysis.vegetation_index || imageAnalysis.ndvi || 0.3) * 100).toFixed(1)}%
                           </Typography>
-                        </Box>
+                        </span>
                       }
                     />
                   </ListItem>
@@ -675,16 +675,16 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Застроенная территория"
                       secondary={
-                        <Box component="div">
+                        <span>
                           <LinearProgress
                             variant="determinate"
-                            value={(imageAnalysis.built_up_area || imageAnalysis.building_density || 0.7) * 100}
-                            sx={{ mt: 1 }}
+                            value={(imageAnalysis.building_density || imageAnalysis.built_up_area || 0.7) * 100}
+                            sx={{ mt: 1, display: 'block' }}
                           />
                           <Typography variant="body2" component="span">
-                            {((imageAnalysis.built_up_area || imageAnalysis.building_density || 0.7) * 100).toFixed(1)}%
+                            {((imageAnalysis.building_density || imageAnalysis.built_up_area || 0.7) * 100).toFixed(1)}%
                           </Typography>
-                        </Box>
+                        </span>
                       }
                     />
                   </ListItem>
@@ -694,16 +694,16 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Водные объекты"
                       secondary={
-                        <Box component="div">
+                        <span>
                           <LinearProgress
                             variant="determinate"
                             value={(imageAnalysis.water_bodies || imageAnalysis.water_coverage || 0.05) * 100}
-                            sx={{ mt: 1 }}
+                            sx={{ mt: 1, display: 'block' }}
                           />
                           <Typography variant="body2" component="span">
                             {((imageAnalysis.water_bodies || imageAnalysis.water_coverage || 0.05) * 100).toFixed(1)}%
                           </Typography>
-                        </Box>
+                        </span>
                       }
                     />
                   </ListItem>
@@ -713,16 +713,16 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                     <ListItemText
                       primary="Открытая почва"
                       secondary={
-                        <Box component="div">
+                        <span>
                           <LinearProgress
                             variant="determinate"
                             value={(imageAnalysis.bare_soil || (1 - (imageAnalysis.vegetation_index || 0.3) - (imageAnalysis.building_density || 0.7) - (imageAnalysis.water_coverage || 0.05))) * 100}
-                            sx={{ mt: 1 }}
+                            sx={{ mt: 1, display: 'block' }}
                           />
                           <Typography variant="body2" component="span">
                             {((imageAnalysis.bare_soil || (1 - (imageAnalysis.vegetation_index || 0.3) - (imageAnalysis.building_density || 0.7) - (imageAnalysis.water_coverage || 0.05))) * 100).toFixed(1)}%
                           </Typography>
-                        </Box>
+                        </span>
                       }
                     />
                   </ListItem>
@@ -809,7 +809,7 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
         </Grid>
         
         <Grid item xs={12} md={8}>
-          {timeSeriesData.time_series && timeSeriesData.time_series.length > 0 && (
+          {timeSeriesData && timeSeriesData.length > 0 && (
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -817,14 +817,17 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                 </Typography>
                 
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Всего периодов: {timeSeriesData.summary.total_periods}
+                  Всего периодов: {timeSeriesData.length}
                 </Typography>
                 
                 <Grid container spacing={2}>
                   <Grid item xs={4}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h6">
-                        {timeSeriesData.summary.averages ? (timeSeriesData.summary.averages.vegetation_index * 100).toFixed(1) : '0.0'}%
+                        {timeSeriesData.length > 0 ? 
+                          (timeSeriesData.reduce((sum, item) => sum + (item.vegetation_index || 0), 0) / timeSeriesData.length * 100).toFixed(1) : 
+                          '0.0'
+                        }%
                       </Typography>
                       <Typography variant="body2">
                         Средняя растительность
@@ -834,7 +837,10 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                   <Grid item xs={4}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h6">
-                        {timeSeriesData.summary.averages ? (timeSeriesData.summary.averages.built_up_area * 100).toFixed(1) : '0.0'}%
+                        {timeSeriesData.length > 0 ? 
+                          (timeSeriesData.reduce((sum, item) => sum + (item.built_up_area || 0), 0) / timeSeriesData.length * 100).toFixed(1) : 
+                          '0.0'
+                        }%
                       </Typography>
                       <Typography variant="body2">
                         Средняя застройка
@@ -844,7 +850,10 @@ const SatelliteAnalyzer = ({ coordinates, onImageSelect }) => {
                   <Grid item xs={4}>
                     <Paper sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h6">
-                        {timeSeriesData.summary.averages ? timeSeriesData.summary.averages.cloud_coverage.toFixed(1) : '0.0'}%
+                        {timeSeriesData.length > 0 ? 
+                          (timeSeriesData.reduce((sum, item) => sum + (item.cloud_coverage || 0), 0) / timeSeriesData.length).toFixed(1) : 
+                          '0.0'
+                        }%
                       </Typography>
                       <Typography variant="body2">
                         Средняя облачность
