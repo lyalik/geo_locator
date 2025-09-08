@@ -85,6 +85,9 @@ export const search = {
 // Violations API
 export const violations = {
   getList: () => api.get('/api/violations/list'),
+  get: (violationId) => api.get(`/api/violations/${violationId}`),
+  update: (violationId, data) => api.put(`/api/violations/${violationId}`, data),
+  delete: (violationId) => api.delete(`/api/violations/${violationId}`),
   detect: (formData) => api.post('/api/violations/detect', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',

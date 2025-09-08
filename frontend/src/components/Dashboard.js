@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Tab, Tabs,
-  Chip, CircularProgress, Paper, Dialog, DialogTitle, DialogContent, DialogActions
+  Chip, CircularProgress, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
+  Alert, Snackbar
 } from '@mui/material';
 import {
   Map as MapIcon, Upload as UploadIcon, Analytics as AnalyticsIcon,
@@ -17,6 +18,7 @@ import PropertyAnalyzer from './PropertyAnalyzer';
 import UrbanAnalyzer from './UrbanAnalyzer';
 import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
+import ViolationEditDialog from './ViolationEditDialog';
 import { violations } from '../services/api';
 
 const Dashboard = () => {
@@ -34,6 +36,9 @@ const Dashboard = () => {
     withoutCoordinates: 0
   });
   const [selectedCoordinates, setSelectedCoordinates] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingViolation, setEditingViolation] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     loadViolations();
@@ -116,6 +121,38 @@ const Dashboard = () => {
   const handleViolationClick = (violation) => {
     setSelectedViolation(violation);
     setShowViolationDialog(true);
+  };
+
+  const handleEditViolation = (violation) => {
+    setEditingViolation(violation);
+    setShowEditDialog(true);
+    setShowViolationDialog(false);
+  };
+
+  const handleUpdateViolation = async (violationId, updateData) => {
+    try {
+      const response = await violations.update(violationId, updateData);
+      if (response.data.success) {
+        setSnackbar({ open: true, message: 'Нарушение успешно обновлено', severity: 'success' });
+        loadViolations(); // Reload data
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Ошибка при обновлении нарушения', severity: 'error' });
+      throw error;
+    }
+  };
+
+  const handleDeleteViolation = async (violationId) => {
+    try {
+      const response = await violations.delete(violationId);
+      if (response.data.success) {
+        setSnackbar({ open: true, message: 'Нарушение успешно удалено', severity: 'success' });
+        loadViolations(); // Reload data
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Ошибка при удалении нарушения', severity: 'error' });
+      throw error;
+    }
   };
 
   const handleUploadComplete = (results) => {
@@ -396,11 +433,45 @@ const Dashboard = () => {
           <Button onClick={() => setShowViolationDialog(false)}>
             Закрыть
           </Button>
+          <Button 
+            onClick={() => handleEditViolation(selectedViolation)}
+            variant="outlined"
+            color="primary"
+          >
+            Редактировать
+          </Button>
           <Button startIcon={<DownloadIcon />} variant="outlined">
             Скачать отчет
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Edit Violation Dialog */}
+      <ViolationEditDialog
+        open={showEditDialog}
+        onClose={() => {
+          setShowEditDialog(false);
+          setEditingViolation(null);
+        }}
+        violation={editingViolation}
+        onUpdate={handleUpdateViolation}
+        onDelete={handleDeleteViolation}
+      />
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

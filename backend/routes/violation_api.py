@@ -431,15 +431,201 @@ def detect_violations():
 def get_violation(violation_id):
     """
     Get details of a specific violation by ID.
-    In a real implementation, this would fetch from a database.
     """
-    # TODO: Implement database lookup
-    return jsonify({
-        'success': False,
-        'message': 'Not implemented',
-        'data': None,
-        'error': 'NOT_IMPLEMENTED'
-    }), 501
+    try:
+        violation = db.session.query(Violation).filter_by(id=violation_id).first()
+        if not violation:
+            return jsonify({
+                'success': False,
+                'message': 'Violation not found',
+                'data': None,
+                'error': 'NOT_FOUND'
+            }), 404
+        
+        photo = violation.photo
+        violation_data = {
+            'violation_id': str(violation.id),
+            'category': violation.category,
+            'confidence': violation.confidence,
+            'bbox': violation.bbox_data,
+            'image_path': f"/uploads/violations/{Path(photo.file_path).name}",
+            'location': {
+                'coordinates': {
+                    'latitude': photo.lat,
+                    'longitude': photo.lon
+                } if photo.lat and photo.lon else None,
+                'address': photo.address_data,
+                'has_gps': photo.has_gps
+            },
+            'metadata': {
+                'timestamp': photo.created_at.isoformat() + 'Z',
+                'user_id': str(photo.user_id),
+                'location_hint': photo.location_hint or ''
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': 'Violation retrieved successfully',
+            'data': violation_data,
+            'error': None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving violation {violation_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to retrieve violation',
+            'data': None,
+            'error': 'INTERNAL_SERVER_ERROR'
+        }), 500
+
+@bp.route('/<violation_id>', methods=['PUT'])
+def update_violation(violation_id):
+    """
+    Update details of a specific violation by ID.
+    """
+    try:
+        violation = db.session.query(Violation).filter_by(id=violation_id).first()
+        if not violation:
+            return jsonify({
+                'success': False,
+                'message': 'Violation not found',
+                'data': None,
+                'error': 'NOT_FOUND'
+            }), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data provided',
+                'data': None,
+                'error': 'NO_DATA'
+            }), 400
+        
+        # Update violation fields
+        if 'category' in data:
+            violation.category = data['category']
+        if 'confidence' in data:
+            violation.confidence = float(data['confidence'])
+        if 'bbox' in data:
+            violation.bbox_data = data['bbox']
+        
+        # Update photo fields if provided
+        photo = violation.photo
+        if 'location_hint' in data:
+            photo.location_hint = data['location_hint']
+        if 'coordinates' in data and data['coordinates']:
+            coords = data['coordinates']
+            if 'latitude' in coords and 'longitude' in coords:
+                photo.lat = float(coords['latitude'])
+                photo.lon = float(coords['longitude'])
+                photo.has_gps = True
+        if 'address' in data:
+            photo.address_data = data['address']
+        
+        db.session.commit()
+        current_app.logger.info(f"Updated violation {violation_id}")
+        
+        # Return updated violation data
+        violation_data = {
+            'violation_id': str(violation.id),
+            'category': violation.category,
+            'confidence': violation.confidence,
+            'bbox': violation.bbox_data,
+            'image_path': f"/uploads/violations/{Path(photo.file_path).name}",
+            'location': {
+                'coordinates': {
+                    'latitude': photo.lat,
+                    'longitude': photo.lon
+                } if photo.lat and photo.lon else None,
+                'address': photo.address_data,
+                'has_gps': photo.has_gps
+            },
+            'metadata': {
+                'timestamp': photo.created_at.isoformat() + 'Z',
+                'user_id': str(photo.user_id),
+                'location_hint': photo.location_hint or ''
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': 'Violation updated successfully',
+            'data': violation_data,
+            'error': None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error updating violation {violation_id}: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Failed to update violation',
+            'data': None,
+            'error': 'INTERNAL_SERVER_ERROR'
+        }), 500
+
+@bp.route('/<violation_id>', methods=['DELETE'])
+def delete_violation(violation_id):
+    """
+    Delete a specific violation by ID.
+    """
+    try:
+        violation = db.session.query(Violation).filter_by(id=violation_id).first()
+        if not violation:
+            return jsonify({
+                'success': False,
+                'message': 'Violation not found',
+                'data': None,
+                'error': 'NOT_FOUND'
+            }), 404
+        
+        photo = violation.photo
+        
+        # Check if this is the only violation for this photo
+        other_violations = db.session.query(Violation).filter_by(photo_id=photo.id).filter(Violation.id != violation_id).count()
+        
+        # Delete the violation
+        db.session.delete(violation)
+        
+        # If no other violations exist for this photo, delete the photo and file
+        if other_violations == 0:
+            # Delete the physical file
+            try:
+                if os.path.exists(photo.file_path):
+                    os.remove(photo.file_path)
+                    current_app.logger.info(f"Deleted file: {photo.file_path}")
+            except Exception as file_error:
+                current_app.logger.warning(f"Could not delete file {photo.file_path}: {file_error}")
+            
+            # Delete the photo record
+            db.session.delete(photo)
+            current_app.logger.info(f"Deleted photo {photo.id} (no remaining violations)")
+        
+        db.session.commit()
+        current_app.logger.info(f"Deleted violation {violation_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Violation deleted successfully',
+            'data': {
+                'deleted_violation_id': violation_id,
+                'photo_also_deleted': other_violations == 0
+            },
+            'error': None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error deleting violation {violation_id}: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Failed to delete violation',
+            'data': None,
+            'error': 'INTERNAL_SERVER_ERROR'
+        }), 500
 
 @bp.route('/', methods=['GET'])
 def list_violations():
