@@ -377,14 +377,15 @@ const Dashboard = () => {
         fullWidth
       >
         <DialogTitle>
-          Детали нарушения
-          {selectedViolation && (
-            <Chip
-              label={getStatusColor(selectedViolation.status)}
-              color={getStatusColor(selectedViolation.status)}
-              sx={{ ml: 2 }}
-            />
-          )}
+          <Box display="flex" alignItems="center" gap={2}>
+            Детали нарушения
+            {selectedViolation && (
+              <Chip
+                label={getStatusColor(selectedViolation.status)}
+                color={getStatusColor(selectedViolation.status)}
+              />
+            )}
+          </Box>
         </DialogTitle>
         <DialogContent>
           {selectedViolation && (
