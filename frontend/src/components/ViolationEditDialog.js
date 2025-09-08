@@ -27,11 +27,11 @@ const ViolationEditDialog = ({ open, onClose, violation, onUpdate, onDelete }) =
   useEffect(() => {
     if (violation) {
       setEditedViolation({
-        category: violation.violations?.[0]?.category || '',
-        confidence: violation.violations?.[0]?.confidence || 0,
+        category: violation.category || violation.violations?.[0]?.category || '',
+        confidence: violation.confidence || violation.violations?.[0]?.confidence || 0,
         location_hint: violation.metadata?.location_hint || '',
-        coordinates: violation.location?.coordinates || null,
-        address: violation.location?.address || {}
+        coordinates: violation.coordinates || violation.location?.coordinates || null,
+        address: violation.address || violation.location?.address || {}
       });
     }
   }, [violation]);
@@ -66,7 +66,7 @@ const ViolationEditDialog = ({ open, onClose, violation, onUpdate, onDelete }) =
         address: editedViolation.address
       };
 
-      await onUpdate(violation.violation_id, updateData);
+      await onUpdate(violation.violation_id || violation.id, updateData);
       onClose();
     } catch (err) {
       setError('Ошибка при сохранении изменений: ' + err.message);
@@ -81,7 +81,7 @@ const ViolationEditDialog = ({ open, onClose, violation, onUpdate, onDelete }) =
       setError('');
       
       try {
-        await onDelete(violation.violation_id);
+        await onDelete(violation.violation_id || violation.id);
         onClose();
       } catch (err) {
         setError('Ошибка при удалении нарушения: ' + err.message);
@@ -207,7 +207,7 @@ const ViolationEditDialog = ({ open, onClose, violation, onUpdate, onDelete }) =
 
           <Grid item xs={12}>
             <Box display="flex" flexWrap="wrap" gap={1}>
-              <Chip label={`ID: ${violation.violation_id}`} size="small" />
+              <Chip label={`ID: ${violation.violation_id || violation.id}`} size="small" />
               <Chip 
                 label={`Источник: ${violation.violations?.[0]?.source || 'unknown'}`} 
                 size="small" 

@@ -489,13 +489,6 @@ const InteractiveMap = ({ violations = [], onViolationClick, onCoordinateSelect,
               const lon = violation.lon || violation.longitude || 
                          (violation.location && violation.location.coordinates && violation.location.coordinates.longitude);
               
-              console.log('Map violation check:', {
-                id: violation.id,
-                category: violation.category,
-                lat: lat,
-                lon: lon,
-                violation: violation
-              });
               
               return lat && lon && (
                 <Marker

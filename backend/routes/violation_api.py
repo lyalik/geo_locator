@@ -433,7 +433,18 @@ def get_violation(violation_id):
     Get details of a specific violation by ID.
     """
     try:
-        violation = db.session.query(Violation).filter_by(id=violation_id).first()
+        # Convert violation_id to integer
+        try:
+            violation_id_int = int(violation_id)
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid violation ID format',
+                'data': None,
+                'error': 'INVALID_ID'
+            }), 400
+        
+        violation = db.session.query(Violation).filter_by(id=violation_id_int).first()
         if not violation:
             return jsonify({
                 'success': False,
@@ -483,10 +494,21 @@ def get_violation(violation_id):
 @bp.route('/<violation_id>', methods=['PUT'])
 def update_violation(violation_id):
     """
-    Update details of a specific violation by ID.
+    Update a specific violation by ID.
     """
     try:
-        violation = db.session.query(Violation).filter_by(id=violation_id).first()
+        # Convert violation_id to integer
+        try:
+            violation_id_int = int(violation_id)
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid violation ID format',
+                'data': None,
+                'error': 'INVALID_ID'
+            }), 400
+        
+        violation = db.session.query(Violation).filter_by(id=violation_id_int).first()
         if not violation:
             return jsonify({
                 'success': False,
@@ -573,7 +595,18 @@ def delete_violation(violation_id):
     Delete a specific violation by ID.
     """
     try:
-        violation = db.session.query(Violation).filter_by(id=violation_id).first()
+        # Convert violation_id to integer
+        try:
+            violation_id_int = int(violation_id)
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid violation ID format',
+                'data': None,
+                'error': 'INVALID_ID'
+            }), 400
+        
+        violation = db.session.query(Violation).filter_by(id=violation_id_int).first()
         if not violation:
             return jsonify({
                 'success': False,
@@ -585,7 +618,7 @@ def delete_violation(violation_id):
         photo = violation.photo
         
         # Check if this is the only violation for this photo
-        other_violations = db.session.query(Violation).filter_by(photo_id=photo.id).filter(Violation.id != violation_id).count()
+        other_violations = db.session.query(Violation).filter_by(photo_id=photo.id).filter(Violation.id != violation_id_int).count()
         
         # Delete the violation
         db.session.delete(violation)
@@ -611,7 +644,7 @@ def delete_violation(violation_id):
             'success': True,
             'message': 'Violation deleted successfully',
             'data': {
-                'deleted_violation_id': violation_id,
+                'deleted_violation_id': str(violation_id_int),
                 'photo_also_deleted': other_violations == 0
             },
             'error': None
@@ -628,23 +661,61 @@ def delete_violation(violation_id):
         }), 500
 
 @bp.route('/', methods=['GET'])
-def list_violations():
+def list_all_violations():
     """
-    List all violations with optional filtering.
-    In a real implementation, this would query a database.
+    List all violations with optional filtering (alternative endpoint).
     """
-    # TODO: Implement database query with filters
-    return jsonify({
-        'success': True,
-        'message': 'List of violations',
-        'data': {
-            'violations': [],
-            'total': 0,
-            'page': 1,
-            'per_page': 10
-        },
-        'error': None
-    })
+    try:
+        # Get query parameters for filtering
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        category = request.args.get('category')
+        
+        # Build query
+        query = db.session.query(Photo).join(Violation)
+        
+        if category:
+            query = query.filter(Violation.category == category)
+        
+        # Paginate
+        photos = query.offset((page - 1) * per_page).limit(per_page).all()
+        total = query.count()
+        
+        violations_list = []
+        for photo in photos:
+            for violation in photo.violations:
+                violations_list.append({
+                    'violation_id': str(violation.id),
+                    'category': violation.category,
+                    'confidence': violation.confidence,
+                    'coordinates': {
+                        'latitude': photo.lat,
+                        'longitude': photo.lon
+                    } if photo.lat and photo.lon else None,
+                    'address': photo.address_data,
+                    'created_at': photo.created_at.isoformat() + 'Z'
+                })
+        
+        return jsonify({
+            'success': True,
+            'message': f'Retrieved {len(violations_list)} violations',
+            'data': {
+                'violations': violations_list,
+                'total': total,
+                'page': page,
+                'per_page': per_page
+            },
+            'error': None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in list_all_violations: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to retrieve violations',
+            'data': None,
+            'error': 'INTERNAL_SERVER_ERROR'
+        }), 500
 
 @bp.route('/batch_detect', methods=['POST'])
 def batch_detect_violations():
