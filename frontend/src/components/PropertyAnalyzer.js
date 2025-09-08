@@ -42,12 +42,16 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     console.log('showPropertyDialog:', showPropertyDialog);
   }, [selectedProperty, showPropertyDialog]);
 
-  const searchByAddress = async () => {
-    if (!searchQuery.trim()) return;
-    
+  const searchByAddress = async (searchQuery) => {
+    if (!searchQuery.trim()) {
+      setError('Пожалуйста, введите адрес');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setProperties([]);
+    setValidationResult(null); // Сбрасываем результат проверки
     // Сбрасываем состояние диалога при новом поиске
     setSelectedProperty(null);
     setShowPropertyDialog(false);
@@ -187,16 +191,25 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     }
   };
 
-  const searchByCadastralNumber = async () => {
-    if (!searchQuery.trim()) return;
-    
+  const searchByCadastralNumber = async (searchQuery) => {
+    if (!searchQuery.trim()) {
+      setError('Пожалуйста, введите кадастровый номер');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setProperties([]);
-    
+    setValidationResult(null); // Сбрасываем результат проверки
+
     try {
-      const response = await api.get('/api/geo/locate/cadastral', {
-        params: { cadastral_number: searchQuery }
+      console.log('🔍 Поиск по кадастровому номеру:', searchQuery);
+      
+      const response = await api.get('/api/geo/locate', {
+        params: {
+          query: searchQuery,
+          search_type: 'cadastral'
+        }
       });
       
       if (response.data.success) {
@@ -204,20 +217,34 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         const dgisResults = [];
         
         // Обрабатываем результаты от Яндекс
-        if (response.data.yandex && response.data.yandex.results) {
+        if (response.data.yandex && response.data.yandex.results && response.data.yandex.results.length > 0) {
           response.data.yandex.results.forEach((result, index) => {
             yandexResults.push({
               id: `yandex_cad_${index}`,
-              address: result.formatted_address || result.address,
+              address: result.formatted_address || result.address || 'Адрес не найден',
               coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
-              category: result.type || 'Объект недвижимости',
+              category: result.type || 'house',
               area: result.area || 'Не указано',
-              permitted_use: result.description || 'Не указано',
+              permitted_use: result.permitted_use || 'Не указано',
               source: 'Яндекс Карты',
               confidence: result.confidence || 0.8,
               cadastral_number: searchQuery,
               provider: 'yandex'
             });
+          });
+        } else {
+          // Создаём fallback результат для кадастрового номера
+          yandexResults.push({
+            id: `cadastral_fallback`,
+            address: 'Объект по кадастровому номеру',
+            coordinates: null,
+            category: 'house',
+            area: 'Не указано',
+            permitted_use: 'Не указано',
+            source: 'Кадастровый номер',
+            confidence: 0.5,
+            cadastral_number: searchQuery,
+            provider: 'yandex'
           });
         }
         
@@ -228,9 +255,9 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
               id: `dgis_cad_${index}`,
               address: result.formatted_address || result.address,
               coordinates: result.latitude && result.longitude ? [result.latitude, result.longitude] : null,
-              category: result.type || 'Объект недвижимости',
+              category: result.type || 'house',
               area: result.area || 'Не указано',
-              permitted_use: result.description || 'Не указано',
+              permitted_use: result.permitted_use || 'Не указано',
               source: '2GIS',
               confidence: result.confidence || 0.8,
               cadastral_number: searchQuery,
@@ -241,10 +268,6 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
         
         const allResults = [...yandexResults, ...dgisResults];
         setProperties(allResults);
-        
-        if (allResults.length === 0) {
-          setError('Объект с указанным кадастровым номером не найден');
-        }
       } else {
         setError('Объект с указанным кадастровым номером не найден');
       }
@@ -256,10 +279,11 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     }
   };
 
-  const searchByCoordinates = async (lat, lon, radius = 200) => {
+  const searchByCoordinates = async (lat, lon) => {
     setLoading(true);
     setError(null);
     setProperties([]);
+    setValidationResult(null); // Сбрасываем результат проверки
     
     try {
       const response = await api.get('/api/geo/locate/coordinates', {
@@ -478,10 +502,33 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
     console.log('✅ Dialog should be open now');
   }, []);
 
+  const formatCadastralNumber = (cadastralNumber) => {
+    if (!cadastralNumber || cadastralNumber === 'Не указан' || cadastralNumber.includes('yandex_')) {
+      return 'Не указан';
+    }
+    // Формат кадастрового номера: XX:XX:XXXXXXX:XX
+    const cleanNumber = cadastralNumber.replace(/[^0-9]/g, '');
+    if (cleanNumber.length >= 11) {
+      return `${cleanNumber.slice(0,2)}:${cleanNumber.slice(2,4)}:${cleanNumber.slice(4,11)}:${cleanNumber.slice(11)}`;
+    }
+    return cadastralNumber;
+  };
+
+  const translateCategory = (category) => {
+    const translations = {
+      'house': 'Жилой дом',
+      'apartment': 'Квартира',
+      'commercial': 'Коммерческая недвижимость',
+      'office': 'Офис',
+      'land': 'Земельный участок'
+    };
+    return translations[category] || category;
+  };
+
   const getPropertyIcon = (category) => {
-    if (category.includes('жилая') || category.includes('дом')) {
+    if (category.includes('жилая') || category.includes('дом') || category === 'house') {
       return <HomeIcon color="primary" />;
-    } else if (category.includes('коммерческая') || category.includes('офис')) {
+    } else if (category.includes('коммерческая') || category.includes('офис') || category === 'commercial' || category === 'office') {
       return <BusinessIcon color="secondary" />;
     }
     return <DescriptionIcon color="action" />;
@@ -717,7 +764,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                           secondary={
                             <React.Fragment>
                               <Typography variant="body2" color="textSecondary" component="span">
-                                {property.category}
+                                {translateCategory(property.category)}
                               </Typography>
                               {property.coordinates && (
                                 <Typography variant="caption" color="textSecondary" component="span" sx={{ display: 'block' }}>
@@ -779,7 +826,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                           secondary={
                             <React.Fragment>
                               <Typography variant="body2" color="textSecondary" component="span">
-                                {property.category}
+                                {translateCategory(property.category)}
                               </Typography>
                               {property.coordinates && (
                                 <Typography variant="caption" color="textSecondary" component="span" sx={{ display: 'block' }}>
@@ -882,7 +929,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                       <TableBody>
                         <TableRow>
                           <TableCell><strong>Кадастровый номер</strong></TableCell>
-                          <TableCell>{selectedProperty.cadastral_number}</TableCell>
+                          <TableCell>{formatCadastralNumber(selectedProperty.cadastral_number)}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell><strong>Адрес</strong></TableCell>
@@ -890,7 +937,7 @@ const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
                         </TableRow>
                         <TableRow>
                           <TableCell><strong>Категория</strong></TableCell>
-                          <TableCell>{selectedProperty.category}</TableCell>
+                          <TableCell>{translateCategory(selectedProperty.category)}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell><strong>Площадь</strong></TableCell>
