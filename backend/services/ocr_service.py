@@ -134,7 +134,7 @@ class OCRService:
             # Get detailed OCR data
             data = pytesseract.image_to_data(
                 processed_image,
-                config=self.tesseract_config['default'],
+                config=self.tesseract_config,
                 lang='rus+eng',
                 output_type=pytesseract.Output.DICT
             )
@@ -177,7 +177,7 @@ class OCRService:
             # Extract text with Russian and English support
             text = pytesseract.image_to_string(
                 processed_image,
-                config=self.tesseract_config['default'],
+                config=self.tesseract_config,
                 lang='rus+eng'
             )
             
@@ -285,6 +285,100 @@ class OCRService:
         key_info['legal_references'] = legal_refs
         
         return key_info
+    
+    def analyze_violation_text(self, text: str) -> 'ViolationAnalysis':
+        """Analyze text for violation-related information"""
+        try:
+            # Extract violation keywords
+            violation_keywords = []
+            for keyword in self.violation_keywords:
+                if keyword.lower() in text.lower():
+                    violation_keywords.append(keyword)
+            
+            # Extract addresses
+            addresses = []
+            for pattern in self.address_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                addresses.extend(matches)
+            
+            # Extract dates
+            dates = []
+            date_patterns = [
+                r'\d{1,2}\.\d{1,2}\.\d{4}',
+                r'\d{1,2}/\d{1,2}/\d{4}',
+                r'\d{4}-\d{1,2}-\d{1,2}'
+            ]
+            for pattern in date_patterns:
+                dates.extend(re.findall(pattern, text))
+            
+            # Extract legal references
+            legal_references = []
+            legal_patterns = [
+                r'ст\.\s*\d+',
+                r'статья\s*\d+',
+                r'п\.\s*\d+',
+                r'пункт\s*\d+'
+            ]
+            for pattern in legal_patterns:
+                legal_references.extend(re.findall(pattern, text, re.IGNORECASE))
+            
+            # Determine severity indicators
+            severity_indicators = []
+            high_severity = ['штраф', 'снос', 'административный', 'уголовный']
+            medium_severity = ['предписание', 'нарушение', 'незаконный']
+            
+            for indicator in high_severity:
+                if indicator.lower() in text.lower():
+                    severity_indicators.append(f"high:{indicator}")
+            
+            for indicator in medium_severity:
+                if indicator.lower() in text.lower():
+                    severity_indicators.append(f"medium:{indicator}")
+            
+            # Calculate confidence score
+            confidence_score = min(1.0, (len(violation_keywords) * 0.2 + 
+                                       len(addresses) * 0.1 + 
+                                       len(legal_references) * 0.15 + 
+                                       len(severity_indicators) * 0.1))
+            
+            # Create ViolationAnalysis object
+            from dataclasses import dataclass
+            from typing import List
+            
+            @dataclass
+            class ViolationAnalysis:
+                violation_keywords: List[str]
+                addresses: List[str]
+                dates: List[str]
+                legal_references: List[str]
+                severity_indicators: List[str]
+                confidence_score: float
+            
+            return ViolationAnalysis(
+                violation_keywords=violation_keywords,
+                addresses=addresses,
+                dates=dates,
+                legal_references=legal_references,
+                severity_indicators=severity_indicators,
+                confidence_score=confidence_score
+            )
+            
+        except Exception as e:
+            logger.error(f"Error analyzing violation text: {e}")
+            # Return empty ViolationAnalysis
+            from dataclasses import dataclass
+            from typing import List
+            
+            @dataclass
+            class ViolationAnalysis:
+                violation_keywords: List[str]
+                addresses: List[str]
+                dates: List[str]
+                legal_references: List[str]
+                severity_indicators: List[str]
+                confidence_score: float
+            
+            return ViolationAnalysis([], [], [], [], [], 0.0)
     
     def analyze_address_text(self, text: str) -> AddressAnalysis:
         """Analyze text for addresses and building information from signage"""
