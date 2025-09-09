@@ -91,10 +91,13 @@ class CoordinateDetector:
             
             # Step 5: Use geolocation services to determine coordinates
             geo_result = None
+            logger.info(f"🗺️ Location hint received: '{location_hint}' (type: {type(location_hint)}, bool: {bool(location_hint)})")
             if location_hint:
                 logger.info(f"🗺️ Processing location hint: '{location_hint}'")
                 geo_result = self.geo_aggregator.locate_image(image_path, location_hint)
                 logger.info(f"🗺️ Geo result: {geo_result}")
+            else:
+                logger.info("🗺️ No location hint provided, skipping geolocation service")
             
             # Step 6: Try archive photo matching for better accuracy
             archive_coords = self._find_archive_coordinates(image_path)
