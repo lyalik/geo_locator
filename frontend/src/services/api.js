@@ -143,5 +143,35 @@ export const maps = {
   }
 };
 
+// Video analysis API endpoints
+export const videoAnalysis = {
+  analyze: (file, locationHint = '', frameInterval = 30, maxFrames = 10) => {
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('location_hint', locationHint);
+    formData.append('frame_interval', frameInterval.toString());
+    formData.append('max_frames', maxFrames.toString());
+    
+    return api.post('/api/coordinates/video/analyze', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  estimateProcessingTime: (file, frameInterval = 30, maxFrames = 10) => {
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('frame_interval', frameInterval.toString());
+    formData.append('max_frames', maxFrames.toString());
+    
+    return api.post('/api/coordinates/video/estimate', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+};
+
 export { api };
 export default api;

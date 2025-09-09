@@ -4,10 +4,9 @@ from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
 from PIL import Image
 import cv2
-from .yolo_violation_detector import YOLOObjectDetector
-from .geo_aggregator_service import GeoAggregatorService
-from .image_similarity_service import ImageSimilarityService
-from .cache_service import DetectionCache
+from services.yolo_violation_detector import YOLOObjectDetector
+from services.geo_aggregator_service import GeoAggregatorService
+from services.cache_service import DetectionCache
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +22,6 @@ class CoordinateDetector:
         """Initialize the coordinate detector with required services."""
         self.yolo_detector = YOLOObjectDetector()
         self.geo_aggregator = GeoAggregatorService()
-        self.image_similarity = ImageSimilarityService()
         logger.info("Coordinate Detector initialized")
     
     def detect_coordinates_from_image(self, image_path: str, location_hint: Optional[str] = None) -> Dict[str, Any]:
@@ -49,7 +47,7 @@ class CoordinateDetector:
                     'objects': []
                 }
             
-            objects = detection_result['objects']
+            objects = detection_result.get('objects', [])
             
             # Step 2: Extract image metadata (EXIF GPS if available)
             image_coords = self._extract_gps_coordinates(image_path)
@@ -57,7 +55,7 @@ class CoordinateDetector:
             # Step 3: Use geolocation services to determine coordinates
             geo_result = None
             if location_hint:
-                geo_result = self.geo_aggregator.get_location_info(location_hint)
+                geo_result = self.geo_aggregator.locate_image(image_path, location_hint)
             
             # Step 4: Try image similarity matching for better accuracy
             similarity_coords = self._find_similar_image_coordinates(image_path)
@@ -70,6 +68,7 @@ class CoordinateDetector:
             # Step 6: Enhance objects with geolocation relevance
             enhanced_objects = self._enhance_objects_with_location(objects, final_coordinates)
             
+            # Return success even if no objects or coordinates found, as long as detection process worked
             return {
                 'success': True,
                 'coordinates': final_coordinates,
@@ -77,10 +76,11 @@ class CoordinateDetector:
                 'total_objects': len(enhanced_objects),
                 'coordinate_sources': {
                     'gps_metadata': image_coords is not None,
-                    'geolocation_service': geo_result is not None,
+                    'geolocation_service': geo_result is not None and geo_result.get('success', False),
                     'image_similarity': similarity_coords is not None
                 },
-                'annotated_image_path': detection_result.get('annotated_image_path')
+                'annotated_image_path': detection_result.get('annotated_image_path'),
+                'detection_status': 'no_objects_detected' if len(objects) == 0 else 'objects_detected'
             }
             
         except Exception as e:
@@ -139,22 +139,8 @@ class CoordinateDetector:
     def _find_similar_image_coordinates(self, image_path: str) -> Optional[Dict[str, float]]:
         """Find coordinates by matching with similar images in database."""
         try:
-            # Use image similarity service to find matching images
-            similar_images = self.image_similarity.find_similar_images(image_path, limit=3)
-            
-            if not similar_images:
-                return None
-            
-            # Get coordinates from the most similar image
-            best_match = similar_images[0]
-            if best_match.get('similarity_score', 0) > 0.8:  # High similarity threshold
-                return {
-                    'latitude': best_match.get('latitude'),
-                    'longitude': best_match.get('longitude'),
-                    'source': 'image_similarity',
-                    'similarity_score': best_match.get('similarity_score')
-                }
-            
+            # Image similarity service not available, skip this step
+            logger.debug("Image similarity service not available, skipping similarity matching")
             return None
             
         except Exception as e:

@@ -2,9 +2,9 @@ from flask import Blueprint, request, jsonify, current_app
 import os
 import logging
 from werkzeug.utils import secure_filename
-from ..services.coordinate_detector import CoordinateDetector
-from ..services.video_coordinate_detector import VideoCoordinateDetector
-from ..models import db, Photo, Violation
+from services.coordinate_detector import CoordinateDetector
+from services.video_coordinate_detector import VideoCoordinateDetector
+from models import db, Photo, Violation
 
 # Configure logging
 logger = logging.getLogger(__name__)

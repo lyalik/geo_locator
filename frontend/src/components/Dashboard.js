@@ -6,8 +6,7 @@ import {
 } from '@mui/material';
 import {
   Map as MapIcon, Upload as UploadIcon, Analytics as AnalyticsIcon,
-  Warning as WarningIcon, CheckCircle as CheckIcon, Schedule as ScheduleIcon,
-  GetApp as DownloadIcon, Refresh as RefreshIcon,
+  Schedule as ScheduleIcon, GetApp as DownloadIcon, Refresh as RefreshIcon,
   Home as PropertyIcon, LocationCity as UrbanIcon, Satellite as SatelliteIcon,
   TextFields as OCRIcon
 } from '@mui/icons-material';
@@ -18,6 +17,7 @@ import PropertyAnalyzer from './PropertyAnalyzer';
 import UrbanAnalyzer from './UrbanAnalyzer';
 import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
+import VideoAnalyzer from './VideoAnalyzer';
 import ViolationEditDialog from './ViolationEditDialog';
 import { violations } from '../services/api';
 
@@ -239,23 +239,56 @@ const Dashboard = () => {
   };
 
   const tabs = [
-    { label: 'Карта нарушений', icon: <MapIcon />, component: <InteractiveMap violations={violationsData} onViolationClick={handleViolationClick} onCoordinateSelect={setSelectedCoordinates} height={600} /> },
-    { label: 'Анализ с ИИ', icon: <UploadIcon />, component: <ViolationUploader onUploadComplete={handleUploadComplete} /> },
-    { label: 'Аналитика', icon: <AnalyticsIcon />, component: <AnalyticsDashboard violations={violationsData} /> },
-    { label: 'Анализ недвижимости', icon: <PropertyIcon />, component: <PropertyAnalyzer coordinates={selectedCoordinates} onPropertySelect={(property) => { if (property.coordinates) setSelectedCoordinates({lat: property.coordinates[0], lon: property.coordinates[1]}); }} /> },
-    { label: 'Городской контекст', icon: <UrbanIcon />, component: <UrbanAnalyzer coordinates={selectedCoordinates} /> },
-    { label: 'Спутниковый анализ', icon: <SatelliteIcon />, component: <SatelliteAnalyzer coordinates={selectedCoordinates} /> },
-    { label: 'OCR анализ', icon: <OCRIcon />, component: <OCRAnalyzer /> }
+    { 
+      label: 'Карта нарушений', 
+      icon: <MapIcon />, 
+      description: 'Интерактивная карта с отображением всех нарушений, фильтрацией по категориям и детальной информацией по каждому объекту',
+      component: <InteractiveMap violations={violationsData} onViolationClick={handleViolationClick} onCoordinateSelect={setSelectedCoordinates} height={600} /> 
+    },
+    { 
+      label: 'Анализ с ИИ', 
+      icon: <UploadIcon />, 
+      description: 'Загрузка изображений для автоматического обнаружения нарушений с помощью ИИ (Google Vision API + YOLO) и определения координат объектов',
+      component: <ViolationUploader onUploadComplete={handleUploadComplete} /> 
+    },
+    { 
+      label: 'Аналитика', 
+      icon: <AnalyticsIcon />, 
+      description: 'Статистические данные и аналитические отчеты по нарушениям, трендам, производительности системы и источникам данных',
+      component: <AnalyticsDashboard violations={violationsData} /> 
+    },
+    { 
+      label: 'Анализ недвижимости', 
+      icon: <PropertyIcon />, 
+      description: 'Анализ объектов недвижимости по координатам с использованием российских API (Росреестр, ДомКлик) и OpenStreetMap данных',
+      component: <PropertyAnalyzer coordinates={selectedCoordinates} onPropertySelect={(property) => { if (property.coordinates) setSelectedCoordinates({lat: property.coordinates[0], lon: property.coordinates[1]}); }} /> 
+    },
+    { 
+      label: 'Городской контекст', 
+      icon: <UrbanIcon />, 
+      description: 'Анализ городской инфраструктуры и контекста местности с интеграцией спутниковых данных и геосервисов',
+      component: <UrbanAnalyzer coordinates={selectedCoordinates} /> 
+    },
+    { 
+      label: 'Спутниковый анализ', 
+      icon: <SatelliteIcon />, 
+      description: 'Получение и анализ спутниковых снимков от российских источников (Роскосмос, Яндекс Спутник) с детекцией изменений',
+      component: <SatelliteAnalyzer coordinates={selectedCoordinates} /> 
+    },
+    { 
+      label: 'OCR анализ', 
+      icon: <OCRIcon />, 
+      description: 'Распознавание и извлечение текста с изображений, анализ вывесок, табличек и документов для получения адресной информации',
+      component: <OCRAnalyzer /> 
+    },
+    { 
+      label: 'Анализ видео', 
+      icon: <ScheduleIcon />, 
+      description: 'Покадровый анализ видеофайлов с детекцией объектов, определением координат и временной привязкой результатов',
+      component: <VideoAnalyzer /> 
+    }
   ];
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'processed': return <CheckIcon color="success" />;
-      case 'error': return <WarningIcon color="error" />;
-      case 'pending': return <ScheduleIcon color="action" />;
-      default: return <ScheduleIcon color="action" />;
-    }
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -296,8 +329,8 @@ const Dashboard = () => {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -309,7 +342,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -321,7 +354,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -333,7 +366,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -341,6 +374,30 @@ const Dashboard = () => {
               </Typography>
               <Typography variant="h4" color="error.main">
                 {stats.errors}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                С координатами
+              </Typography>
+              <Typography variant="h4" color="primary.main">
+                {stats.withCoordinates}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Без координат
+              </Typography>
+              <Typography variant="h4" color="text.secondary">
+                {stats.withoutCoordinates}
               </Typography>
             </CardContent>
           </Card>
@@ -355,10 +412,19 @@ const Dashboard = () => {
           variant="fullWidth"
         >
           {tabs.map((tab, index) => (
-            <Tab key={index} icon={tab.icon} label={tab.label} />
+            <Tab key={index} label={tab.label} icon={tab.icon} />
           ))}
         </Tabs>
       </Paper>
+
+      {/* Current Tab Description */}
+      {tabs[activeTab] && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>{tabs[activeTab].label}:</strong> {tabs[activeTab].description}
+          </Typography>
+        </Alert>
+      )}
 
       {/* Tab Panels */}
       {tabs.map((tab, index) => (

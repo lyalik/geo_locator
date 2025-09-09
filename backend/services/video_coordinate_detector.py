@@ -4,8 +4,8 @@ import cv2
 import tempfile
 from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
-from .coordinate_detector import CoordinateDetector
-from .cache_service import DetectionCache
+from services.coordinate_detector import CoordinateDetector
+from services.cache_service import DetectionCache
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
