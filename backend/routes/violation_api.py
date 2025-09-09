@@ -41,7 +41,7 @@ bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
 
 def allowed_file(filename):
     """Check if the file extension is allowed."""
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'tif', 'webp'}
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -162,6 +162,9 @@ def detect_violations():
             'data': None,
             'error': 'NO_FILE_SELECTED'
         }), 400
+    
+    current_app.logger.info(f"📁 File upload - Filename: '{file.filename}', Content-Type: '{file.content_type}'")
+    current_app.logger.info(f"📁 File validation - allowed_file result: {allowed_file(file.filename)}")
     
     if file and allowed_file(file.filename):
         # Generate a unique filename

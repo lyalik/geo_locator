@@ -385,24 +385,31 @@ class CoordinateDetector:
     
     def _find_archive_coordinates(self, image_path: str) -> Optional[Dict[str, Any]]:
         """Find coordinates by matching with archive photos."""
+        logger.info(f"🏛️ Archive search - Service available: {self.archive_service is not None}")
+        
         if not self.archive_service:
-            logger.debug("Archive service not available, skipping archive matching")
+            logger.info("🏛️ Archive service not available, skipping archive matching")
             return None
             
         try:
+            logger.info(f"🏛️ Archive search - Searching for similar buildings in archive...")
             # Search for similar buildings in archive
             archive_result = self.archive_service.get_coordinates_from_similar_buildings(
                 image_path, threshold=0.75
             )
             
+            logger.info(f"🏛️ Archive search - Result: {archive_result}")
+            
             if archive_result:
                 logger.info(f"🏛️ Found archive match: {archive_result.get('matched_building', {}).get('description', 'Unknown building')}")
                 return archive_result
+            else:
+                logger.info("🏛️ Archive search - No matches found")
             
             return None
             
         except Exception as e:
-            logger.debug(f"Archive photo matching failed: {str(e)}")
+            logger.error(f"🏛️ Archive photo matching failed: {str(e)}")
             return None
     
     def _find_similar_image_coordinates(self, image_path: str) -> Optional[Dict[str, float]]:
@@ -422,6 +429,14 @@ class CoordinateDetector:
                                   google_geo_coords: Optional[Dict] = None,
                                   archive_coords: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
         """Combine coordinates from different sources with confidence weighting."""
+        logger.info(f"🔍 Combining coordinate sources:")
+        logger.info(f"  GPS: {gps_coords}")
+        logger.info(f"  Geo: {geo_result}")
+        logger.info(f"  Archive: {archive_coords}")
+        logger.info(f"  Google OCR: {google_ocr_coords}")
+        logger.info(f"  Google Geo: {google_geo_coords}")
+        logger.info(f"  Similarity: {similarity_coords}")
+        
         coordinate_candidates = []
         
         # Add GPS coordinates (highest priority)
@@ -434,16 +449,15 @@ class CoordinateDetector:
         
         # Add geolocation service results
         if geo_result and geo_result.get('success'):
-            locations = geo_result.get('locations', [])
-            for location in locations[:1]:  # Take best result
-                if location.get('coordinates'):
-                    coordinate_candidates.append({
-                        'latitude': location['coordinates']['lat'],
-                        'longitude': location['coordinates']['lon'],
-                        'source': 'geolocation_service',
-                        'confidence': location.get('confidence', 0.7),
-                        'priority': 2
-                    })
+            final_location = geo_result.get('final_location')
+            if final_location and final_location.get('coordinates'):
+                coordinate_candidates.append({
+                    'latitude': final_location['coordinates']['lat'],
+                    'longitude': final_location['coordinates']['lon'],
+                    'source': 'geolocation_service',
+                    'confidence': final_location.get('confidence', 0.7),
+                    'priority': 2
+                })
         
         # Add Google Vision OCR coordinates
         if google_ocr_coords:
