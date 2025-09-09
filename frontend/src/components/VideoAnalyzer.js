@@ -52,6 +52,7 @@ const VideoAnalyzer = () => {
   const [analysisResults, setAnalysisResults] = useState(null);
   const [processingEstimate, setProcessingEstimate] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [fileType, setFileType] = useState(null); // 'image' or 'video'
 
   // Handle file drop
   const onDrop = useCallback((acceptedFiles) => {
@@ -60,23 +61,62 @@ const VideoAnalyzer = () => {
       setSelectedFile(file);
       setAnalysisResults(null);
       setProcessingEstimate(null);
-      enqueueSnackbar(`Выбран файл: ${file.name}`, { variant: 'info' });
+      
+      // Determine file type
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      
+      if (isImage) {
+        setFileType('image');
+      } else if (isVideo) {
+        setFileType('video');
+      } else {
+        setFileType(null);
+      }
+      
+      enqueueSnackbar(`Выбран ${isImage ? 'изображение' : 'видео'}: ${file.name}`, { variant: 'info' });
     }
   }, [enqueueSnackbar]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'video/*': ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm']
+      'video/*': ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm'],
+      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
     },
     multiple: false,
     maxSize: 500 * 1024 * 1024 // 500MB
   });
 
+  // Analyze image coordinates
+  const analyzeImageCoordinates = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (locationHint) {
+      formData.append('location_hint', locationHint);
+    }
+
+    const response = await fetch('http://localhost:5001/api/coordinates/detect', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  };
+
   // Estimate processing time
   const handleEstimateProcessing = async () => {
     if (!selectedFile) {
-      enqueueSnackbar('Сначала выберите видеофайл', { variant: 'warning' });
+      enqueueSnackbar('Сначала выберите файл', { variant: 'warning' });
+      return;
+    }
+
+    if (fileType === 'image') {
+      enqueueSnackbar('Для изображений оценка времени не требуется', { variant: 'info' });
       return;
     }
 
@@ -107,10 +147,10 @@ const VideoAnalyzer = () => {
     }
   };
 
-  // Start video analysis
-  const handleAnalyzeVideo = async () => {
+  // Start analysis (video or image)
+  const handleAnalyzeFile = async () => {
     if (!selectedFile) {
-      enqueueSnackbar('Сначала выберите видеофайл', { variant: 'warning' });
+      enqueueSnackbar('Сначала выберите файл', { variant: 'warning' });
       return;
     }
 
@@ -118,36 +158,87 @@ const VideoAnalyzer = () => {
     setProgress(0);
     setAnalysisResults(null);
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + 5;
-      });
-    }, 1000);
-
     try {
-      const response = await videoAnalysis.analyze(
-        selectedFile,
-        locationHint,
-        frameInterval,
-        maxFrames
-      );
+      if (fileType === 'image') {
+        // Image coordinate analysis
+        setProgress(50);
+        const data = await analyzeImageCoordinates(selectedFile);
+        setProgress(100);
 
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      if (response.data.success) {
-        setAnalysisResults(response.data.data);
-        enqueueSnackbar('Анализ видео завершен успешно!', { variant: 'success' });
+        if (data.success) {
+          console.log('🔍 Полученные данные от API:', data);
+          console.log('🗺️ Координаты:', data.data?.coordinates);
+          console.log('📍 Объекты:', data.data?.objects);
+          
+          // Transform image coordinate results to match video analysis format
+          const apiData = data.data || data;
+          const transformedResults = {
+            total_frames_processed: 1,
+            successful_frames: 1,
+            total_objects_detected: apiData.total_objects || 0,
+            coordinates: apiData.coordinates ? {
+              latitude: apiData.coordinates.latitude,
+              longitude: apiData.coordinates.longitude,
+              confidence: apiData.coordinates.confidence || 1,
+              source: apiData.coordinates.source || 'EXIF',
+              frame_count: 1
+            } : null,
+            object_statistics: apiData.objects ? {
+              category_counts: apiData.objects.reduce((acc, obj) => {
+                acc[obj.category] = (acc[obj.category] || 0) + 1;
+                return acc;
+              }, {}),
+              category_avg_confidence: apiData.objects.reduce((acc, obj) => {
+                acc[obj.category] = obj.confidence;
+                return acc;
+              }, {}),
+              unique_categories: [...new Set(apiData.objects.map(obj => obj.category))].length,
+              average_geolocation_utility: apiData.objects.reduce((sum, obj) => sum + (obj.geolocation_utility || 0), 0) / apiData.objects.length,
+              high_utility_objects: apiData.objects.filter(obj => (obj.geolocation_utility || 0) > 0.7).length
+            } : null,
+            frame_results: [{
+              frame_number: 1,
+              timestamp: 0,
+              success: true,
+              objects: apiData.objects || [],
+              coordinates: apiData.coordinates
+            }]
+          };
+          setAnalysisResults(transformedResults);
+          enqueueSnackbar('Анализ изображения завершен успешно!', { variant: 'success' });
+        } else {
+          throw new Error(data.message || 'Ошибка при анализе изображения');
+        }
       } else {
-        throw new Error(response.data.message || 'Ошибка при анализе видео');
+        // Video analysis
+        const progressInterval = setInterval(() => {
+          setProgress((prev) => {
+            if (prev >= 90) {
+              clearInterval(progressInterval);
+              return 90;
+            }
+            return prev + 5;
+          });
+        }, 1000);
+
+        const response = await videoAnalysis.analyze(
+          selectedFile,
+          locationHint,
+          frameInterval,
+          maxFrames
+        );
+
+        clearInterval(progressInterval);
+        setProgress(100);
+
+        if (response.data.success) {
+          setAnalysisResults(response.data.data);
+          enqueueSnackbar('Анализ видео завершен успешно!', { variant: 'success' });
+        } else {
+          throw new Error(response.data.message || 'Ошибка при анализе видео');
+        }
       }
     } catch (error) {
-      clearInterval(progressInterval);
       console.error('Analysis error:', error);
       enqueueSnackbar(`Ошибка анализа: ${error.message}`, { variant: 'error' });
     } finally {
@@ -178,11 +269,11 @@ const VideoAnalyzer = () => {
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         <VideoFileIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-        Анализ видеофайлов
+        Анализ медиафайлов
       </Typography>
       
       <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
-        Загрузите видеофайл для покадрового анализа и определения координат объектов
+        Загрузите фото или видео для анализа и определения координат объектов
       </Typography>
 
       {/* File Upload Section */}
@@ -210,10 +301,13 @@ const VideoAnalyzer = () => {
             <Typography variant="h6" gutterBottom>
               {isDragActive 
                 ? 'Отпустите файл здесь' 
-                : 'Перетащите видеофайл сюда или нажмите для выбора'}
+                : 'Перетащите фото или видео сюда или нажмите для выбора'}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              Поддерживаемые форматы: MP4, AVI, MOV, MKV, WMV, FLV, WEBM
+              Видео: MP4, AVI, MOV, MKV, WMV, FLV, WEBM
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Фото: JPG, JPEG, PNG, GIF, BMP, WEBP
             </Typography>
             <Typography variant="body2" color="textSecondary">
               Максимальный размер: 500 МБ
@@ -257,57 +351,64 @@ const VideoAnalyzer = () => {
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Интервал кадров</InputLabel>
-                <Select
-                  value={frameInterval}
-                  label="Интервал кадров"
-                  onChange={(e) => setFrameInterval(e.target.value)}
-                >
-                  <MenuItem value={15}>Каждые 15 кадров (высокое качество)</MenuItem>
-                  <MenuItem value={30}>Каждые 30 кадров (рекомендуется)</MenuItem>
-                  <MenuItem value={60}>Каждые 60 кадров (быстро)</MenuItem>
-                  <MenuItem value={120}>Каждые 120 кадров (очень быстро)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Максимум кадров</InputLabel>
-                <Select
-                  value={maxFrames}
-                  label="Максимум кадров"
-                  onChange={(e) => setMaxFrames(e.target.value)}
-                >
-                  <MenuItem value={5}>5 кадров (быстро)</MenuItem>
-                  <MenuItem value={10}>10 кадров (рекомендуется)</MenuItem>
-                  <MenuItem value={20}>20 кадров (детально)</MenuItem>
-                  <MenuItem value={50}>50 кадров (максимально)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+            {fileType === 'video' && (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Интервал кадров</InputLabel>
+                    <Select
+                      value={frameInterval}
+                      label="Интервал кадров"
+                      onChange={(e) => setFrameInterval(e.target.value)}
+                    >
+                      <MenuItem value={15}>Каждые 15 кадров (высокое качество)</MenuItem>
+                      <MenuItem value={30}>Каждые 30 кадров (рекомендуется)</MenuItem>
+                      <MenuItem value={60}>Каждые 60 кадров (быстро)</MenuItem>
+                      <MenuItem value={120}>Каждые 120 кадров (очень быстро)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Максимум кадров</InputLabel>
+                    <Select
+                      value={maxFrames}
+                      label="Максимум кадров"
+                      onChange={(e) => setMaxFrames(e.target.value)}
+                    >
+                      <MenuItem value={5}>5 кадров (быстро)</MenuItem>
+                      <MenuItem value={10}>10 кадров (рекомендуется)</MenuItem>
+                      <MenuItem value={20}>20 кадров (детально)</MenuItem>
+                      <MenuItem value={50}>50 кадров (максимально)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
           </Grid>
 
           <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Button
-              variant="outlined"
-              startIcon={<ScheduleIcon />}
-              onClick={handleEstimateProcessing}
-              disabled={!selectedFile || isEstimating || isAnalyzing}
-            >
-              {isEstimating ? 'Оценка...' : 'Оценить время'}
-            </Button>
+            {fileType === 'video' && (
+              <Button
+                variant="outlined"
+                startIcon={<ScheduleIcon />}
+                onClick={handleEstimateProcessing}
+                disabled={!selectedFile || isEstimating || isAnalyzing}
+              >
+                {isEstimating ? 'Оценка...' : 'Оценить время'}
+              </Button>
+            )}
             
             <Button
               variant="contained"
+              size="large"
               startIcon={<PlayArrowIcon />}
-              onClick={handleAnalyzeVideo}
+              onClick={handleAnalyzeFile}
               disabled={!selectedFile || isAnalyzing}
               color="primary"
             >
-              {isAnalyzing ? 'Анализ...' : 'Начать анализ'}
+              {isAnalyzing ? 'Анализ...' : 'НАЧАТЬ АНАЛИЗ МЕДИАФАЙЛА'}
             </Button>
           </Box>
         </CardContent>

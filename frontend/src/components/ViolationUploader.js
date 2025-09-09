@@ -20,7 +20,6 @@ const ViolationUploader = ({ onUploadComplete }) => {
   const [enableSatelliteAnalysis, setEnableSatelliteAnalysis] = useState(true);
   const [enableGeoAnalysis, setEnableGeoAnalysis] = useState(true);
   const [hardcodedResults, setHardcodedResults] = useState([]);
-  const [coordinateAnalysisMode, setCoordinateAnalysisMode] = useState(false);
   
   // Функции для работы с глобальным хранилищем
   const addToGlobalStorage = (result) => {
@@ -88,29 +87,24 @@ const ViolationUploader = ({ onUploadComplete }) => {
       try {
         let data;
         
-        if (coordinateAnalysisMode) {
-          // Coordinate analysis mode
-          data = await analyzeImageCoordinates(actualFile);
-        } else {
-          // Violation detection mode
-          const formData = new FormData();
-          formData.append('file', actualFile);
-          formData.append('user_id', 'current_user_id');
-          formData.append('location_notes', 'User notes');
-          formData.append('location_hint', locationHint);
-          
-          if (manualCoordinates.lat && manualCoordinates.lon) {
-            formData.append('manual_lat', manualCoordinates.lat);
-            formData.append('manual_lon', manualCoordinates.lon);
-          }
-
-          const response = await fetch('http://localhost:5001/api/violations/detect', {
-            method: 'POST',
-            body: formData,
-          });
-
-          data = await response.json();
+        // Violation detection mode only
+        const formData = new FormData();
+        formData.append('file', actualFile);
+        formData.append('user_id', 'current_user_id');
+        formData.append('location_notes', 'User notes');
+        formData.append('location_hint', locationHint);
+        
+        if (manualCoordinates.lat && manualCoordinates.lon) {
+          formData.append('manual_lat', manualCoordinates.lat);
+          formData.append('manual_lon', manualCoordinates.lon);
         }
+
+        const response = await fetch('http://localhost:5001/api/violations/detect', {
+          method: 'POST',
+          body: formData,
+        });
+
+        data = await response.json();
         console.log('API Response:', data);
         
         // КРИТИЧЕСКАЯ ДИАГНОСТИКА - проверяем весь ответ
@@ -154,50 +148,22 @@ const ViolationUploader = ({ onUploadComplete }) => {
 
         console.log('Processing successful response for file:', file.name);
 
-        // Создаем объект результата для отображения в зависимости от режима
-        let processedResult;
-        
-        if (coordinateAnalysisMode) {
-          // Режим анализа координат - данные приходят напрямую
-          processedResult = {
-            violation_id: `coord_${Date.now()}`,
-            fileName: actualFile.name,
-            image: data.image || URL.createObjectURL(actualFile),
-            violations: [], // В режиме координат нет нарушений
-            objects: data.objects || [], // Обнаруженные объекты
-            coordinates: data.coordinates,
-            coordinate_sources: data.coordinate_sources || {},
-            detection_status: data.detection_status || 'unknown',
-            total_objects: data.total_objects || 0,
-            location: data.coordinates ? {
-              coordinates: {
-                latitude: data.coordinates.latitude,
-                longitude: data.coordinates.longitude
-              },
-              address: data.coordinates.address || 'Координаты из EXIF'
-            } : null,
-            uploadTime: new Date().toISOString(),
-            analysisMode: 'coordinates'
-          };
-        } else {
-          // Режим анализа нарушений - данные в data.data
-          processedResult = {
-            violation_id: data.data?.violation_id || `temp_${Date.now()}`,
-            fileName: actualFile.name,
-            image: data.data?.annotated_image_path || data.data?.image_path || URL.createObjectURL(actualFile),
-            violations: data.data?.violations || [],
-            location: data.data?.location || (manualCoordinates.lat && manualCoordinates.lon ? {
-              coordinates: {
-                latitude: parseFloat(manualCoordinates.lat),
-                longitude: parseFloat(manualCoordinates.lon)
-              },
-              address: locationHint || 'Координаты заданы вручную'
-            } : null),
-            satellite_data: data.data?.satellite_data || null,
-            uploadTime: new Date().toISOString(),
-            analysisMode: 'violations'
-          };
-        }
+        // Создаем объект результата для отображения
+        const processedResult = {
+          violation_id: data.data?.violation_id || `temp_${Date.now()}`,
+          fileName: actualFile.name,
+          image: data.data?.annotated_image_path || data.data?.image_path || URL.createObjectURL(actualFile),
+          violations: data.data?.violations || [],
+          location: data.data?.location || (manualCoordinates.lat && manualCoordinates.lon ? {
+            coordinates: {
+              latitude: parseFloat(manualCoordinates.lat),
+              longitude: parseFloat(manualCoordinates.lon)
+            },
+            address: locationHint || 'Координаты заданы вручную'
+          } : null),
+          satellite_data: data.data?.satellite_data || null,
+          uploadTime: new Date().toISOString()
+        };
         allResults.push(processedResult);
         
         // Сохраняем в глобальное хранилище СРАЗУ
@@ -206,53 +172,36 @@ const ViolationUploader = ({ onUploadComplete }) => {
         console.log('Processed result for display:', processedResult);
         console.log('Current allResults array:', allResults);
         
-        // Логируем результаты в зависимости от режима
-        if (coordinateAnalysisMode) {
-          // Логируем результаты анализа координат
-          console.log('📍 Coordinate Analysis Results:');
-          console.log(`- Objects detected: ${data.total_objects || 0}`);
-          console.log(`- Coordinates found: ${data.coordinates ? 'Yes' : 'No'}`);
-          console.log(`- Detection status: ${data.detection_status}`);
-          console.log(`- Coordinate sources:`, data.coordinate_sources);
+        // Логируем результаты анализа нарушений
+        if (data.data && data.data.violations) {
+          console.log('🔧 Processing violations from data.data.violations');
+          const allViolations = data.data.violations;
+          const googleViolations = allViolations.filter(v => v.source === 'google_vision');
+          const yoloViolations = allViolations.filter(v => v.source === 'yolo' || !v.source);
           
-          if (data.objects && data.objects.length > 0) {
-            console.log('🎯 Detected objects:');
-            data.objects.forEach(obj => {
-              console.log(`- ${obj.category}: ${obj.description} (${Math.round(obj.confidence * 100)}%)`);
+          console.log('🔧 All violations:', allViolations);
+          console.log('🔧 Google Vision violations after filter:', googleViolations);
+          console.log('🔧 YOLO violations after filter:', yoloViolations);
+          
+          if (googleViolations.length > 0) {
+            console.log('🤖 Google Vision обнаружил нарушения:', googleViolations);
+            googleViolations.forEach(violation => {
+              console.log(`- ${violation.category}: ${violation.description} (${Math.round(violation.confidence * 100)}%)`);
+            });
+          } else {
+            console.log('❌ Google Vision нарушения не найдены после фильтрации');
+          }
+          
+          if (yoloViolations.length > 0) {
+            console.log('🎯 YOLO обнаружил нарушения:', yoloViolations);
+            yoloViolations.forEach(violation => {
+              console.log(`- ${violation.category}: ${Math.round(violation.confidence * 100)}%`);
             });
           }
+          
+          console.log(`📊 Итого: Google Vision: ${googleViolations.length}, YOLO: ${yoloViolations.length}`);
         } else {
-          // Логируем результаты анализа нарушений
-          if (data.data && data.data.violations) {
-            console.log('🔧 Processing violations from data.data.violations');
-            const allViolations = data.data.violations;
-            const googleViolations = allViolations.filter(v => v.source === 'google_vision');
-            const yoloViolations = allViolations.filter(v => v.source === 'yolo' || !v.source);
-            
-            console.log('🔧 All violations:', allViolations);
-            console.log('🔧 Google Vision violations after filter:', googleViolations);
-            console.log('🔧 YOLO violations after filter:', yoloViolations);
-            
-            if (googleViolations.length > 0) {
-              console.log('🤖 Google Vision обнаружил нарушения:', googleViolations);
-              googleViolations.forEach(violation => {
-                console.log(`- ${violation.category}: ${violation.description} (${Math.round(violation.confidence * 100)}%)`);
-              });
-            } else {
-              console.log('❌ Google Vision нарушения не найдены после фильтрации');
-            }
-            
-            if (yoloViolations.length > 0) {
-              console.log('🎯 YOLO обнаружил нарушения:', yoloViolations);
-              yoloViolations.forEach(violation => {
-                console.log(`- ${violation.category}: ${Math.round(violation.confidence * 100)}%`);
-              });
-            }
-            
-            console.log(`📊 Итого: Google Vision: ${googleViolations.length}, YOLO: ${yoloViolations.length}`);
-          } else {
-            console.log('❌ Нет violations в data.data');
-          }
+          console.log('❌ Нет violations в data.data');
         }
         
       } catch (error) {
@@ -390,23 +339,6 @@ const ViolationUploader = ({ onUploadComplete }) => {
         🤖 Google Vision + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация (до 50 фото)
       </Typography>
       
-      {/* Mode Selection */}
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <Button
-          variant={!coordinateAnalysisMode ? 'contained' : 'outlined'}
-          onClick={() => setCoordinateAnalysisMode(false)}
-          startIcon={<AnalysisIcon />}
-        >
-          Анализ нарушений
-        </Button>
-        <Button
-          variant={coordinateAnalysisMode ? 'contained' : 'outlined'}
-          onClick={() => setCoordinateAnalysisMode(true)}
-          startIcon={<LocationIcon />}
-        >
-          Определение координат
-        </Button>
-      </Box>
       
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
