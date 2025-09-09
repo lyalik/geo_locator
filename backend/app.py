@@ -227,6 +227,15 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+try:
+    from routes.coordinate_api import bp as coordinate_api_bp
+    app.register_blueprint(coordinate_api_bp)
+    print("✅ Coordinate API registered successfully")
+except Exception as e:
+    print(f"❌ Coordinate API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
+
 # OpenStreetMap API already registered above
 
 @app.route('/')

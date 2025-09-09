@@ -12,34 +12,34 @@ from .cache_service import DetectionCache
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class YOLOViolationDetector:
+class YOLOObjectDetector:
     """
-    Service for detecting property violations in images using YOLOv8.
-    Improved performance and accuracy compared to Faster R-CNN.
+    Service for detecting objects in images using YOLOv8 for coordinate determination.
+    Focuses on identifying landmarks, buildings, and infrastructure objects.
     """
     
-    # Define violation categories
-    VIOLATION_CATEGORIES = {
-        0: 'illegal_construction',
-        1: 'unauthorized_signage', 
-        2: 'blocked_entrance',
-        3: 'improper_waste_disposal',
-        4: 'unauthorized_modification',
-        5: 'parking_violation',
-        6: 'structural_damage',
-        7: 'unsafe_conditions'
+    # Define object categories for geolocation
+    OBJECT_CATEGORIES = {
+        0: 'building',
+        1: 'landmark', 
+        2: 'infrastructure',
+        3: 'transportation',
+        4: 'natural_feature',
+        5: 'urban_furniture',
+        6: 'signage',
+        7: 'monument'
     }
     
     # Category descriptions in Russian
     CATEGORY_DESCRIPTIONS = {
-        'illegal_construction': 'Незаконное строительство',
-        'unauthorized_signage': 'Несанкционированные вывески',
-        'blocked_entrance': 'Заблокированный вход',
-        'improper_waste_disposal': 'Неправильная утилизация отходов',
-        'unauthorized_modification': 'Несанкционированные изменения',
-        'parking_violation': 'Нарушение парковки',
-        'structural_damage': 'Структурные повреждения',
-        'unsafe_conditions': 'Небезопасные условия'
+        'building': 'Здание',
+        'landmark': 'Достопримечательность',
+        'infrastructure': 'Инфраструктура',
+        'transportation': 'Транспорт',
+        'natural_feature': 'Природный объект',
+        'urban_furniture': 'Городская мебель',
+        'signage': 'Указатели и знаки',
+        'monument': 'Памятник'
     }
     
     # Confidence threshold for detection
@@ -47,14 +47,14 @@ class YOLOViolationDetector:
     
     def __init__(self, model_path: Optional[str] = None):
         """
-        Initialize the YOLOv8 violation detector.
+        Initialize the YOLOv8 object detector for geolocation.
         
         Args:
             model_path: Path to a custom trained model. If None, uses YOLOv8n pretrained.
         """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = self._load_model(model_path)
-        logger.info(f"YOLOv8 Violation Detector initialized on {self.device}")
+        logger.info(f"YOLOv8 Object Detector initialized on {self.device}")
     
     def _load_model(self, model_path: Optional[str] = None):
         """Load the YOLOv8 model."""
@@ -76,9 +76,9 @@ class YOLOViolationDetector:
             # Fallback to YOLOv8n
             return YOLO('yolov8n.pt')
     
-    def detect_violations(self, image_path: str) -> Dict[str, Any]:
+    def detect_objects(self, image_path: str) -> Dict[str, Any]:
         """
-        Detect violations in an image with caching.
+        Detect objects in an image for coordinate determination with caching.
         
         Args:
             image_path: Path to the image file
@@ -105,17 +105,17 @@ class YOLOViolationDetector:
             results = self.model(image, conf=self.CONFIDENCE_THRESHOLD)
             
             # Process results
-            violations = self._process_detections(results[0], image.shape)
+            objects = self._process_detections(results[0], image.shape)
             
             # Create annotated image
             annotated_image_path = self._create_annotated_image(
-                image_path, violations
+                image_path, objects
             )
             
             result = {
                 'success': True,
-                'violations': violations,
-                'total_violations': len(violations),
+                'objects': objects,
+                'total_objects': len(objects),
                 'annotated_image_path': annotated_image_path,
                 'model_info': {
                     'model_type': 'YOLOv8',
@@ -134,16 +134,16 @@ class YOLOViolationDetector:
             return {
                 'success': False,
                 'error': str(e),
-                'violations': [],
-                'total_violations': 0
+                'objects': [],
+                'total_objects': 0
             }
     
     def _process_detections(self, results, image_shape) -> List[Dict[str, Any]]:
-        """Process YOLOv8 detection results into violation format."""
-        violations = []
+        """Process YOLOv8 detection results into object format for geolocation."""
+        objects = []
         
         if results.boxes is None:
-            return violations
+            return objects
         
         boxes = results.boxes.xyxy.cpu().numpy()
         confidences = results.boxes.conf.cpu().numpy()
@@ -152,16 +152,15 @@ class YOLOViolationDetector:
         height, width = image_shape[:2]
         
         for i, (box, conf, cls) in enumerate(zip(boxes, confidences, classes)):
-            # Map YOLO classes to violation categories
-            # This is a simplified mapping - in production, use a model trained on violation data
-            violation_category = self._map_class_to_violation(cls)
+            # Map YOLO classes to object categories for geolocation
+            object_category = self._map_class_to_object(cls)
             
-            if violation_category:
+            if object_category:
                 x1, y1, x2, y2 = box
                 
-                violation = {
+                detected_object = {
                     'id': i + 1,
-                    'category': violation_category,
+                    'category': object_category,
                     'confidence': float(conf),
                     'bbox': {
                         'x1': float(x1),
@@ -177,68 +176,128 @@ class YOLOViolationDetector:
                         'x2': float(x2 / width),
                         'y2': float(y2 / height)
                     },
-                    'description': self.CATEGORY_DESCRIPTIONS.get(violation_category, violation_category),
-                    'severity': self._calculate_severity(conf, violation_category),
+                    'description': self.CATEGORY_DESCRIPTIONS.get(object_category, object_category),
+                    'relevance': self._calculate_geolocation_relevance(conf, object_category),
                     'source': 'yolo'
                 }
-                violations.append(violation)
+                objects.append(detected_object)
         
-        return violations
+        return objects
     
-    def _map_class_to_violation(self, yolo_class: int) -> Optional[str]:
+    def _map_class_to_object(self, yolo_class: int) -> Optional[str]:
         """
-        Map YOLO class IDs to violation categories.
-        This is a simplified mapping for demonstration.
-        In production, train YOLOv8 on violation-specific dataset.
+        Map YOLO class IDs to object categories for geolocation.
+        Focus on objects useful for coordinate determination.
         """
-        # YOLO COCO classes that might indicate violations
-        violation_mapping = {
-            0: 'unauthorized_modification',  # person (might indicate unauthorized access)
-            2: 'parking_violation',          # car (in wrong place)
-            3: 'parking_violation',          # motorcycle
-            5: 'parking_violation',          # bus
-            7: 'parking_violation',          # truck
-            9: 'blocked_entrance',           # traffic light (blocked)
-            11: 'blocked_entrance',          # stop sign (blocked)
-            13: 'blocked_entrance',          # bench (blocking entrance)
-            15: 'improper_waste_disposal',   # cat (around waste)
-            16: 'improper_waste_disposal',   # dog (around waste)
-            39: 'improper_waste_disposal',   # bottle
-            41: 'improper_waste_disposal',   # cup
-            64: 'unauthorized_modification', # potted plant (unauthorized)
-            67: 'improper_waste_disposal',   # dining table (dumped furniture)
-            72: 'improper_waste_disposal',   # refrigerator (dumped appliance)
+        # YOLO COCO classes mapped to geolocation-relevant objects
+        object_mapping = {
+            0: 'transportation',    # person (for scale/reference)
+            2: 'transportation',    # car
+            3: 'transportation',    # motorcycle  
+            5: 'transportation',    # bus
+            6: 'transportation',    # train
+            7: 'transportation',    # truck
+            8: 'transportation',    # boat
+            9: 'infrastructure',    # traffic light
+            10: 'infrastructure',   # fire hydrant
+            11: 'signage',          # stop sign
+            12: 'signage',          # parking meter
+            13: 'urban_furniture',  # bench
+            14: 'building',         # bird (on buildings)
+            15: 'natural_feature',  # cat
+            16: 'natural_feature',  # dog
+            17: 'transportation',   # horse
+            18: 'natural_feature',  # sheep
+            19: 'natural_feature',  # cow
+            20: 'natural_feature',  # elephant
+            21: 'natural_feature',  # bear
+            22: 'natural_feature',  # zebra
+            23: 'natural_feature',  # giraffe
+            24: 'urban_furniture',  # backpack
+            25: 'urban_furniture',  # umbrella
+            26: 'urban_furniture',  # handbag
+            27: 'urban_furniture',  # tie
+            28: 'transportation',   # suitcase
+            29: 'transportation',   # frisbee
+            30: 'transportation',   # skis
+            31: 'transportation',   # snowboard
+            32: 'transportation',   # sports ball
+            33: 'transportation',   # kite
+            34: 'transportation',   # baseball bat
+            35: 'transportation',   # baseball glove
+            36: 'transportation',   # skateboard
+            37: 'transportation',   # surfboard
+            38: 'transportation',   # tennis racket
+            39: 'urban_furniture',  # bottle
+            40: 'urban_furniture',  # wine glass
+            41: 'urban_furniture',  # cup
+            42: 'urban_furniture',  # fork
+            43: 'urban_furniture',  # knife
+            44: 'urban_furniture',  # spoon
+            45: 'urban_furniture',  # bowl
+            46: 'natural_feature',  # banana
+            47: 'natural_feature',  # apple
+            48: 'natural_feature',  # sandwich
+            49: 'natural_feature',  # orange
+            50: 'natural_feature',  # broccoli
+            51: 'natural_feature',  # carrot
+            52: 'natural_feature',  # hot dog
+            53: 'natural_feature',  # pizza
+            54: 'natural_feature',  # donut
+            55: 'natural_feature',  # cake
+            56: 'urban_furniture',  # chair
+            57: 'urban_furniture',  # couch
+            58: 'natural_feature',  # potted plant
+            59: 'urban_furniture',  # bed
+            60: 'urban_furniture',  # dining table
+            61: 'urban_furniture',  # toilet
+            62: 'infrastructure',   # tv
+            63: 'infrastructure',   # laptop
+            64: 'infrastructure',   # mouse
+            65: 'infrastructure',   # remote
+            66: 'infrastructure',   # keyboard
+            67: 'infrastructure',   # cell phone
+            68: 'infrastructure',   # microwave
+            69: 'infrastructure',   # oven
+            70: 'infrastructure',   # toaster
+            71: 'infrastructure',   # sink
+            72: 'infrastructure',   # refrigerator
+            73: 'urban_furniture',  # book
+            74: 'infrastructure',   # clock
+            75: 'natural_feature',  # vase
+            76: 'urban_furniture',  # scissors
+            77: 'natural_feature',  # teddy bear
+            78: 'urban_furniture',  # hair drier
+            79: 'urban_furniture',  # toothbrush
         }
         
-        return violation_mapping.get(yolo_class)
+        return object_mapping.get(yolo_class)
     
-    def _calculate_severity(self, confidence: float, category: str) -> str:
-        """Calculate violation severity based on confidence and category."""
-        severity_weights = {
-            'illegal_construction': 1.0,
-            'unsafe_conditions': 0.9,
-            'structural_damage': 0.9,
-            'blocked_entrance': 0.8,
-            'unauthorized_modification': 0.7,
-            'parking_violation': 0.6,
-            'unauthorized_signage': 0.5,
-            'improper_waste_disposal': 0.4
+    def _calculate_geolocation_relevance(self, confidence: float, category: str) -> str:
+        """Calculate object relevance for geolocation based on confidence and category."""
+        relevance_weights = {
+            'landmark': 1.0,
+            'monument': 1.0,
+            'building': 0.9,
+            'infrastructure': 0.8,
+            'signage': 0.7,
+            'transportation': 0.6,
+            'urban_furniture': 0.5,
+            'natural_feature': 0.4
         }
         
-        weight = severity_weights.get(category, 0.5)
-        severity_score = confidence * weight
+        weight = relevance_weights.get(category, 0.5)
+        relevance_score = confidence * weight
         
-        if severity_score >= 0.8:
-            return 'critical'
-        elif severity_score >= 0.6:
+        if relevance_score >= 0.8:
             return 'high'
-        elif severity_score >= 0.4:
+        elif relevance_score >= 0.6:
             return 'medium'
         else:
             return 'low'
     
-    def _create_annotated_image(self, original_image_path: str, violations: List[Dict[str, Any]]) -> str:
-        """Create an annotated image with violation bounding boxes."""
+    def _create_annotated_image(self, original_image_path: str, objects: List[Dict[str, Any]]) -> str:
+        """Create an annotated image with detected objects highlighted."""
         try:
             # Load original image
             image = cv2.imread(original_image_path)
@@ -250,16 +309,16 @@ class YOLOViolationDetector:
             pil_image = Image.fromarray(image_rgb)
             draw = ImageDraw.Draw(pil_image)
             
-            # Define colors for different violation types
+            # Define colors for different object types
             colors = {
-                'illegal_construction': '#FF0000',      # Red
-                'unauthorized_signage': '#FF8800',     # Orange
-                'blocked_entrance': '#8800FF',         # Purple
-                'improper_waste_disposal': '#8B4513',  # Brown
-                'unauthorized_modification': '#607D8B', # Blue Grey
-                'parking_violation': '#FFD700',        # Gold
-                'structural_damage': '#DC143C',        # Crimson
-                'unsafe_conditions': '#FF1493'         # Deep Pink
+                'building': '#FF0000',         # Red
+                'landmark': '#FF8800',        # Orange
+                'infrastructure': '#8800FF',   # Purple
+                'transportation': '#8B4513',   # Brown
+                'natural_feature': '#607D8B',  # Blue Grey
+                'urban_furniture': '#FFD700',  # Gold
+                'signage': '#DC143C',         # Crimson
+                'monument': '#FF1493'         # Deep Pink
             }
             
             # Try to load a font
@@ -269,12 +328,12 @@ class YOLOViolationDetector:
                 font = ImageFont.load_default()
             
             # Draw bounding boxes and labels
-            for violation in violations:
-                bbox = violation['bbox']
-                category = violation['category']
-                confidence = violation['confidence']
+            for obj in objects:
+                bbox = obj['bbox']
+                category = obj['category']
+                confidence = obj['confidence']
                 
-                # Get color for this violation type
+                # Get color for this object type
                 color = colors.get(category, '#0000FF')  # Default to blue
                 
                 # Draw bounding box
@@ -284,25 +343,24 @@ class YOLOViolationDetector:
                 ], outline=color, width=3)
                 
                 # Draw label background
-                label = f"{violation['description']} ({confidence:.2f})"
+                label = f"{obj['description']} ({confidence:.2f})"
                 bbox_text = draw.textbbox((bbox['x1'], bbox['y1'] - 25), label, font=font)
                 draw.rectangle(bbox_text, fill=color)
                 
                 # Draw label text
                 draw.text((bbox['x1'], bbox['y1'] - 25), label, fill='white', font=font)
                 
-                # Draw severity indicator
-                severity_colors = {
-                    'critical': '#FF0000',
-                    'high': '#FF8800', 
-                    'medium': '#FFFF00',
-                    'low': '#00FF00'
+                # Draw relevance indicator
+                relevance_colors = {
+                    'high': '#00FF00',     # Green
+                    'medium': '#FFFF00',   # Yellow
+                    'low': '#FF8800'       # Orange
                 }
-                severity_color = severity_colors.get(violation['severity'], '#FFFFFF')
+                relevance_color = relevance_colors.get(obj['relevance'], '#FFFFFF')
                 draw.ellipse([
                     bbox['x2'] - 20, bbox['y1'],
                     bbox['x2'], bbox['y1'] + 20
-                ], fill=severity_color, outline='white', width=2)
+                ], fill=relevance_color, outline='white', width=2)
             
             # Save annotated image
             base_name = os.path.splitext(os.path.basename(original_image_path))[0]
@@ -344,18 +402,18 @@ class YOLOViolationDetector:
                         results.append({
                             'success': False,
                             'error': f'Could not load image: {image_path}',
-                            'violations': [],
+                            'objects': [],
                             'image_path': image_path
                         })
                         continue
                     
-                    violations = self._process_detections(result, image.shape)
-                    annotated_image_path = self._create_annotated_image(image_path, violations)
+                    objects = self._process_detections(result, image.shape)
+                    annotated_image_path = self._create_annotated_image(image_path, objects)
                     
                     results.append({
                         'success': True,
-                        'violations': violations,
-                        'total_violations': len(violations),
+                        'objects': objects,
+                        'total_objects': len(objects),
                         'annotated_image_path': annotated_image_path,
                         'image_path': image_path
                     })
@@ -365,7 +423,7 @@ class YOLOViolationDetector:
                     results.append({
                         'success': False,
                         'error': str(e),
-                        'violations': [],
+                        'objects': [],
                         'image_path': image_path
                     })
             
@@ -373,7 +431,7 @@ class YOLOViolationDetector:
             logger.error(f"Error in batch detection: {str(e)}")
             # Fallback to individual processing
             for image_path in image_paths:
-                result = self.detect_violations(image_path)
+                result = self.detect_objects(image_path)
                 result['image_path'] = image_path
                 results.append(result)
         
