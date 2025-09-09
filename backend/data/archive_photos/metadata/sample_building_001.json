@@ -1,0 +1,16 @@
+{
+  "filename": "sample_building_001.jpg",
+  "coordinates": {
+    "latitude": 55.7558,
+    "longitude": 37.6176
+  },
+  "address": "Красная площадь, 1, Москва",
+  "building_type": "historical",
+  "architectural_style": "russian_baroque",
+  "construction_year": 1491,
+  "description": "Собор Василия Блаженного",
+  "tags": ["собор", "историческое здание", "красная площадь", "москва"],
+  "photo_date": "2023-08-15",
+  "photographer": "archive_team",
+  "quality_score": 0.95
+}

@@ -143,9 +143,25 @@ export const maps = {
   }
 };
 
-// Video analysis API endpoints
-export const videoAnalysis = {
-  analyze: (file, locationHint = '', frameInterval = 30, maxFrames = 10) => {
+// Coordinate analysis API endpoints
+export const coordinateAnalysis = {
+  // Photo coordinate detection
+  detectFromPhoto: (file, locationHint = '') => {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (locationHint) {
+      formData.append('location_hint', locationHint);
+    }
+    
+    return api.post('/api/coordinates/detect', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  // Video coordinate analysis
+  analyzeVideo: (file, locationHint = '', frameInterval = 30, maxFrames = 10) => {
     const formData = new FormData();
     formData.append('video', file);
     formData.append('location_hint', locationHint);
@@ -172,6 +188,9 @@ export const videoAnalysis = {
     });
   }
 };
+
+// Legacy video analysis API (for backward compatibility)
+export const videoAnalysis = coordinateAnalysis;
 
 export { api };
 export default api;

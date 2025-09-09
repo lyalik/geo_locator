@@ -1,0 +1,16 @@
+{
+  "filename": "sample_street_001.jpg",
+  "coordinates": {
+    "latitude": 55.7540,
+    "longitude": 37.6200
+  },
+  "address": "Никольская улица, Москва",
+  "building_type": "street",
+  "architectural_style": "mixed_historical",
+  "construction_year": 1800,
+  "description": "Никольская улица - историческая улица в центре Москвы",
+  "tags": ["улица", "торговая", "исторический центр", "москва"],
+  "photo_date": "2023-07-20",
+  "photographer": "archive_team",
+  "quality_score": 0.88
+}

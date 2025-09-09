@@ -4,8 +4,10 @@ from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
 from PIL import Image
 import cv2
-from services.yolo_violation_detector import YOLOObjectDetector
-from services.geo_aggregator_service import GeoAggregatorService
+# from .yolo_violation_detector import YOLOObjectDetector  # Временно отключено
+# from .google_vision_service import GoogleVisionService  # Временно отключено
+from .geo_aggregator_service import GeoAggregatorService
+from .archive_photo_service import ArchivePhotoService
 from services.cache_service import DetectionCache
 
 # Import Google services
@@ -13,8 +15,8 @@ try:
     from services.google_vision_service import GoogleVisionService
     GOOGLE_SERVICES_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"Google services not available: {e}")
     GOOGLE_SERVICES_AVAILABLE = False
+    GoogleVisionService = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,18 +29,33 @@ class CoordinateDetector:
     """
     
     def __init__(self):
-        """Initialize the coordinate detector with required services."""
-        self.yolo_detector = YOLOObjectDetector()
+        """Initialize the coordinate detector"""
+        # Initialize services
+        try:
+            from .yolo_violation_detector import YOLOObjectDetector
+            self.yolo_detector = YOLOObjectDetector()
+            logger.info("✅ YOLO detector initialized")
+        except ImportError as e:
+            logger.warning(f"YOLO detector not available: {e}")
+            self.yolo_detector = None
         self.geo_aggregator = GeoAggregatorService()
+        self.cache = DetectionCache()
         
         # Initialize Google services if available
-        self.google_vision_service = None
         if GOOGLE_SERVICES_AVAILABLE:
-            try:
-                self.google_vision_service = GoogleVisionService()
-                logger.info("🔍 Google Vision and Gemini services integrated for enhanced coordinate detection")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Google services: {e}")
+            self.google_vision_service = GoogleVisionService()
+            logger.info("✅ Google Vision service initialized")
+        else:
+            self.google_vision_service = None
+            logger.info("⚠️ Google Vision service not available")
+        
+        # Initialize Archive Photo service
+        try:
+            self.archive_service = ArchivePhotoService()
+            logger.info("🏛️ Archive Photo service initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Archive Photo service: {e}")
+            self.archive_service = None
         
         logger.info("Coordinate Detector initialized")
     
@@ -55,17 +72,13 @@ class CoordinateDetector:
         """
         try:
             # Step 1: Detect objects using YOLO
-            detection_result = self.yolo_detector.detect_objects(image_path)
+            if self.yolo_detector:
+                objects = self.yolo_detector.detect_objects(image_path)
+            else:
+                objects = []
+                logger.info("YOLO detector not available, skipping object detection")
             
-            if not detection_result['success']:
-                return {
-                    'success': False,
-                    'error': detection_result.get('error', 'Object detection failed'),
-                    'coordinates': None,
-                    'objects': []
-                }
-            
-            objects = detection_result.get('objects', [])
+            # Продолжаем даже если объекты не найдены - можем использовать другие источники координат
             
             # Step 2: Extract image metadata (EXIF GPS if available)
             image_coords = self._extract_gps_coordinates(image_path)
@@ -81,13 +94,16 @@ class CoordinateDetector:
             if location_hint:
                 geo_result = self.geo_aggregator.locate_image(image_path, location_hint)
             
-            # Step 6: Try image similarity matching for better accuracy
+            # Step 6: Try archive photo matching for better accuracy
+            archive_coords = self._find_archive_coordinates(image_path)
+            
+            # Step 7: Try image similarity matching for better accuracy
             similarity_coords = self._find_similar_image_coordinates(image_path)
             
-            # Step 7: Combine all coordinate sources
+            # Step 8: Combine all coordinate sources
             final_coordinates = self._combine_coordinate_sources(
                 image_coords, geo_result, similarity_coords, objects, 
-                google_ocr_coords, google_geo_coords
+                google_ocr_coords, google_geo_coords, archive_coords
             )
             
             # Step 6: Enhance objects with geolocation relevance
@@ -104,7 +120,8 @@ class CoordinateDetector:
                     'geolocation_service': geo_result is not None and geo_result.get('success', False),
                     'image_similarity': similarity_coords is not None,
                     'google_vision_ocr': google_ocr_coords is not None,
-                    'google_gemini_geo': google_geo_coords is not None
+                    'google_gemini_geo': google_geo_coords is not None,
+                    'archive_photo_match': archive_coords is not None
                 },
                 'annotated_image_path': detection_result.get('annotated_image_path'),
                 'detection_status': 'no_objects_detected' if len(objects) == 0 else 'objects_detected'
@@ -163,19 +180,38 @@ class CoordinateDetector:
             logger.debug(f"No GPS data found in image: {str(e)}")
             return None
     
-    def _extract_coordinates_from_text(self, image_path: str) -> Optional[Dict[str, Any]]:
-        """Extract coordinates from text using Google Vision OCR."""
+    def _analyze_geographic_features(self, image_path: str) -> Optional[Dict[str, Any]]:
+        """
+        Анализирует географические особенности изображения с помощью Google Gemini
+        """
         if not self.google_vision_service:
-            logger.debug("Google Vision service not available for OCR")
+            logger.info("Google Vision service not available for geographic analysis")
             return None
             
         try:
-            # Extract address information using combined OCR + Gemini analysis
-            address_result = self.google_vision_service.extract_address_info(image_path)
+            # Используем Google Gemini для анализа географических особенностей
+            geo_analysis = self.google_vision_service.analyze_image_with_gemini(image_path)
+            return None
             
-            if address_result.get('success'):
-                ocr_text = address_result.get('ocr_text', '')
-                gemini_analysis = address_result.get('gemini_analysis', '')
+        except Exception as e:
+            logger.debug(f"Google Gemini geographic analysis failed: {str(e)}")
+            return None
+    
+    def _extract_coordinates_from_text(self, image_path: str) -> Optional[Dict[str, Any]]:
+        """
+        Извлекает координаты из текста на изображении с помощью Google Vision OCR
+        """
+        if not self.google_vision_service:
+            logger.info("Google Vision service not available for text extraction")
+            return None
+            
+        try:
+            # Используем Google Vision для извлечения текста
+            ocr_result = self.google_vision_service.extract_text_with_vision(image_path)
+            
+            if ocr_result.get('success'):
+                ocr_text = ocr_result.get('ocr_text', '')
+                gemini_analysis = ocr_result.get('gemini_analysis', '')
                 
                 # Look for street names, house numbers, city names
                 import re
@@ -343,6 +379,28 @@ class CoordinateDetector:
             logger.debug(f"Google Gemini geographical analysis failed: {str(e)}")
             return None
     
+    def _find_archive_coordinates(self, image_path: str) -> Optional[Dict[str, Any]]:
+        """Find coordinates by matching with archive photos."""
+        if not self.archive_service:
+            logger.debug("Archive service not available, skipping archive matching")
+            return None
+            
+        try:
+            # Search for similar buildings in archive
+            archive_result = self.archive_service.get_coordinates_from_similar_buildings(
+                image_path, threshold=0.75
+            )
+            
+            if archive_result:
+                logger.info(f"🏛️ Found archive match: {archive_result.get('matched_building', {}).get('description', 'Unknown building')}")
+                return archive_result
+            
+            return None
+            
+        except Exception as e:
+            logger.debug(f"Archive photo matching failed: {str(e)}")
+            return None
+    
     def _find_similar_image_coordinates(self, image_path: str) -> Optional[Dict[str, float]]:
         """Find coordinates by matching with similar images in database."""
         try:
@@ -357,7 +415,8 @@ class CoordinateDetector:
     def _combine_coordinate_sources(self, gps_coords: Optional[Dict], geo_result: Optional[Dict], 
                                   similarity_coords: Optional[Dict], objects: List[Dict],
                                   google_ocr_coords: Optional[Dict] = None, 
-                                  google_geo_coords: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
+                                  google_geo_coords: Optional[Dict] = None,
+                                  archive_coords: Optional[Dict] = None) -> Optional[Dict[str, Any]]:
         """Combine coordinates from different sources with confidence weighting."""
         coordinate_candidates = []
         
@@ -396,12 +455,19 @@ class CoordinateDetector:
                 'priority': 4
             })
         
+        # Add archive photo matching coordinates
+        if archive_coords:
+            coordinate_candidates.append({
+                **archive_coords,
+                'priority': 3  # High priority for archive matches
+            })
+        
         # Add image similarity coordinates
         if similarity_coords:
             coordinate_candidates.append({
                 **similarity_coords,
                 'confidence': similarity_coords.get('similarity_score', 0.6) * 0.8,
-                'priority': 5
+                'priority': 6
             })
         
         if not coordinate_candidates:

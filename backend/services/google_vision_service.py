@@ -28,6 +28,15 @@ class GoogleVisionService:
             genai.configure(api_key=self.gemini_api_key)
             self.model = genai.GenerativeModel(self.gemini_model)
             logger.info(f"🤖 Gemini initialized with model: {self.gemini_model}")
+        
+        # Инициализация архивного сервиса для улучшения анализа
+        try:
+            from .archive_photo_service import ArchivePhotoService
+            self.archive_service = ArchivePhotoService()
+            logger.info("🏛️ Archive service integrated into Google Vision")
+        except Exception as e:
+            logger.warning(f"Archive service not available in Google Vision: {e}")
+            self.archive_service = None
         else:
             logger.warning("GOOGLE_API_KEY not found in environment variables")
             self.model = None
@@ -277,8 +286,170 @@ class GoogleVisionService:
                 return {'success': False, 'error': 'Analysis failed'}
                 
         except Exception as e:
-            logger.error(f"🤖 Gemini detect_violations error: {e}")
-            return {'success': False, 'error': str(e)}
+            logger.error(f"Error in Gemini analysis: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def analyze_violations_with_archive_context(self, image_path: str, custom_prompt: str = None) -> Dict[str, Any]:
+        """
+        Анализ нарушений с использованием контекста из архивных фото.
+        
+        Args:
+            image_path: Путь к изображению
+            custom_prompt: Дополнительный промпт для анализа
+            
+        Returns:
+            Результат анализа с архивным контекстом
+        """
+        try:
+            result = {
+                'success': True,
+                'archive_context': None,
+                'enhanced_analysis': None,
+                'similar_buildings': []
+            }
+            
+            # Получаем контекст из архивных фото
+            if self.archive_service:
+                # Ищем похожие здания в архиве
+                similar_buildings = self.archive_service.find_similar_buildings(image_path, threshold=0.6)
+                result['similar_buildings'] = similar_buildings
+                
+                if similar_buildings:
+                    # Создаем контекст на основе архивных данных
+                    archive_context = self._create_archive_context(similar_buildings)
+                    result['archive_context'] = archive_context
+                    
+                    # Улучшенный промпт с архивным контекстом
+                    enhanced_prompt = self._create_enhanced_violation_prompt(archive_context, custom_prompt)
+                    
+                    # Анализ с улучшенным промптом
+                    enhanced_analysis = self.analyze_image_with_gemini(image_path, enhanced_prompt)
+                    result['enhanced_analysis'] = enhanced_analysis
+                    
+                    logger.info(f"🏛️ Enhanced violation analysis with {len(similar_buildings)} archive matches")
+                else:
+                    # Обычный анализ без архивного контекста
+                    standard_analysis = self.analyze_image_with_gemini(image_path, custom_prompt or self._get_default_violation_prompt())
+                    result['enhanced_analysis'] = standard_analysis
+                    logger.info("📋 Standard violation analysis (no archive matches)")
+            else:
+                # Архивный сервис недоступен
+                standard_analysis = self.analyze_image_with_gemini(image_path, custom_prompt or self._get_default_violation_prompt())
+                result['enhanced_analysis'] = standard_analysis
+                logger.info("📋 Standard violation analysis (archive service unavailable)")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in archive-enhanced violation analysis: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def _create_archive_context(self, similar_buildings: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Создает контекст на основе похожих зданий из архива."""
+        try:
+            context = {
+                'building_types': [],
+                'architectural_styles': [],
+                'common_violations': [],
+                'historical_info': [],
+                'location_context': []
+            }
+            
+            for building in similar_buildings[:3]:  # Берем топ-3 похожих
+                metadata = building.get('metadata', {})
+                
+                # Типы зданий
+                building_type = metadata.get('building_type')
+                if building_type and building_type not in context['building_types']:
+                    context['building_types'].append(building_type)
+                
+                # Архитектурные стили
+                arch_style = metadata.get('architectural_style')
+                if arch_style and arch_style not in context['architectural_styles']:
+                    context['architectural_styles'].append(arch_style)
+                
+                # Историческая информация
+                if metadata.get('construction_year'):
+                    context['historical_info'].append({
+                        'description': metadata.get('description', ''),
+                        'year': metadata.get('construction_year'),
+                        'address': metadata.get('address', '')
+                    })
+                
+                # Контекст местоположения
+                if metadata.get('address'):
+                    context['location_context'].append(metadata['address'])
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Error creating archive context: {e}")
+            return {}
+    
+    def _create_enhanced_violation_prompt(self, archive_context: Dict[str, Any], custom_prompt: str = None) -> str:
+        """Создает улучшенный промпт с архивным контекстом."""
+        try:
+            base_prompt = custom_prompt or self._get_default_violation_prompt()
+            
+            context_info = []
+            
+            if archive_context.get('building_types'):
+                context_info.append(f"Тип зданий в этом районе: {', '.join(archive_context['building_types'])}")
+            
+            if archive_context.get('architectural_styles'):
+                context_info.append(f"Архитектурные стили: {', '.join(archive_context['architectural_styles'])}")
+            
+            if archive_context.get('historical_info'):
+                historical = archive_context['historical_info'][0]  # Берем первое
+                context_info.append(f"Историческая справка: {historical.get('description', '')} ({historical.get('year', 'неизвестно')})")
+            
+            if archive_context.get('location_context'):
+                context_info.append(f"Район: {archive_context['location_context'][0]}")
+            
+            if context_info:
+                enhanced_prompt = f"""КОНТЕКСТ ИЗ АРХИВНЫХ ДАННЫХ:
+{chr(10).join(context_info)}
+
+ОСНОВНОЙ АНАЛИЗ:
+{base_prompt}
+
+Учитывай архивный контекст при анализе нарушений и особенностей объекта."""
+            else:
+                enhanced_prompt = base_prompt
+            
+            return enhanced_prompt
+            
+        except Exception as e:
+            logger.error(f"Error creating enhanced prompt: {e}")
+            return custom_prompt or self._get_default_violation_prompt()
+    
+    def _get_default_violation_prompt(self) -> str:
+        """Возвращает стандартный промпт для анализа нарушений."""
+        return """Проанализируй изображение и определи:
+
+1. НАРУШЕНИЯ И ПРОБЛЕМЫ:
+   - Архитектурные нарушения
+   - Проблемы с фасадом
+   - Нарушения благоустройства
+   - Проблемы с инфраструктурой
+
+2. ТЕХНИЧЕСКОЕ СОСТОЯНИЕ:
+   - Состояние здания
+   - Видимые повреждения
+   - Необходимость ремонта
+
+3. СООТВЕТСТВИЕ НОРМАМ:
+   - Градостроительные нормы
+   - Архитектурные требования
+   - Безопасность
+
+Верни результат в JSON формате с детальным описанием найденных проблем."""
     
     def extract_address_info(self, image_path: str) -> Dict[str, Any]:
         """

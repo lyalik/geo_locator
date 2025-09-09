@@ -1,0 +1,16 @@
+{
+  "filename": "sample_landmark_001.jpg",
+  "coordinates": {
+    "latitude": 55.7520,
+    "longitude": 37.6175
+  },
+  "address": "Красная площадь, Москва",
+  "building_type": "landmark",
+  "architectural_style": "kremlin_fortress",
+  "construction_year": 1495,
+  "description": "Спасская башня Московского Кремля",
+  "tags": ["кремль", "башня", "часы", "красная площадь", "москва"],
+  "photo_date": "2023-09-01",
+  "photographer": "archive_team",
+  "quality_score": 0.92
+}

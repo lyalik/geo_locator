@@ -89,23 +89,9 @@ const VideoAnalyzer = () => {
   });
 
   // Analyze image coordinates
-  const analyzeImageCoordinates = async (file) => {
-    const formData = new FormData();
-    formData.append('image', file);
-    if (locationHint) {
-      formData.append('location_hint', locationHint);
-    }
-
-    const response = await fetch('http://localhost:5001/api/coordinates/detect', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+  const analyzeImageCoordinates = async (file, locationHint) => {
+    const { coordinateAnalysis } = await import('../services/api');
+    return await coordinateAnalysis.detectFromPhoto(file, locationHint);
   };
 
   // Estimate processing time
