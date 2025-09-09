@@ -81,6 +81,8 @@ def detect_coordinates():
         # Detect coordinates
         result = coordinate_detector.detect_coordinates_from_image(file_path, location_hint)
         
+        logger.info(f"Coordinate detection result: success={result.get('success')}, coordinates={result.get('coordinates') is not None}")
+        
         if result['success']:
             # Save to database if coordinates were found
             coordinates = result.get('coordinates')
@@ -118,12 +120,16 @@ def detect_coordinates():
                     logger.error(f"Error saving to database: {str(e)}")
                     db.session.rollback()
         
-        return jsonify({
+        response_data = {
             'success': result['success'],
-            'message': f"Detected {result.get('total_objects', 0)} objects" if result['success'] else 'Detection failed',
+            'message': f"Detected {result.get('total_objects', 0)} objects" if result['success'] else result.get('error', 'Detection failed'),
             'data': result,
             'error': result.get('error')
-        })
+        }
+        
+        logger.info(f"API response: success={response_data['success']}, message='{response_data['message']}'")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"Error in coordinate detection endpoint: {str(e)}")

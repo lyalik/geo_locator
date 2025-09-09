@@ -92,7 +92,9 @@ class CoordinateDetector:
             # Step 5: Use geolocation services to determine coordinates
             geo_result = None
             if location_hint:
+                logger.info(f"🗺️ Processing location hint: '{location_hint}'")
                 geo_result = self.geo_aggregator.locate_image(image_path, location_hint)
+                logger.info(f"🗺️ Geo result: {geo_result}")
             
             # Step 6: Try archive photo matching for better accuracy
             archive_coords = self._find_archive_coordinates(image_path)
@@ -101,10 +103,12 @@ class CoordinateDetector:
             similarity_coords = self._find_similar_image_coordinates(image_path)
             
             # Step 8: Combine all coordinate sources
+            logger.info(f"📍 Coordinate sources: GPS={image_coords is not None}, Geo={geo_result is not None}, Archive={archive_coords is not None}")
             final_coordinates = self._combine_coordinate_sources(
                 image_coords, geo_result, similarity_coords, objects, 
                 google_ocr_coords, google_geo_coords, archive_coords
             )
+            logger.info(f"📍 Final coordinates: {final_coordinates}")
             
             # Step 6: Enhance objects with geolocation relevance
             enhanced_objects = self._enhance_objects_with_location(objects, final_coordinates)
@@ -123,7 +127,7 @@ class CoordinateDetector:
                     'google_gemini_geo': google_geo_coords is not None,
                     'archive_photo_match': archive_coords is not None
                 },
-                'annotated_image_path': detection_result.get('annotated_image_path'),
+                'annotated_image_path': None,  # YOLO detection result not available
                 'detection_status': 'no_objects_detected' if len(objects) == 0 else 'objects_detected'
             }
             

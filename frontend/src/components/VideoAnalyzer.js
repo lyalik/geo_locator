@@ -91,7 +91,8 @@ const VideoAnalyzer = () => {
   // Analyze image coordinates
   const analyzeImageCoordinates = async (file, locationHint) => {
     const { coordinateAnalysis } = await import('../services/api');
-    return await coordinateAnalysis.detectFromPhoto(file, locationHint);
+    const response = await coordinateAnalysis.detectFromPhoto(file, locationHint);
+    return response.data; // Извлекаем данные из axios response
   };
 
   // Estimate processing time
@@ -158,10 +159,15 @@ const VideoAnalyzer = () => {
           
           // Transform image coordinate results to match video analysis format
           const apiData = data.data || data;
+          
+          // Правильно извлекаем массив объектов
+          const objectsArray = Array.isArray(apiData.objects) ? apiData.objects : 
+                              (apiData.objects && Array.isArray(apiData.objects.objects) ? apiData.objects.objects : []);
+          
           const transformedResults = {
             total_frames_processed: 1,
             successful_frames: 1,
-            total_objects_detected: apiData.total_objects || 0,
+            total_objects_detected: apiData.total_objects || objectsArray.length,
             coordinates: apiData.coordinates ? {
               latitude: apiData.coordinates.latitude,
               longitude: apiData.coordinates.longitude,
@@ -169,24 +175,24 @@ const VideoAnalyzer = () => {
               source: apiData.coordinates.source || 'EXIF',
               frame_count: 1
             } : null,
-            object_statistics: apiData.objects ? {
-              category_counts: apiData.objects.reduce((acc, obj) => {
+            object_statistics: objectsArray.length > 0 ? {
+              category_counts: objectsArray.reduce((acc, obj) => {
                 acc[obj.category] = (acc[obj.category] || 0) + 1;
                 return acc;
               }, {}),
-              category_avg_confidence: apiData.objects.reduce((acc, obj) => {
+              category_avg_confidence: objectsArray.reduce((acc, obj) => {
                 acc[obj.category] = obj.confidence;
                 return acc;
               }, {}),
-              unique_categories: [...new Set(apiData.objects.map(obj => obj.category))].length,
-              average_geolocation_utility: apiData.objects.reduce((sum, obj) => sum + (obj.geolocation_utility || 0), 0) / apiData.objects.length,
-              high_utility_objects: apiData.objects.filter(obj => (obj.geolocation_utility || 0) > 0.7).length
+              unique_categories: [...new Set(objectsArray.map(obj => obj.category))].length,
+              average_geolocation_utility: objectsArray.reduce((sum, obj) => sum + (obj.geolocation_utility || 0), 0) / objectsArray.length,
+              high_utility_objects: objectsArray.filter(obj => (obj.geolocation_utility || 0) > 0.7).length
             } : null,
             frame_results: [{
               frame_number: 1,
               timestamp: 0,
               success: true,
-              objects: apiData.objects || [],
+              objects: objectsArray,
               coordinates: apiData.coordinates
             }]
           };
