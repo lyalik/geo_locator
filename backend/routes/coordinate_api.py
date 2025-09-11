@@ -433,20 +433,20 @@ def analyze_video():
                     )
                     db.session.add(photo)
                     
-                    # Create object records from video analysis
+                    # Create object records from video analysis (as DetectedObject, not Violation)
                     object_stats = result.get('object_statistics', {})
                     category_counts = object_stats.get('category_counts', {})
                     category_confidences = object_stats.get('category_avg_confidence', {})
                     
                     for category, count in category_counts.items():
                         confidence = category_confidences.get(category, 0.5)
-                        detection = Violation(
+                        detected_object = DetectedObject(
                             photo=photo,
                             category=category,
                             confidence=confidence,
                             bbox_data={'video_analysis': True, 'detection_count': count}
                         )
-                        db.session.add(detection)
+                        db.session.add(detected_object)
                     
                     db.session.commit()
                     

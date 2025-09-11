@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 from PIL import Image
 import cv2
@@ -116,15 +116,30 @@ class CoordinateDetector:
             geo_result = None
             logger.info(f"🗺️ Location hint received: '{location_hint}' (type: {type(location_hint)}, bool: {bool(location_hint)})")
             
-            # Try geolocation with hint first, then with detected objects
+            # Try geolocation with hint combined with image analysis
             if location_hint and location_hint.strip():
                 logger.info(f"🗺️ Processing location hint: '{location_hint}'")
-                geo_result = self.geo_aggregator.locate_image(image_path, location_hint.strip())
+                
+                # Сначала анализируем изображение с помощью Gemini для уточнения места
+                if google_geo_coords and google_geo_coords.get('success'):
+                    analysis = google_geo_coords.get('analysis', '')
+                    location_suggestions = google_geo_coords.get('location_suggestions', [])
+                    
+                    # Комбинируем подсказку пользователя с анализом изображения
+                    if location_suggestions:
+                        enhanced_query = f"{location_hint}, {', '.join(location_suggestions[:2])}"
+                        logger.info(f"🤖 Enhanced query with Gemini analysis: {enhanced_query}")
+                        geo_result = self.geo_aggregator.locate_image(image_path, enhanced_query)
+                    else:
+                        geo_result = self.geo_aggregator.locate_image(image_path, location_hint.strip())
+                else:
+                    geo_result = self.geo_aggregator.locate_image(image_path, location_hint.strip())
+                
                 logger.info(f"🗺️ Geo result with hint: {geo_result}")
                 
-                # If hint processing was successful, skip fallback search
+                # Не пропускаем fallback - может быть полезен для уточнения
                 if geo_result and geo_result.get('success'):
-                    logger.info("🗺️ Location hint processing successful, skipping fallback search")
+                    logger.info("🗺️ Location hint processing successful")
                 else:
                     logger.info("🗺️ Location hint processing failed, will try fallback")
             elif objects and len(objects) > 0:
@@ -176,7 +191,54 @@ class CoordinateDetector:
                     logger.error(f"Error processing objects for geolocation: {e}")
                     geo_result = None
             else:
-                logger.info("🗺️ No location hint or objects available for geolocation")
+                # Без подсказки - используем только анализ изображения Gemini
+                logger.info("🗺️ No location hint, trying image analysis with Gemini")
+                if google_geo_coords and google_geo_coords.get('success'):
+                    location_suggestions = google_geo_coords.get('location_suggestions', [])
+                    if location_suggestions:
+                        # Используем самое вероятное место из анализа
+                        best_suggestion = location_suggestions[0]
+                        logger.info(f"🤖 Using Gemini suggestion: {best_suggestion}")
+                        geo_result = self.geo_aggregator.locate_image(image_path, best_suggestion)
+                        logger.info(f"🗺️ Geo result with Gemini: {geo_result}")
+                    else:
+                        logger.info("🗺️ No location suggestions from Gemini analysis")
+                        geo_result = None
+                else:
+                    logger.info("🗺️ No Gemini analysis available, trying object-based search")
+                    # Fallback к поиску по объектам если Gemini недоступен
+                    if objects and len(objects) > 0:
+                        try:
+                            limited_objects = objects[:3] if isinstance(objects, list) else []
+                            object_descriptions = []
+                            
+                            for obj in limited_objects:
+                                if isinstance(obj, dict):
+                                    desc = obj.get('description', obj.get('category', ''))
+                                    if desc and desc.lower() not in ['detected objects', 'none', 'null', '']:
+                                        object_descriptions.append(desc)
+                            
+                            if object_descriptions:
+                                filtered_descriptions = []
+                                for desc in object_descriptions:
+                                    if len(desc) > 2 and desc not in ['object', 'item', 'thing']:
+                                        filtered_descriptions.append(desc)
+                                
+                                if filtered_descriptions:
+                                    object_context = ", ".join(filtered_descriptions[:2])
+                                    logger.info(f"🗺️ Trying with detected objects: {object_context}")
+                                    geo_result = self.geo_aggregator.locate_image(image_path, object_context)
+                                    logger.info(f"🗺️ Geo result with objects: {geo_result}")
+                                else:
+                                    geo_result = None
+                            else:
+                                geo_result = None
+                        except Exception as e:
+                            logger.error(f"Error processing objects for geolocation: {e}")
+                            geo_result = None
+                    else:
+                        logger.info("🗺️ No objects available for geolocation")
+                        geo_result = None
             
             # Step 6: Try archive photo matching for better accuracy
             archive_coords = self._find_archive_coordinates(image_path)
@@ -276,7 +338,7 @@ class CoordinateDetector:
             logger.debug(f"No GPS data found in image: {str(e)}")
             return None
     
-    def _analyze_geographic_features(self, image_path: str) -> Optional[Dict[str, Any]]:
+    def _analyze_geographical_features(self, image_path: str, location_hint: str = None) -> Optional[Dict[str, Any]]:
         """
         Анализирует географические особенности изображения с помощью Google Gemini
         """
@@ -285,13 +347,79 @@ class CoordinateDetector:
             return None
             
         try:
-            # Используем Google Gemini для анализа географических особенностей
-            geo_analysis = self.google_vision_service.analyze_image_with_gemini(image_path)
-            return None
+            # Создаем промпт для анализа географических особенностей
+            geo_prompt = """Проанализируй изображение и определи:
+
+1. Что за здание или место изображено?
+2. Есть ли характерные архитектурные элементы (купола, башни, колонны)?
+3. Видны ли надписи, вывески, названия?
+4. Это известная достопримечательность?
+5. В каком городе или стране это может находиться?
+
+Ответь кратко и конкретно, назови место если узнаешь его.
+"""
             
+            if location_hint:
+                geo_prompt += f"\nПодсказка региона: {location_hint}. Уточни конкретное место в этом регионе."
+            
+            # Используем Google Gemini для анализа
+            result = self.google_vision_service.analyze_image_with_gemini(image_path, geo_prompt)
+            
+            if result.get('success'):
+                analysis = result.get('analysis', '')
+                logger.info(f"🤖 Gemini geographic analysis: {analysis[:200]}...")
+                
+                # Извлекаем полезную информацию из анализа
+                return {
+                    'success': True,
+                    'analysis': analysis,
+                    'source': 'google_gemini_geo',
+                    'location_suggestions': self._extract_location_from_analysis(analysis)
+                }
+            else:
+                logger.debug(f"Google Gemini geographic analysis failed: {result.get('error')}")
+                return None
+                
         except Exception as e:
             logger.debug(f"Google Gemini geographic analysis failed: {str(e)}")
             return None
+    
+    def _extract_location_from_analysis(self, analysis: str) -> List[str]:
+        """
+        Извлекает возможные местоположения из текста анализа Gemini
+        """
+        if not analysis:
+            return []
+        
+        locations = []
+        analysis_lower = analysis.lower()
+        
+        # Ищем известные достопримечательности и места
+        landmarks = [
+            "красная площадь", "кремль", "собор василия блаженного", "спасская башня",
+            "большой театр", "третьяковская галерея", "храм христа спасителя",
+            "эрмитаж", "дворцовая площадь", "петропавловская крепость",
+            "исаакиевский собор", "казанский собор", "смольный собор"
+        ]
+        
+        for landmark in landmarks:
+            if landmark in analysis_lower:
+                if "красная площадь" in landmark or "кремль" in landmark or "спасская" in landmark:
+                    locations.append("Красная площадь, Москва")
+                elif "большой театр" in landmark:
+                    locations.append("Большой театр, Москва")
+                elif "эрмитаж" in landmark or "дворцовая" in landmark:
+                    locations.append("Дворцовая площадь, Санкт-Петербург")
+                else:
+                    locations.append(landmark)
+        
+        # Ищем упоминания городов
+        cities = ["москва", "санкт-петербург", "петербург", "казань", "новосибирск", "екатеринбург"]
+        for city in cities:
+            if city in analysis_lower and city not in [loc.lower() for loc in locations]:
+                locations.append(city.title())
+        
+        return locations[:3]  # Возвращаем максимум 3 предложения
     
     def _extract_coordinates_from_text(self, image_path: str) -> Optional[Dict[str, Any]]:
         """
