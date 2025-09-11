@@ -138,6 +138,10 @@ EOF
     echo -e "${YELLOW}⚠️  Please update .env file with your actual API keys${NC}"
 fi
 
+# Cleanup any existing processes first
+echo "🧹 Cleaning up existing processes..."
+./cleanup_ports.sh
+
 # Start services
 echo "🚀 Starting services..."
 
@@ -153,17 +157,48 @@ else
     exit 1
 fi
 export POSTGRES_PASSWORD=3666599
-python run_local.py &
+nohup python run_local.py > ../logs/backend.log 2>&1 &
 BACKEND_PID=$!
+echo "Backend started with PID: $BACKEND_PID"
 
 # Wait a moment for backend to start
-sleep 3
+sleep 5
+
+# Check if backend is running
+if ! kill -0 $BACKEND_PID 2>/dev/null; then
+    echo "❌ Backend failed to start. Check logs/backend.log"
+    exit 1
+fi
 
 # Start frontend
 echo "Starting frontend server..."
 cd ../frontend
-npm start &
+
+# Create logs directory if it doesn't exist
+mkdir -p ../logs
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    echo "Installing frontend dependencies..."
+    npm install
+fi
+
+# Set environment variables for React
+export BROWSER=none
+export REACT_APP_API_URL=http://localhost:5001
+
+nohup npm start > ../logs/frontend.log 2>&1 &
 FRONTEND_PID=$!
+echo "Frontend started with PID: $FRONTEND_PID"
+
+# Wait for frontend to start
+sleep 10
+
+# Check if frontend is running
+if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+    echo "❌ Frontend failed to start. Check logs/frontend.log"
+    exit 1
+fi
 
 echo ""
 echo "🎉 Geo Locator is starting up!"
@@ -179,14 +214,49 @@ echo "=================================================="
 cleanup() {
     echo ""
     echo "🛑 Shutting down services..."
-    kill $BACKEND_PID 2>/dev/null
-    kill $FRONTEND_PID 2>/dev/null
+    
+    # Kill backend process and its children
+    if [ ! -z "$BACKEND_PID" ]; then
+        echo "Stopping backend (PID: $BACKEND_PID)..."
+        pkill -P $BACKEND_PID 2>/dev/null
+        kill $BACKEND_PID 2>/dev/null
+        sleep 2
+        kill -9 $BACKEND_PID 2>/dev/null
+    fi
+    
+    # Kill frontend process and its children
+    if [ ! -z "$FRONTEND_PID" ]; then
+        echo "Stopping frontend (PID: $FRONTEND_PID)..."
+        pkill -P $FRONTEND_PID 2>/dev/null
+        kill $FRONTEND_PID 2>/dev/null
+        sleep 2
+        kill -9 $FRONTEND_PID 2>/dev/null
+    fi
+    
+    # Kill any remaining node processes on port 3000
+    echo "Cleaning up any remaining processes..."
+    pkill -f "react-scripts start" 2>/dev/null
+    pkill -f "npm start" 2>/dev/null
+    lsof -ti:3000 | xargs kill -9 2>/dev/null
+    lsof -ti:5001 | xargs kill -9 2>/dev/null
+    
     echo "✅ Services stopped"
     exit 0
 }
 
 # Set trap to cleanup on script exit
-trap cleanup INT TERM
+trap cleanup INT TERM EXIT
 
-# Wait for processes
-wait
+# Wait for processes with proper signal handling
+wait_for_processes() {
+    while true; do
+        # Check if both processes are still running
+        if ! kill -0 $BACKEND_PID 2>/dev/null && ! kill -0 $FRONTEND_PID 2>/dev/null; then
+            echo "Both processes have stopped"
+            break
+        fi
+        sleep 1
+    done
+}
+
+wait_for_processes

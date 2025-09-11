@@ -117,7 +117,19 @@ cd geo_locator
 # 4. Запуск системы
 cd backend && source venv/bin/activate && python run_local.py
 cd frontend && npm start
+Как использовать
+Рекомендуемый способ (простой и надежный):
 
+bash
+./start_simple.sh
+Альтернативный способ (полнофункциональный):
+
+bash
+./start_local.sh
+Для очистки зависших процессов:
+
+bash
+./cleanup_ports.sh
 **Ubuntu/Debian:**
 ```bash
 # Обновление системы
