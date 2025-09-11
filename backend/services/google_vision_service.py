@@ -10,6 +10,13 @@ import io
 import json
 import google.generativeai as genai
 from google.cloud import vision
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из корневой директории проекта
+import sys
+from pathlib import Path
+project_root = Path(__file__).parent.parent.parent
+load_dotenv(project_root / '.env')
 
 logger = logging.getLogger(__name__)
 

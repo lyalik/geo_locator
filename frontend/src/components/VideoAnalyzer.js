@@ -149,42 +149,56 @@ const VideoAnalyzer = () => {
       if (fileType === 'image') {
         // Image coordinate analysis
         setProgress(50);
-        const data = await analyzeImageCoordinates(selectedFile);
+        const data = await analyzeImageCoordinates(selectedFile, locationHint);
         setProgress(100);
 
         if (data.success) {
           console.log('🔍 Полученные данные от API:', data);
-          console.log('🗺️ Координаты:', data.data?.coordinates);
-          console.log('📍 Объекты:', data.data?.objects);
+          console.log('🗺️ Координаты:', data.data.coordinates);
+          console.log('📍 Объекты:', data.data.objects);
+          console.log('🛰️ Спутниковые данные:', data.data.satellite_data);
+          console.log('📍 Информация о местоположении:', data.data.location_info);
           
-          // Transform image coordinate results to match video analysis format
-          const apiData = data.data || data;
-          
-          // Правильно извлекаем массив объектов
-          const objectsArray = Array.isArray(apiData.objects) ? apiData.objects : 
-                              (apiData.objects && Array.isArray(apiData.objects.objects) ? apiData.objects.objects : []);
+          // Извлекаем данные из правильной структуры API ответа
+          const apiData = data.data;
+          const objectsArray = Array.isArray(apiData.objects) ? apiData.objects : [];
           
           const transformedResults = {
             total_frames_processed: 1,
             successful_frames: 1,
-            total_objects_detected: apiData.total_objects || objectsArray.length,
+            total_objects_detected: objectsArray.length,
             coordinates: apiData.coordinates ? {
-              latitude: apiData.coordinates.latitude,
-              longitude: apiData.coordinates.longitude,
+              latitude: apiData.coordinates.latitude || apiData.coordinates.lat,
+              longitude: apiData.coordinates.longitude || apiData.coordinates.lon,
               confidence: apiData.coordinates.confidence || 1,
-              source: apiData.coordinates.source || 'EXIF',
+              source: apiData.coordinates.source || 'Coordinate Detection',
               frame_count: 1
+            } : null,
+            // Добавляем спутниковые данные
+            satellite_data: apiData.satellite_data ? {
+              source: apiData.satellite_data.primary_source,
+              image_data: apiData.satellite_data.image_data,
+              coordinates: apiData.satellite_data.coordinates,
+              available_sources: apiData.satellite_data.available_sources
+            } : null,
+            // Добавляем информацию о местоположении
+            location_info: apiData.location_info ? {
+              coordinates: apiData.location_info.coordinates,
+              dgis_data: apiData.location_info.dgis_data,
+              nearby_places: apiData.location_info.nearby_places || []
             } : null,
             object_statistics: objectsArray.length > 0 ? {
               category_counts: objectsArray.reduce((acc, obj) => {
-                acc[obj.category] = (acc[obj.category] || 0) + 1;
+                const category = obj.category || obj.class || 'unknown';
+                acc[category] = (acc[category] || 0) + 1;
                 return acc;
               }, {}),
               category_avg_confidence: objectsArray.reduce((acc, obj) => {
-                acc[obj.category] = obj.confidence;
+                const category = obj.category || obj.class || 'unknown';
+                acc[category] = obj.confidence || 0;
                 return acc;
               }, {}),
-              unique_categories: [...new Set(objectsArray.map(obj => obj.category))].length,
+              unique_categories: [...new Set(objectsArray.map(obj => obj.category || obj.class || 'unknown'))].length,
               average_geolocation_utility: objectsArray.reduce((sum, obj) => sum + (obj.geolocation_utility || 0), 0) / objectsArray.length,
               high_utility_objects: objectsArray.filter(obj => (obj.geolocation_utility || 0) > 0.7).length
             } : null,
@@ -193,8 +207,16 @@ const VideoAnalyzer = () => {
               timestamp: 0,
               success: true,
               objects: objectsArray,
-              coordinates: apiData.coordinates
-            }]
+              coordinates: apiData.coordinates,
+              satellite_data: apiData.satellite_data,
+              location_info: apiData.location_info
+            }],
+            // Добавляем рекомендации
+            recommendations: apiData.recommendations || [],
+            // Добавляем источники данных
+            sources_used: apiData.sources_used || [],
+            // Добавляем источники координат
+            coordinate_sources: apiData.coordinate_sources || {}
           };
           setAnalysisResults(transformedResults);
           enqueueSnackbar('Анализ изображения завершен успешно!', { variant: 'success' });
@@ -624,6 +646,250 @@ const VideoAnalyzer = () => {
               </TableContainer>
             </AccordionDetails>
           </Accordion>
+
+          {/* Satellite Imagery Section */}
+          {analysisResults.satellite_data && analysisResults.satellite_data.success && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  🛰️ Спутниковые снимки
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                      Источник: {analysisResults.satellite_data.primary_source === 'roscosmos' ? 'Роскосмос' : 'Яндекс Спутник'}
+                    </Typography>
+                    
+                    {analysisResults.satellite_data.image_data && (
+                      <Box sx={{ 
+                        border: '1px solid #ddd', 
+                        borderRadius: 1, 
+                        overflow: 'hidden',
+                        maxWidth: '100%'
+                      }}>
+                        {analysisResults.satellite_data.image_data.image_url ? (
+                          <img 
+                            src={analysisResults.satellite_data.image_data.image_url}
+                            alt="Спутниковый снимок"
+                            style={{ width: '100%', height: 'auto', maxHeight: '300px', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                        ) : analysisResults.satellite_data.image_data.image_data ? (
+                          <img 
+                            src={`data:${analysisResults.satellite_data.image_data.content_type || 'image/jpeg'};base64,${analysisResults.satellite_data.image_data.image_data}`}
+                            alt="Спутниковый снимок"
+                            style={{ width: '100%', height: 'auto', maxHeight: '300px', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <Typography variant="body2" color="textSecondary" sx={{ p: 2, textAlign: 'center' }}>
+                            Спутниковый снимок недоступен
+                          </Typography>
+                        )}
+                        <Typography 
+                          variant="body2" 
+                          color="error" 
+                          sx={{ p: 2, textAlign: 'center', display: 'none' }}
+                        >
+                          Ошибка загрузки изображения
+                        </Typography>
+                      </Box>
+                    )}
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" gutterBottom>Информация о снимке:</Typography>
+                    <Typography variant="body2">
+                      <strong>Координаты:</strong> {analysisResults.coordinates.latitude.toFixed(6)}, {analysisResults.coordinates.longitude.toFixed(6)}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Доступных источников:</strong> {analysisResults.satellite_data.available_sources}
+                    </Typography>
+                    {analysisResults.satellite_data.image_data.satellite && (
+                      <Typography variant="body2">
+                        <strong>Спутник:</strong> {analysisResults.satellite_data.image_data.satellite}
+                      </Typography>
+                    )}
+                    {analysisResults.satellite_data.image_data.acquisition_date && (
+                      <Typography variant="body2">
+                        <strong>Дата съемки:</strong> {new Date(analysisResults.satellite_data.image_data.acquisition_date).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Satellite Data Section */}
+          {analysisResults.satellite_data && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  🛰️ Спутниковые снимки
+                </Typography>
+                
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" gutterBottom>Источник данных:</Typography>
+                    <Chip 
+                      label={analysisResults.satellite_data.source || 'Неизвестно'}
+                      color="primary"
+                      sx={{ mb: 2 }}
+                    />
+                    
+                    {analysisResults.satellite_data.metadata && (
+                      <Box>
+                        <Typography variant="body2">
+                          <strong>Разрешение:</strong> {analysisResults.satellite_data.metadata.resolution || 'Не указано'}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Дата съемки:</strong> {analysisResults.satellite_data.metadata.date || 'Не указано'}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>Облачность:</strong> {analysisResults.satellite_data.metadata.cloud_cover || 'Не указано'}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Grid>
+                  
+                  {analysisResults.satellite_data.image_url && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" gutterBottom>Спутниковый снимок:</Typography>
+                      <Box
+                        component="img"
+                        src={analysisResults.satellite_data.image_url}
+                        alt="Спутниковый снимок"
+                        sx={{
+                          width: '100%',
+                          maxWidth: 300,
+                          height: 'auto',
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </Grid>
+                  )}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Location Information Section */}
+          {analysisResults.location_info && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  📍 Информация о местоположении
+                </Typography>
+                
+                <Grid container spacing={3}>
+                  {/* Yandex Address */}
+                  {analysisResults.location_info.yandex_address && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" gutterBottom>Адрес (Яндекс):</Typography>
+                      <Typography variant="body2">
+                        {analysisResults.location_info.yandex_address.formatted_address || 'Адрес не определен'}
+                      </Typography>
+                      <Chip 
+                        label={`Точность: ${Math.round((analysisResults.location_info.yandex_address.confidence || 0) * 100)}%`}
+                        size="small"
+                        color="primary"
+                        sx={{ mt: 1 }}
+                      />
+                    </Grid>
+                  )}
+                  
+                  {/* 2GIS Places */}
+                  {analysisResults.location_info.dgis_places && analysisResults.location_info.dgis_places.length > 0 && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" gutterBottom>Ближайшие места (2GIS):</Typography>
+                      {analysisResults.location_info.dgis_places.slice(0, 3).map((place, index) => (
+                        <Box key={index} sx={{ mb: 1 }}>
+                          <Typography variant="body2">
+                            <strong>{place.name}</strong>
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {place.address}
+                          </Typography>
+                          {place.category && (
+                            <Chip 
+                              label={place.category}
+                              size="small"
+                              variant="outlined"
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                        </Box>
+                      ))}
+                    </Grid>
+                  )}
+                  
+                  {/* OSM Data */}
+                  {analysisResults.location_info.osm_data && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>Данные OpenStreetMap:</Typography>
+                      <Typography variant="body2">
+                        <strong>Тип местности:</strong> {analysisResults.location_info.osm_data.place_type || 'Не определено'}
+                      </Typography>
+                      {analysisResults.location_info.osm_data.buildings_count && (
+                        <Typography variant="body2">
+                          <strong>Зданий поблизости:</strong> {analysisResults.location_info.osm_data.buildings_count}
+                        </Typography>
+                      )}
+                    </Grid>
+                  )}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recommendations Section */}
+          {analysisResults.recommendations && analysisResults.recommendations.length > 0 && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  💡 Рекомендации
+                </Typography>
+                {analysisResults.recommendations.map((recommendation, index) => (
+                  <Box key={index} sx={{ mb: 1, display: 'flex', alignItems: 'flex-start' }}>
+                    <InfoIcon sx={{ mr: 1, mt: 0.5, fontSize: 16, color: 'info.main' }} />
+                    <Typography variant="body2">
+                      {recommendation}
+                    </Typography>
+                  </Box>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sources Used Section */}
+          {analysisResults.sources_used && analysisResults.sources_used.length > 0 && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  📡 Использованные источники данных
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {analysisResults.sources_used.map((source, index) => (
+                    <Chip 
+                      key={index}
+                      label={source}
+                      variant="outlined"
+                      color="primary"
+                    />
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Map View Button */}
           {analysisResults.coordinates && (

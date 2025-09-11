@@ -39,14 +39,14 @@
 
 - ✅ **AI-Powered Detection**: 
   - **YOLO Integration** - Fast object detection
-  - **Mistral AI Pixtral-12B** - Advanced vision analysis
+  - **Google Vision + Google Gemini** - Advanced vision analysis
   - **Combined Results** - Enhanced accuracy through dual AI models
   - **Russian Language Support** - Violation descriptions in Russian
 
 - ✅ **Supported Workflows**:
   - Single image violation detection (`/api/violations/detect`)
   - Batch image processing (`/api/violations/batch_detect`)
-  - Mistral AI analysis endpoints (`/api/geo/mistral/*`)
+  - AI analysis endpoints (`/api/geo/mistral/*`)
   - Non-blocking notification sending
   - Graceful error handling
 

@@ -48,6 +48,7 @@ pyproj==3.7.0
 
 # External API integrations
 google-generativeai==0.7.2
+google-cloud-vision==3.7.2
 sentinelhub==3.10.3
 requests-oauthlib==2.0.0
 oauthlib==3.2.2

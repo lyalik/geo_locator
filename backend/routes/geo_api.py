@@ -306,18 +306,32 @@ def locate_image():
         logger.error(f"Error in locate_image: {e}")
         return jsonify({'error': str(e)}), 500
 
-@geo_bp.route('/search/places', methods=['GET'])
+@geo_bp.route('/search/places', methods=['GET', 'POST'])
 def search_places():
     """
     Поиск мест через Yandex Maps и 2GIS
     """
     try:
-        # Поддерживаем оба варианта параметра запроса
-        query = request.args.get('query', '') or request.args.get('q', '')
-        lat = request.args.get('lat', type=float)
-        lon = request.args.get('lon', type=float)
-        radius = request.args.get('radius', 1000, type=int)
-        source = request.args.get('source', 'all')  # 'yandex', 'dgis', 'all'
+        # Поддерживаем GET и POST запросы
+        if request.method == 'POST':
+            data = request.get_json() or {}
+            query = data.get('location_hint', '') or data.get('query', '')
+            lat = data.get('lat')
+            lon = data.get('lon')
+            radius = data.get('radius', 1000)
+            source = data.get('source', 'all')
+            
+            # Конвертируем в float если нужно
+            if lat is not None:
+                lat = float(lat)
+            if lon is not None:
+                lon = float(lon)
+        else:
+            query = request.args.get('query', '') or request.args.get('q', '')
+            lat = request.args.get('lat', type=float)
+            lon = request.args.get('lon', type=float)
+            radius = request.args.get('radius', 1000, type=int)
+            source = request.args.get('source', 'all')  # 'yandex', 'dgis', 'all'
         
         if not query:
             return jsonify({'error': 'Query parameter is required'}), 400
@@ -561,11 +575,11 @@ def get_static_map():
 @geo_bp.route('/mistral/analyze', methods=['POST'])
 def mistral_analyze_image():
     """
-    Анализ изображения с помощью Mistral AI
+    Анализ изображения с помощью AI
     """
     try:
         if mistral_service is None:
-            return jsonify({'error': 'Mistral AI service not available'}), 503
+            return jsonify({'error': 'AI service not available'}), 503
         
         # Проверяем наличие файла
         if 'image' not in request.files:
@@ -613,11 +627,11 @@ def mistral_analyze_image():
 @geo_bp.route('/mistral/violations', methods=['POST'])
 def mistral_detect_violations():
     """
-    Специализированная детекция нарушений с помощью Mistral AI
+    Специализированная детекция нарушений с помощью AI
     """
     try:
         if mistral_service is None:
-            return jsonify({'error': 'Mistral AI service not available'}), 503
+            return jsonify({'error': 'AI service not available'}), 503
         
         if 'image' not in request.files:
             return jsonify({'error': 'No image file provided'}), 400
@@ -645,11 +659,11 @@ def mistral_detect_violations():
 @geo_bp.route('/mistral/address', methods=['POST'])
 def mistral_extract_address():
     """
-    Извлечение адресной информации с помощью Mistral AI
+    Извлечение адресной информации с помощью AI
     """
     try:
         if mistral_service is None:
-            return jsonify({'error': 'Mistral AI service not available'}), 503
+            return jsonify({'error': 'AI service not available'}), 503
         
         if 'image' not in request.files:
             return jsonify({'error': 'No image file provided'}), 400
@@ -677,11 +691,11 @@ def mistral_extract_address():
 @geo_bp.route('/mistral/property', methods=['POST'])
 def mistral_analyze_property():
     """
-    Анализ типа недвижимости с помощью Mistral AI
+    Анализ типа недвижимости с помощью AI
     """
     try:
         if mistral_service is None:
-            return jsonify({'error': 'Mistral AI service not available'}), 503
+            return jsonify({'error': 'AI service not available'}), 503
         
         if 'image' not in request.files:
             return jsonify({'error': 'No image file provided'}), 400

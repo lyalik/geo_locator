@@ -91,6 +91,7 @@ def detect_coordinates():
                     # Create photo record
                     photo = Photo(
                         file_path=file_path,
+                        user_id=1,  # Default user for coordinate detection
                         lat=coordinates['latitude'],
                         lon=coordinates['longitude'],
                         address_data={
@@ -104,13 +105,15 @@ def detect_coordinates():
                     # Create object records as "detections" (reusing violation model)
                     objects = result.get('objects', [])
                     for obj in objects:
-                        detection = Violation(
-                            photo=photo,
-                            category=obj['category'],
-                            confidence=obj['confidence'],
-                            bbox_data=obj['bbox']
-                        )
-                        db.session.add(detection)
+                        # Ensure obj has required fields
+                        if isinstance(obj, dict) and 'name' in obj:
+                            detection = Violation(
+                                photo=photo,
+                                category=obj.get('name', 'unknown'),
+                                confidence=obj.get('confidence', 0.5),
+                                bbox_data=obj.get('bbox', {})
+                            )
+                            db.session.add(detection)
                     
                     db.session.commit()
                     
@@ -120,10 +123,23 @@ def detect_coordinates():
                     logger.error(f"Error saving to database: {str(e)}")
                     db.session.rollback()
         
+        # Clean result data for JSON serialization
+        def clean_data(obj):
+            if isinstance(obj, bytes):
+                return None  # Skip bytes objects
+            elif isinstance(obj, dict):
+                return {k: clean_data(v) for k, v in obj.items() if clean_data(v) is not None}
+            elif isinstance(obj, list):
+                return [clean_data(item) for item in obj if clean_data(item) is not None]
+            else:
+                return obj
+        
+        clean_result = clean_data(result)
+        
         response_data = {
             'success': result['success'],
             'message': f"Detected {result.get('total_objects', 0)} objects" if result['success'] else result.get('error', 'Detection failed'),
-            'data': result,
+            'data': clean_result,
             'error': result.get('error')
         }
         

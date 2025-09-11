@@ -22,7 +22,7 @@ class YandexMapsService:
     
     def __init__(self):
         self.api_key = os.getenv('YANDEX_API_KEY')
-        self.base_url = 'https://api-maps.yandex.ru'
+        self.base_url = 'https://search-maps.yandex.ru'
         self.geocoder_url = 'https://geocode-maps.yandex.ru/1.x/'
         self.static_url = 'https://static-maps.yandex.ru/1.x/'
         self.panorama_url = 'https://api-maps.yandex.ru/services/panoramas/1.x/'
@@ -30,10 +30,9 @@ class YandexMapsService:
         if not self.api_key:
             logger.warning("YANDEX_API_KEY not found in environment variables")
     
-    def search_places(self, query: str, lat: float = None, lon: float = None, 
-                     radius: int = 1000) -> Dict[str, Any]:
+    def search_places(self, query: str, lat: Optional[float] = None, lon: Optional[float] = None, radius: int = 5000) -> Dict[str, Any]:
         """
-        Поиск мест и объектов через Yandex Search API
+        Поиск мест и объектов через Yandex Geocoder API (используем работающий API)
         
         Args:
             query: Поисковый запрос
@@ -41,43 +40,73 @@ class YandexMapsService:
             radius: Радиус поиска в метрах
         """
         try:
-            url = f"{self.base_url}/search/v1/"
+            # Проверяем валидность запроса
+            if not query or query.strip() == "" or query.lower() in ['detected objects', 'none', 'null']:
+                logger.warning(f"Invalid search query: '{query}', using fallback")
+                query = "достопримечательность"
+            
+            # Используем работающий Geocoder API вместо Search API
             params = {
                 'apikey': self.api_key,
-                'text': query,
-                'lang': 'ru_RU',
+                'geocode': query.strip(),
+                'format': 'json',
                 'results': 10,
-                'format': 'json'
+                'lang': 'ru_RU'
             }
             
+            # Добавляем ограничение по области поиска если есть координаты
             if lat and lon:
-                params['ll'] = f"{lon},{lat}"
-                params['spn'] = f"{radius/111000},{radius/111000}"  # Примерное преобразование метров в градусы
+                # Создаем bbox для ограничения области поиска
+                delta = radius / 111000  # Примерное преобразование метров в градусы
+                bbox = f"{lon-delta},{lat-delta}~{lon+delta},{lat+delta}"
+                params['bbox'] = bbox
             
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(self.geocoder_url, params=params, timeout=10)
             response.raise_for_status()
             
             data = response.json()
             
-            # Обработка результатов поиска
+            # Обработка результатов Geocoder API
             results = {
                 'success': True,
                 'source': 'yandex_maps',
                 'query': query,
-                'total_found': len(data.get('features', [])),
+                'total_found': 0,
                 'places': []
             }
             
-            for feature in data.get('features', []):
+            # Geocoder API возвращает структуру с GeoObjectCollection
+            geo_objects = data.get('response', {}).get('GeoObjectCollection', {}).get('featureMember', [])
+            results['total_found'] = len(geo_objects)
+            
+            for member in geo_objects:
+                geo_object = member.get('GeoObject', {})
+                metadata = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {})
+                
+                # Извлекаем координаты
+                point = geo_object.get('Point', {})
+                pos = point.get('pos', '').split()
+                coordinates = [float(pos[0]), float(pos[1])] if len(pos) == 2 else []
+                
+                # Преобразуем координаты в правильный формат
+                coords_dict = None
+                if len(coordinates) == 2:
+                    coords_dict = {
+                        'latitude': coordinates[1],   # lat - второй элемент
+                        'longitude': coordinates[0]   # lon - первый элемент
+                    }
+                
                 place = {
-                    'name': feature.get('properties', {}).get('name', ''),
-                    'description': feature.get('properties', {}).get('description', ''),
-                    'coordinates': feature.get('geometry', {}).get('coordinates', []),
-                    'address': feature.get('properties', {}).get('CompanyMetaData', {}).get('address', ''),
-                    'category': feature.get('properties', {}).get('CompanyMetaData', {}).get('Categories', []),
-                    'phone': feature.get('properties', {}).get('CompanyMetaData', {}).get('Phones', []),
-                    'url': feature.get('properties', {}).get('CompanyMetaData', {}).get('url', ''),
-                    'hours': feature.get('properties', {}).get('CompanyMetaData', {}).get('Hours', {})
+                    'name': geo_object.get('name', ''),
+                    'description': geo_object.get('description', ''),
+                    'coordinates': coords_dict,
+                    'address': metadata.get('text', ''),
+                    'category': [metadata.get('kind', '')],
+                    'phone': [],
+                    'url': '',
+                    'hours': {},
+                    'precision': metadata.get('precision', ''),
+                    'type': metadata.get('kind', 'place')
                 }
                 results['places'].append(place)
             

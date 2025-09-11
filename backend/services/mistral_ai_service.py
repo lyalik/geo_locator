@@ -1,5 +1,5 @@
 """
-Mistral AI Service для анализа изображений и текста
+Google Vision + Google Gemini Service для анализа изображений и текста
 """
 import os
 import base64
@@ -23,7 +23,7 @@ class MistralAIService:
             self.demo_mode = True
         else:
             self.demo_mode = False
-            logger.info(f"🤖 Mistral AI initialized with API key: {self.api_key[:8]}...")
+            logger.info(f"🤖 AI initialized with API key: {self.api_key[:8]}...")
     
     def _encode_image(self, image_path: str) -> str:
         """Кодирование изображения в base64"""
@@ -54,10 +54,10 @@ class MistralAIService:
     
     def analyze_image(self, image_path: str, prompt: str = None) -> Dict[str, Any]:
         """
-        Анализ изображения с помощью Mistral AI
+        Анализ изображения с помощью AI
         """
         if not self.api_key:
-            return {'success': False, 'error': 'Mistral API key not configured'}
+            return {'success': False, 'error': 'AI API key not configured'}
         
         try:
             # Кодируем изображение
@@ -125,13 +125,13 @@ class MistralAIService:
                     'tokens_used': result.get('usage', {}).get('total_tokens', 0)
                 }
             else:
-                return {'success': False, 'error': 'No analysis returned from Mistral AI'}
+                return {'success': False, 'error': 'No analysis returned from AI'}
                 
         except requests.RequestException as e:
-            logger.error(f"Mistral AI API error: {e}")
+            logger.error(f"AI API error: {e}")
             return {'success': False, 'error': f'API request failed: {str(e)}'}
         except Exception as e:
-            logger.error(f"Unexpected error in Mistral AI analysis: {e}")
+            logger.error(f"Unexpected error in AI analysis: {e}")
             return {'success': False, 'error': f'Analysis failed: {str(e)}'}
     
     def detect_violations(self, image_path: str) -> Dict[str, Any]:
@@ -177,7 +177,7 @@ class MistralAIService:
         try:
             # Если нет API ключа, возвращаем демо результаты
             if self.demo_mode:
-                logger.info(f"🤖 Mistral AI DEMO MODE - generating mock violations")
+                logger.info(f"🤖 AI DEMO MODE - generating mock violations")
                 return {
                     'success': True,
                     'violations': [
@@ -199,7 +199,7 @@ class MistralAIService:
                 }
             
             result = self.analyze_image(image_path, violation_prompt)
-            logger.info(f"🤖 Mistral AI raw result: {result}")
+            logger.info(f"🤖 AI raw result: {result}")
             
             if result.get('success') and result.get('analysis'):
                 # Парсим JSON ответ из текста
@@ -207,14 +207,14 @@ class MistralAIService:
                 import re
                 
                 analysis_text = result['analysis']
-                logger.info(f"🤖 Mistral AI analysis text: {analysis_text}")
+                logger.info(f"🤖 AI analysis text: {analysis_text}")
                 
                 # Ищем JSON в ответе
                 json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
                 if json_match:
                     try:
                         parsed_data = json.loads(json_match.group())
-                        logger.info(f"🤖 Mistral AI parsed JSON: {parsed_data}")
+                        logger.info(f"🤖 AI parsed JSON: {parsed_data}")
                         
                         # Преобразуем в нужный формат
                         violations = []
@@ -228,7 +228,7 @@ class MistralAIService:
                                 })
                         
                         # Убираем демо нарушения - используем только реальные результаты анализа
-                        logger.info(f"🤖 Mistral AI - Found {len(violations)} real violations")
+                        logger.info(f"🤖 AI - Found {len(violations)} real violations")
                         
                         return {
                             'success': True,
@@ -237,7 +237,7 @@ class MistralAIService:
                             'recommendations': parsed_data.get('recommendations', [])
                         }
                     except json.JSONDecodeError as e:
-                        logger.error(f"🤖 Mistral AI JSON parse error: {e}")
+                        logger.error(f"🤖 AI JSON parse error: {e}")
                         # Fallback - создаем базовый результат
                         return {
                             'success': True,
@@ -251,7 +251,7 @@ class MistralAIService:
                             'recommendations': []
                         }
                 else:
-                    logger.warning(f"🤖 Mistral AI: No JSON found in response")
+                    logger.warning(f"🤖 AI: No JSON found in response")
                     return {
                         'success': True,
                         'violations': [{
@@ -264,11 +264,11 @@ class MistralAIService:
                         'recommendations': []
                     }
             else:
-                logger.error(f"🤖 Mistral AI: Analysis failed - {result}")
+                logger.error(f"🤖 AI: Analysis failed - {result}")
                 return {'success': False, 'error': 'Analysis failed'}
                 
         except Exception as e:
-            logger.error(f"🤖 Mistral AI detect_violations error: {e}")
+            logger.error(f"🤖 AI detect_violations error: {e}")
             return {'success': False, 'error': str(e)}
     
     def extract_address_info(self, image_path: str) -> Dict[str, Any]:

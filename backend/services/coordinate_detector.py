@@ -9,6 +9,10 @@ import cv2
 from .geo_aggregator_service import GeoAggregatorService
 from .archive_photo_service import ArchivePhotoService
 from services.cache_service import DetectionCache
+from .yandex_maps_service import YandexMapsService
+from .dgis_service import DGISService
+from .roscosmos_satellite_service import RoscosmosService
+from .yandex_satellite_service import YandexSatelliteService
 
 # Import Google services
 try:
@@ -40,6 +44,13 @@ class CoordinateDetector:
             self.yolo_detector = None
         self.geo_aggregator = GeoAggregatorService()
         self.cache = DetectionCache()
+        
+        # Initialize API services for enhanced coordinate analysis
+        self.yandex_service = YandexMapsService()
+        self.dgis_service = DGISService()
+        self.roscosmos_service = RoscosmosService()
+        self.yandex_satellite_service = YandexSatelliteService()
+        logger.info("✅ API services initialized (Yandex, 2GIS, Roscosmos)")
         
         # Initialize Google services if available
         if GOOGLE_SERVICES_AVAILABLE:
@@ -92,12 +103,68 @@ class CoordinateDetector:
             # Step 5: Use geolocation services to determine coordinates
             geo_result = None
             logger.info(f"🗺️ Location hint received: '{location_hint}' (type: {type(location_hint)}, bool: {bool(location_hint)})")
-            if location_hint:
+            
+            # Try geolocation with hint first, then with detected objects
+            if location_hint and location_hint.strip():
                 logger.info(f"🗺️ Processing location hint: '{location_hint}'")
-                geo_result = self.geo_aggregator.locate_image(image_path, location_hint)
-                logger.info(f"🗺️ Geo result: {geo_result}")
+                geo_result = self.geo_aggregator.locate_image(image_path, location_hint.strip())
+                logger.info(f"🗺️ Geo result with hint: {geo_result}")
+                
+                # If hint processing was successful, skip fallback search
+                if geo_result and geo_result.get('success'):
+                    logger.info("🗺️ Location hint processing successful, skipping fallback search")
+                else:
+                    logger.info("🗺️ Location hint processing failed, will try fallback")
+            elif objects and len(objects) > 0:
+                # Use detected objects to generate location context
+                try:
+                    # Safely get first 3 objects
+                    limited_objects = objects[:3] if isinstance(objects, list) else []
+                    object_descriptions = []
+                    
+                    for obj in limited_objects:
+                        if isinstance(obj, dict):
+                            desc = obj.get('description', obj.get('category', ''))
+                            if desc and desc.lower() not in ['detected objects', 'none', 'null', '']:
+                                object_descriptions.append(desc)
+                    
+                    # Создаем осмысленный контекст для поиска
+                    if object_descriptions:
+                        # Фильтруем и улучшаем описания объектов
+                        filtered_descriptions = []
+                        for desc in object_descriptions:
+                            if len(desc) > 2 and desc not in ['object', 'item', 'thing']:
+                                filtered_descriptions.append(desc)
+                        
+                        if filtered_descriptions:
+                            object_context = ", ".join(filtered_descriptions[:2])  # Берем только 2 лучших
+                            logger.info(f"🗺️ No location hint, trying with detected objects: {object_context}")
+                            geo_result = self.geo_aggregator.locate_image(image_path, object_context)
+                            logger.info(f"🗺️ Geo result with objects: {geo_result}")
+                        else:
+                            logger.info("🗺️ No meaningful objects detected, skipping geo search")
+                            geo_result = None
+                    else:
+                        # Fallback: попробуем поиск по общим архитектурным терминам
+                        logger.info("🗺️ No object descriptions available, trying fallback search")
+                        fallback_terms = ["здание", "архитектура", "строение"]
+                        for term in fallback_terms:
+                            try:
+                                geo_result = self.geo_aggregator.locate_image(image_path, term)
+                                if geo_result and geo_result.get('success'):
+                                    logger.info(f"🗺️ Fallback search successful with term: {term}")
+                                    break
+                            except Exception as e:
+                                logger.debug(f"Fallback search failed for '{term}': {e}")
+                                continue
+                        else:
+                            logger.info("🗺️ All fallback searches failed")
+                            geo_result = None
+                except Exception as e:
+                    logger.error(f"Error processing objects for geolocation: {e}")
+                    geo_result = None
             else:
-                logger.info("🗺️ No location hint provided, skipping geolocation service")
+                logger.info("🗺️ No location hint or objects available for geolocation")
             
             # Step 6: Try archive photo matching for better accuracy
             archive_coords = self._find_archive_coordinates(image_path)
@@ -116,12 +183,21 @@ class CoordinateDetector:
             # Step 6: Enhance objects with geolocation relevance
             enhanced_objects = self._enhance_objects_with_location(objects, final_coordinates)
             
+            # Step 7: Get satellite imagery and additional location data
+            satellite_data = None
+            location_info = None
+            if final_coordinates:
+                satellite_data = self._get_satellite_imagery(final_coordinates)
+                location_info = self._get_enhanced_location_info(final_coordinates, location_hint)
+            
             # Return success even if no objects or coordinates found, as long as detection process worked
             return {
                 'success': True,
                 'coordinates': final_coordinates,
                 'objects': enhanced_objects,
                 'total_objects': len(enhanced_objects),
+                'satellite_data': satellite_data,
+                'location_info': location_info,
                 'coordinate_sources': {
                     'gps_metadata': image_coords is not None,
                     'geolocation_service': geo_result is not None and geo_result.get('success', False),
@@ -140,7 +216,8 @@ class CoordinateDetector:
                 'success': False,
                 'error': str(e),
                 'coordinates': None,
-                'objects': []
+                'objects': [],
+                'total_objects': 0
             }
     
     def _extract_gps_coordinates(self, image_path: str) -> Optional[Dict[str, float]]:
@@ -258,8 +335,8 @@ class CoordinateDetector:
                             coords = best_location.get('coordinates')
                             if coords:
                                 return {
-                                    'latitude': coords['lat'],
-                                    'longitude': coords['lon'],
+                                    'latitude': coords.get('latitude', coords.get('lat')),
+                                    'longitude': coords.get('longitude', coords.get('lon')),
                                     'source': 'google_vision_ocr',
                                     'confidence': best_location.get('confidence', 0.7) * 0.8,  # Slightly lower confidence
                                     'extracted_address': address_string
@@ -361,8 +438,8 @@ class CoordinateDetector:
                                     coords = best_location.get('coordinates')
                                     if coords:
                                         return {
-                                            'latitude': coords['lat'],
-                                            'longitude': coords['lon'],
+                                            'latitude': coords.get('latitude', coords.get('lat')),
+                                            'longitude': coords.get('longitude', coords.get('lon')),
                                             'source': 'google_gemini_geo',
                                             'confidence': confidence * best_location.get('confidence', 0.7) * 0.7,
                                             'extracted_features': parsed_data,
@@ -454,9 +531,10 @@ class CoordinateDetector:
         if geo_result and geo_result.get('success'):
             final_location = geo_result.get('final_location')
             if final_location and final_location.get('coordinates'):
+                coords = final_location['coordinates']
                 coordinate_candidates.append({
-                    'latitude': final_location['coordinates']['lat'],
-                    'longitude': final_location['coordinates']['lon'],
+                    'latitude': coords.get('latitude', coords.get('lat')),
+                    'longitude': coords.get('longitude', coords.get('lon')),
                     'source': 'geolocation_service',
                     'confidence': final_location.get('confidence', 0.7),
                     'priority': 2
@@ -516,7 +594,13 @@ class CoordinateDetector:
         enhanced_objects = []
         
         for obj in objects:
-            enhanced_obj = obj.copy()
+            # Ensure obj is a dictionary
+            if isinstance(obj, str):
+                enhanced_obj = {'name': obj, 'confidence': 0.5}
+            elif isinstance(obj, dict):
+                enhanced_obj = obj.copy()
+            else:
+                enhanced_obj = {'name': str(obj), 'confidence': 0.5}
             
             # Add coordinate information
             enhanced_obj['location'] = {
@@ -526,11 +610,11 @@ class CoordinateDetector:
             }
             
             # Calculate geolocation utility score
-            enhanced_obj['geolocation_utility'] = self._calculate_geolocation_utility(obj)
+            enhanced_obj['geolocation_utility'] = self._calculate_geolocation_utility(enhanced_obj)
             
             # Add location context
             enhanced_obj['location_context'] = self._get_location_context(
-                obj, coordinates['latitude'], coordinates['longitude']
+                enhanced_obj, coordinates['latitude'], coordinates['longitude']
             )
             
             enhanced_objects.append(enhanced_obj)
@@ -626,9 +710,118 @@ class CoordinateDetector:
                 'monument', 
                 'building',
                 'infrastructure',
-                'signage',
-                'transportation',
-                'urban_furniture',
-                'natural_feature'
+                'vehicle'
             ]
         }
+    
+    def _get_satellite_imagery(self, coordinates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Получение спутниковых снимков для найденных координат
+        """
+        try:
+            lat = coordinates['latitude']
+            lon = coordinates['longitude']
+            
+            logger.info(f"🛰️ Getting satellite imagery for coordinates: {lat}, {lon}")
+            
+            # Приоритет источников: Роскосмос -> Яндекс -> публичные
+            satellite_sources = []
+            
+            # 1. Роскосмос (основной источник)
+            try:
+                roscosmos_result = self.roscosmos_service.get_satellite_image(lat, lon, zoom=16)
+                if roscosmos_result.get('success'):
+                    satellite_sources.append({
+                        'source': 'roscosmos',
+                        'priority': 1,
+                        'data': roscosmos_result
+                    })
+                    logger.info("✅ Roscosmos satellite image obtained")
+            except Exception as e:
+                logger.warning(f"Roscosmos satellite service failed: {e}")
+            
+            # 2. Яндекс Спутник (резервный)
+            try:
+                yandex_result = self.yandex_satellite_service.get_satellite_image(lat, lon, zoom=16)
+                if yandex_result.get('success'):
+                    satellite_sources.append({
+                        'source': 'yandex_satellite',
+                        'priority': 2,
+                        'data': yandex_result
+                    })
+                    logger.info("✅ Yandex satellite image obtained")
+            except Exception as e:
+                logger.warning(f"Yandex satellite service failed: {e}")
+            
+            if satellite_sources:
+                # Возвращаем лучший доступный источник
+                best_source = min(satellite_sources, key=lambda x: x['priority'])
+                return {
+                    'success': True,
+                    'primary_source': best_source['source'],
+                    'image_data': best_source['data'],
+                    'available_sources': len(satellite_sources),
+                    'coordinates': {'latitude': lat, 'longitude': lon}
+                }
+            else:
+                logger.warning("No satellite imagery available")
+                return {'success': False, 'error': 'No satellite imagery available'}
+                
+        except Exception as e:
+            logger.error(f"Error getting satellite imagery: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _get_enhanced_location_info(self, coordinates: Dict[str, Any], location_hint: str = None) -> Optional[Dict[str, Any]]:
+        """
+        Получение дополнительной информации о местоположении через API сервисы
+        """
+        try:
+            lat = coordinates['latitude']
+            lon = coordinates['longitude']
+            
+            logger.info(f"🗺️ Getting enhanced location info for: {lat}, {lon}")
+            
+            location_data = {
+                'coordinates': {'latitude': lat, 'longitude': lon},
+                'yandex_data': None,
+                'dgis_data': None,
+                'reverse_geocoding': None,
+                'nearby_places': []
+            }
+            
+            # 1. Обратное геокодирование через Яндекс
+            try:
+                # Формируем запрос для обратного геокодирования
+                coord_string = f"{lat},{lon}"
+                yandex_geocode = self.yandex_service.geocode(coord_string)
+                if yandex_geocode.get('success'):
+                    location_data['reverse_geocoding'] = yandex_geocode
+                    logger.info("✅ Yandex reverse geocoding successful")
+            except Exception as e:
+                logger.warning(f"Yandex reverse geocoding failed: {e}")
+            
+            # 2. Поиск ближайших мест через 2GIS
+            try:
+                dgis_nearby = self.dgis_service.search_places("", lat=lat, lon=lon, radius=500)
+                if dgis_nearby.get('success'):
+                    location_data['dgis_data'] = dgis_nearby
+                    location_data['nearby_places'] = dgis_nearby.get('places', [])[:5]  # Топ 5 мест
+                    logger.info(f"✅ 2GIS found {len(location_data['nearby_places'])} nearby places")
+            except Exception as e:
+                logger.warning(f"2GIS nearby search failed: {e}")
+            
+            # 3. Дополнительный поиск через Яндекс если есть подсказка
+            if location_hint:
+                try:
+                    yandex_search = self.yandex_service.search_places(location_hint, lat=lat, lon=lon)
+                    if yandex_search.get('success'):
+                        location_data['yandex_data'] = yandex_search
+                        logger.info("✅ Yandex location search successful")
+                except Exception as e:
+                    logger.warning(f"Yandex location search failed: {e}")
+            
+            return location_data
+            
+        except Exception as e:
+            logger.error(f"Error getting enhanced location info: {e}")
+            return {'error': str(e)}

@@ -108,8 +108,10 @@ class GeoAggregatorService:
             if location_hint:
                 api_results = self._search_external_apis(location_hint, user_description)
                 results['all_results']['external_apis'] = api_results
+                logger.info(f"API results: {api_results}")
                 if api_results['yandex']['success']:
                     results['sources_used'].append('yandex_search')
+                    logger.info(f"Yandex places found: {len(api_results['yandex'].get('places', []))}")
                 if api_results['dgis']['success']:
                     results['sources_used'].append('dgis_search')
             
@@ -122,7 +124,20 @@ class GeoAggregatorService:
                     logger.info(f"Satellite match score: {satellite_result.get('match_score', 0)}")
             
             # 5. Агрегация результатов и выбор лучшего
+            logger.info(f"All results before aggregation: {results['all_results']}")
+            
+            # Детальная диагностика external_apis
+            if 'external_apis' in results['all_results']:
+                ext_apis = results['all_results']['external_apis']
+                logger.info(f"External APIs details:")
+                for api_name, api_data in ext_apis.items():
+                    logger.info(f"  {api_name}: success={api_data.get('success')}, places_count={len(api_data.get('places', []))}")
+                    if api_data.get('places'):
+                        first_place = api_data['places'][0]
+                        logger.info(f"    First place coordinates: {first_place.get('coordinates')}")
+            
             final_location = self._aggregate_results(results['all_results'])
+            logger.info(f"Final location after aggregation: {final_location}")
             if final_location:
                 results['success'] = True
                 results['final_location'] = final_location
@@ -193,32 +208,32 @@ class GeoAggregatorService:
         
         return {'success': False, 'source': 'image_database'}
     
-    def _search_external_apis(self, location_hint: str, description: str = None) -> Dict[str, Any]:
-        """Поиск через внешние API"""
+    def _search_external_apis(self, location_hint: str, user_description: str = None) -> Dict[str, Any]:
+        """Поиск через внешние API сервисы"""
         results = {
             'yandex': {'success': False},
-            'dgis': {'success': False}
+            'dgis': {'success': False},
+            'osm': {'success': False}
         }
         
+        # Валидация и очистка location_hint
+        if not location_hint or location_hint.strip() == "" or location_hint.lower() in ['detected objects', 'none', 'null']:
+            logger.warning(f"Invalid location hint: '{location_hint}', skipping external API search")
+            return results
+        
         try:
-            # Поиск через Yandex Maps
-            yandex_result = self.yandex_service.search_places(location_hint)
-            if yandex_result.get('success') and yandex_result.get('places'):
-                place = yandex_result['places'][0]  # Берем первый результат
-                if place.get('coordinates'):
-                    results['yandex'] = {
-                        'success': True,
-                        'source': 'yandex_maps',
-                        'coordinates': {
-                            'latitude': place['coordinates'][1],
-                            'longitude': place['coordinates'][0]
-                        },
-                        'place_info': place,
-                        'confidence': 0.7
-                    }
-            
-            # Поиск через 2GIS
-            dgis_result = self.dgis_service.search_places(location_hint)
+            # Yandex Maps поиск
+            yandex_result = self.yandex_service.search_places(location_hint.strip())
+            if yandex_result.get('success'):
+                results['yandex'] = yandex_result
+                logger.info(f"Yandex found {yandex_result.get('total_found', 0)} places")
+        except Exception as e:
+            logger.error(f"Yandex search failed: {e}")
+            results['yandex']['error'] = str(e)
+        
+        try:
+            # 2GIS поиск
+            dgis_result = self.dgis_service.search_places(location_hint.strip())
             if dgis_result.get('success') and dgis_result.get('places'):
                 place = dgis_result['places'][0]
                 if place.get('coordinates'):
@@ -229,42 +244,21 @@ class GeoAggregatorService:
                         'place_info': place,
                         'confidence': 0.7
                     }
-            
-            # Поиск через OpenStreetMap
-            if OSM_SERVICE_AVAILABLE:
-                try:
-                    osm_results = sync_search_places(location_hint)
-                    if osm_results and len(osm_results) > 0:
-                        place = osm_results[0]
-                        # Обработка различных форматов OSM результатов
-                        if hasattr(place, 'lat') and hasattr(place, 'lon'):
-                            lat, lon = float(place.lat), float(place.lon)
-                        elif isinstance(place, dict):
-                            lat = float(place.get('lat', 0))
-                            lon = float(place.get('lon', 0))
-                        else:
-                            logger.warning("OSM place object has no coordinates")
-                            lat, lon = 0, 0
-                            
-                        results['osm'] = {
-                            'success': True,
-                            'source': 'openstreetmap',
-                            'coordinates': {
-                                'latitude': lat,
-                                'longitude': lon
-                            },
-                            'place_info': {
-                                'name': getattr(place, 'display_name', place.get('display_name', 'Unknown')),
-                                'type': getattr(place, 'type', place.get('type', 'place')),
-                                'class': getattr(place, 'class_name', place.get('class', 'unknown'))
-                            },
-                            'confidence': 0.65
-                        }
-                except Exception as osm_error:
-                    logger.warning(f"OpenStreetMap search failed: {osm_error}")
-            
+                    logger.info(f"2GIS found place: {place.get('name', 'Unknown')}")
         except Exception as e:
-            logger.error(f"Error searching external APIs: {e}")
+            logger.error(f"2GIS search failed: {e}")
+            results['dgis']['error'] = str(e)
+        
+        try:
+            # OSM поиск (если доступен)
+            if hasattr(self, 'osm_service') and self.osm_service:
+                osm_result = self.osm_service.search_places(location_hint.strip())
+                if osm_result.get('success'):
+                    results['osm'] = osm_result
+                    logger.info(f"OSM found {osm_result.get('total_found', 0)} places")
+        except Exception as e:
+            logger.error(f"OSM search failed: {e}")
+            results['osm']['error'] = str(e)
         
         return results
     
@@ -275,11 +269,11 @@ class GeoAggregatorService:
             coordinates = None
             
             if all_results.get('exif', {}).get('success'):
-                coordinates = all_results['exif']['coordinates']
+                coordinates = all_results['exif'].get('coordinates')
             elif all_results.get('external_apis', {}).get('yandex', {}).get('success'):
-                coordinates = all_results['external_apis']['yandex']['coordinates']
+                coordinates = all_results['external_apis']['yandex'].get('coordinates')
             elif all_results.get('external_apis', {}).get('dgis', {}).get('success'):
-                coordinates = all_results['external_apis']['dgis']['coordinates']
+                coordinates = all_results['external_apis']['dgis'].get('coordinates')
             
             if not coordinates:
                 return {'success': False, 'source': 'satellite'}
@@ -351,14 +345,32 @@ class GeoAggregatorService:
                 elif source_type == 'external_apis':
                     for api_name, api_data in data.items():
                         if api_data.get('success'):
-                            source_key = f"{api_name}_search"
-                            candidates.append({
-                                'coordinates': api_data['coordinates'],
-                                'source': source_key,
-                                'weight': self.source_weights.get(source_key, 0.7),
-                                'confidence': api_data.get('confidence', 0.7),
-                                'place_info': api_data.get('place_info')
-                            })
+                            # Проверяем координаты в places массиве
+                            places = api_data.get('places', [])
+                            if places and len(places) > 0:
+                                first_place = places[0]
+                                coordinates = first_place.get('coordinates')
+                                if coordinates:
+                                    source_key = f"{api_name}_search"
+                                    candidates.append({
+                                        'coordinates': coordinates,
+                                        'source': source_key,
+                                        'weight': self.source_weights.get(source_key, 0.7),
+                                        'confidence': api_data.get('confidence', 0.7),
+                                        'place_info': first_place
+                                    })
+                                    logger.info(f"Added candidate from {api_name}: {coordinates}")
+                            # Fallback: проверяем координаты напрямую в api_data
+                            elif api_data.get('coordinates'):
+                                source_key = f"{api_name}_search"
+                                candidates.append({
+                                    'coordinates': api_data.get('coordinates'),
+                                    'source': source_key,
+                                    'weight': self.source_weights.get(source_key, 0.7),
+                                    'confidence': api_data.get('confidence', 0.7),
+                                    'place_info': api_data.get('place_info')
+                                })
+                                logger.info(f"Added fallback candidate from {api_name}: {api_data.get('coordinates')}")
                 
                 elif source_type == 'satellite' and data.get('success'):
                     candidates.append({

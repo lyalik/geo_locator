@@ -29,7 +29,7 @@ import {
 import { useDropzone } from 'react-dropzone';
 import api from '../services/api';
 
-const MistralAnalyzer = () => {
+const AIAnalyzer = () => {
   const [files, setFiles] = useState([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState([]);
@@ -122,11 +122,11 @@ const MistralAnalyzer = () => {
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <AIIcon color="secondary" />
-        Mistral AI Анализатор
+         AI Анализатор
       </Typography>
       
       <Typography variant="body1" color="text.secondary" paragraph>
-        Продвинутый анализ изображений с помощью модели Mistral AI Pixtral-12B
+        Продвинутый анализ изображений с помощью AI технологий
       </Typography>
 
       <Grid container spacing={3}>
@@ -154,7 +154,7 @@ const MistralAnalyzer = () => {
             {isAnalyzing ? (
               <Box textAlign="center">
                 <CircularProgress color="secondary" />
-                <Typography>Анализ с помощью Mistral AI...</Typography>
+                <Typography>Анализ с помощью AI...</Typography>
               </Box>
             ) : (
               <Box textAlign="center">
@@ -200,7 +200,7 @@ const MistralAnalyzer = () => {
                 startIcon={<AIIcon />}
                 sx={{ mt: 2, width: '100%' }}
               >
-                {isAnalyzing ? 'Анализируем...' : 'Анализировать с Mistral AI'}
+                {isAnalyzing ? 'Анализируем...' : 'Анализировать с AI'}
               </Button>
             </Box>
           )}
@@ -327,7 +327,7 @@ const MistralAnalyzer = () => {
                               <Divider sx={{ my: 2 }} />
                               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 <Chip 
-                                  label={`Модель: ${analysis.data.model || 'Mistral AI'}`}
+                                  label={`Модель: ${analysis.data.model || 'AI'}`}
                                   size="small"
                                   variant="outlined"
                                 />
@@ -361,4 +361,4 @@ const MistralAnalyzer = () => {
   );
 };
 
-export default MistralAnalyzer;
+export default AIAnalyzer;

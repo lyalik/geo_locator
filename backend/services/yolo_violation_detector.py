@@ -42,8 +42,8 @@ class YOLOObjectDetector:
         'monument': 'Памятник'
     }
     
-    # Confidence threshold for detection
-    CONFIDENCE_THRESHOLD = 0.5
+    # Confidence threshold for detection (lowered for better detection)
+    CONFIDENCE_THRESHOLD = 0.25
     
     def __init__(self, model_path: Optional[str] = None):
         """
