@@ -95,10 +95,22 @@ class CoordinateDetector:
             image_coords = self._extract_gps_coordinates(image_path)
             
             # Step 3: Extract text and address info using Google Vision OCR
-            google_ocr_coords = self._extract_coordinates_from_text(image_path)
+            google_ocr_coords = None
+            if self.google_vision_service:
+                try:
+                    google_ocr_coords = self._extract_coordinates_from_text(image_path)
+                except Exception as e:
+                    logger.warning(f"Google Vision OCR failed: {e}")
+                    google_ocr_coords = None
             
             # Step 4: Analyze geographical features using Google Gemini
-            google_geo_coords = self._analyze_geographical_features(image_path, location_hint)
+            google_geo_coords = None
+            if self.google_vision_service:
+                try:
+                    google_geo_coords = self._analyze_geographical_features(image_path, location_hint)
+                except Exception as e:
+                    logger.warning(f"Google Gemini analysis failed: {e}")
+                    google_geo_coords = None
             
             # Step 5: Use geolocation services to determine coordinates
             geo_result = None

@@ -102,18 +102,9 @@ def detect_coordinates():
                     )
                     db.session.add(photo)
                     
-                    # Create object records as "detections" (reusing violation model)
-                    objects = result.get('objects', [])
-                    for obj in objects:
-                        # Ensure obj has required fields
-                        if isinstance(obj, dict) and 'name' in obj:
-                            detection = Violation(
-                                photo=photo,
-                                category=obj.get('name', 'unknown'),
-                                confidence=obj.get('confidence', 0.5),
-                                bbox_data=obj.get('bbox', {})
-                            )
-                            db.session.add(detection)
+                    # НЕ создаем записи в таблице Violation для координатного анализа
+                    # Объекты сохраняются только в metadata фото для справки
+                    # Violation записи создаются только при ИИ-анализе нарушений
                     
                     db.session.commit()
                     

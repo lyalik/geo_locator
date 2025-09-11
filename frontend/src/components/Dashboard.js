@@ -47,7 +47,8 @@ const Dashboard = () => {
   const loadViolations = async () => {
     setLoading(true);
     try {
-      // Загружаем данные из базы данных через API
+      // Загружаем ТОЛЬКО данные нарушений из ИИ-анализа через API
+      // НЕ загружаем данные координатного анализа
       console.log('🔄 Loading violations from database...');
       const response = await violations.getList();
       
@@ -59,8 +60,15 @@ const Dashboard = () => {
         const rawViolations = Array.isArray(response.data) ? response.data : (response.data.data || []);
         console.log('✅ Loaded violations from database:', rawViolations.length);
         
+        // Фильтруем только записи с реальными нарушениями (не координатный анализ)
+        const realViolations = rawViolations.filter(result => 
+          result.violations && 
+          result.violations.length > 0 && 
+          result.violations.some(v => v.category && v.category !== 'unknown')
+        );
+        
         // Нормализуем данные из базы данных для отображения
-        allDbViolations = rawViolations.map(result => ({
+        allDbViolations = realViolations.map(result => ({
           id: result.violation_id || Math.random().toString(),
           category: result.violations?.[0]?.category || 'unknown',
           confidence: result.violations?.[0]?.confidence || 0,
@@ -80,8 +88,8 @@ const Dashboard = () => {
         // Для карты используем только нарушения с координатами
         dbViolations = allDbViolations.filter(v => v.has_coordinates);
         
-        console.log('📍 Violations with coordinates:', dbViolations.length);
-        console.log('📊 Total violations:', allDbViolations.length);
+        console.log('📍 Real violations with coordinates:', dbViolations.length);
+        console.log('📊 Total real violations:', allDbViolations.length);
       } else {
         console.warn('⚠️ Failed to load violations from database:', response.data);
       }

@@ -73,33 +73,11 @@ const AnalyticsDashboard = ({ violations = [] }) => {
 
   const loadRealViolationsData = async () => {
     try {
-      // Получаем данные из глобальных хранилищ результатов
-      const batchResults = window.GLOBAL_BATCH_RESULTS || [];
-      const singleResults = window.GLOBAL_SINGLE_RESULTS || [];
+      // НЕ загружаем данные из глобальных хранилищ - они могут содержать координатный анализ
+      // Аналитика должна показывать только данные нарушений из ИИ-анализа
       
-      // Объединяем все результаты
-      const allResults = [...batchResults, ...singleResults];
-      
-      // Преобразуем в формат для аналитики
-      const violationsData = allResults.flatMap(result => {
-        if (result.violations && result.violations.length > 0) {
-          return result.violations.map(violation => ({
-            id: violation.id || Math.random().toString(36),
-            category: violation.category || violation.type || 'unknown',
-            confidence: violation.confidence || 0,
-            created_at: result.uploadTime || new Date().toISOString(),
-            location: result.location,
-            satellite_data: result.satellite_data,
-            image_path: result.image || result.image_path,
-            violation_id: result.violation_id,
-            source: violation.source || 'yolo', // Источник детекции
-            description: violation.description, // Описание от Google Vision
-            severity: violation.severity, // Уровень серьезности
-            recommendations: violation.recommendations // Рекомендации
-          }));
-        }
-        return [];
-      });
+      // Загружаем только данные нарушений через API
+      const violationsData = [];
 
       console.log('Loaded real violations data:', violationsData);
       setRealViolationsData(violationsData);

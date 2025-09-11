@@ -6,11 +6,15 @@ import {
   Button,
   Card,
   CardContent,
-  Typography,
-  LinearProgress,
-  Grid,
   Chip,
+  Grid,
+  LinearProgress,
   TextField,
+  Typography,
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   FormControl,
   InputLabel,
   Select,
@@ -22,9 +26,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   IconButton,
   Tooltip
 } from '@mui/material';
@@ -174,6 +175,8 @@ const VideoAnalyzer = () => {
               source: apiData.coordinates.source || 'Coordinate Detection',
               frame_count: 1
             } : null,
+            // Всегда показываем новый интерфейс, даже если координаты не найдены
+            has_analysis_data: true,
             // Добавляем спутниковые данные
             satellite_data: apiData.satellite_data ? {
               source: apiData.satellite_data.primary_source,
@@ -466,7 +469,7 @@ const VideoAnalyzer = () => {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Обработка видео...
+              Обработка...
             </Typography>
             <LinearProgress 
               variant="determinate" 
@@ -734,49 +737,95 @@ const VideoAnalyzer = () => {
                 
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" gutterBottom>Источник данных:</Typography>
-                    <Chip 
-                      label={analysisResults.satellite_data.source || 'Неизвестно'}
-                      color="primary"
-                      sx={{ mb: 2 }}
-                    />
+                    <Typography variant="subtitle2" gutterBottom>Доступные источники:</Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <Chip 
+                        label={`Роскосмос (${analysisResults.satellite_data.primary_source})`}
+                        color="primary"
+                        sx={{ mr: 1, mb: 1 }}
+                      />
+                      <Chip 
+                        label="Яндекс Карты"
+                        variant="outlined"
+                        sx={{ mr: 1, mb: 1 }}
+                        onClick={() => {
+                          const { latitude, longitude } = analysisResults.coordinates;
+                          window.open(`https://yandex.ru/maps/?ll=${longitude},${latitude}&z=16&l=sat`, '_blank');
+                        }}
+                      />
+                      <Chip 
+                        label="2ГИС"
+                        variant="outlined"
+                        sx={{ mr: 1, mb: 1 }}
+                        onClick={() => {
+                          const { latitude, longitude } = analysisResults.coordinates;
+                          window.open(`https://2gis.ru/geo/${latitude},${longitude}/zoom/16`, '_blank');
+                        }}
+                      />
+                      <Chip 
+                        label="OpenStreetMap"
+                        variant="outlined"
+                        sx={{ mr: 1, mb: 1 }}
+                        onClick={() => {
+                          const { latitude, longitude } = analysisResults.coordinates;
+                          window.open(`https://www.openstreetmap.org/#map=16/${latitude}/${longitude}`, '_blank');
+                        }}
+                      />
+                    </Box>
                     
-                    {analysisResults.satellite_data.metadata && (
-                      <Box>
-                        <Typography variant="body2">
-                          <strong>Разрешение:</strong> {analysisResults.satellite_data.metadata.resolution || 'Не указано'}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>Дата съемки:</strong> {analysisResults.satellite_data.metadata.date || 'Не указано'}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>Облачность:</strong> {analysisResults.satellite_data.metadata.cloud_cover || 'Не указано'}
-                        </Typography>
-                      </Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Координаты:</strong> {analysisResults.coordinates.latitude.toFixed(6)}, {analysisResults.coordinates.longitude.toFixed(6)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Доступных источников:</strong> {analysisResults.satellite_data.available_sources}
+                    </Typography>
+                    {analysisResults.satellite_data.image_data && analysisResults.satellite_data.image_data.satellite && (
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Спутник:</strong> {analysisResults.satellite_data.image_data.satellite}
+                      </Typography>
                     )}
                   </Grid>
                   
-                  {analysisResults.satellite_data.image_url && (
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle2" gutterBottom>Спутниковый снимок:</Typography>
-                      <Box
-                        component="img"
-                        src={analysisResults.satellite_data.image_url}
-                        alt="Спутниковый снимок"
-                        sx={{
-                          width: '100%',
-                          maxWidth: 300,
-                          height: 'auto',
-                          borderRadius: 1,
-                          border: '1px solid',
-                          borderColor: 'divider'
-                        }}
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    </Grid>
-                  )}
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" gutterBottom>Спутниковый снимок:</Typography>
+                    <Box sx={{ textAlign: 'center', p: 2 }}>
+                      <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                        Спутниковые снимки доступны через внешние сервисы:
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            const { latitude, longitude } = analysisResults.coordinates;
+                            window.open(`https://yandex.ru/maps/?ll=${longitude},${latitude}&z=16&l=sat`, '_blank');
+                          }}
+                        >
+                          Открыть в Яндекс Картах (спутник)
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            const { latitude, longitude } = analysisResults.coordinates;
+                            window.open(`https://www.google.com/maps/@${latitude},${longitude},16z/data=!3m1!1e3`, '_blank');
+                          }}
+                        >
+                          Открыть в Google Maps (спутник)
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            const { latitude, longitude } = analysisResults.coordinates;
+                            window.open(`https://www.openstreetmap.org/#map=16/${latitude}/${longitude}`, '_blank');
+                          }}
+                        >
+                          Открыть в OpenStreetMap
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Grid>
                 </Grid>
               </CardContent>
             </Card>
@@ -791,42 +840,118 @@ const VideoAnalyzer = () => {
                 </Typography>
                 
                 <Grid container spacing={3}>
-                  {/* Yandex Address */}
-                  {analysisResults.location_info.yandex_address && (
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle2" gutterBottom>Адрес (Яндекс):</Typography>
-                      <Typography variant="body2">
-                        {analysisResults.location_info.yandex_address.formatted_address || 'Адрес не определен'}
+                  {/* Coordinates and Source */}
+                  <Grid item xs={12}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>Координаты:</Typography>
+                      <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                        {analysisResults.coordinates ? 
+                          `${analysisResults.coordinates.latitude.toFixed(6)}, ${analysisResults.coordinates.longitude.toFixed(6)}` : 
+                          'Координаты не определены'
+                        }
                       </Typography>
-                      <Chip 
-                        label={`Точность: ${Math.round((analysisResults.location_info.yandex_address.confidence || 0) * 100)}%`}
-                        size="small"
-                        color="primary"
-                        sx={{ mt: 1 }}
-                      />
+                      {analysisResults.coordinates && (
+                        <Chip 
+                          label={`Источник: ${analysisResults.coordinates.source}`}
+                          color="primary"
+                          size="small"
+                          sx={{ mr: 1 }}
+                        />
+                      )}
+                      {analysisResults.coordinates && (
+                        <Chip 
+                          label={`Точность: ${Math.round(analysisResults.coordinates.confidence * 100)}%`}
+                          variant="outlined"
+                          size="small"
+                        />
+                      )}
+                    </Box>
+                  </Grid>
+
+                  {/* Yandex Data */}
+                  {analysisResults.location_info.yandex_data && analysisResults.location_info.yandex_data.places && analysisResults.location_info.yandex_data.places.length > 0 && (
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="subtitle2" gutterBottom>Данные Яндекс:</Typography>
+                      {analysisResults.location_info.yandex_data.places.slice(0, 2).map((place, index) => (
+                        <Box key={index} sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                            {place.name}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                            {place.address}
+                          </Typography>
+                          {place.description && (
+                            <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>
+                              {place.description}
+                            </Typography>
+                          )}
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip 
+                              label={place.type || 'Место'}
+                              size="small"
+                              color="primary"
+                            />
+                            <Chip 
+                              label={place.precision || 'Точность не указана'}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Box>
+                        </Box>
+                      ))}
                     </Grid>
                   )}
                   
-                  {/* 2GIS Places */}
-                  {analysisResults.location_info.dgis_places && analysisResults.location_info.dgis_places.length > 0 && (
+                  {/* 2GIS Data */}
+                  {analysisResults.location_info.dgis_data && analysisResults.location_info.dgis_data.places && analysisResults.location_info.dgis_data.places.length > 0 && (
                     <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle2" gutterBottom>Ближайшие места (2GIS):</Typography>
-                      {analysisResults.location_info.dgis_places.slice(0, 3).map((place, index) => (
-                        <Box key={index} sx={{ mb: 1 }}>
-                          <Typography variant="body2">
-                            <strong>{place.name}</strong>
+                      <Typography variant="subtitle2" gutterBottom>Данные 2ГИС:</Typography>
+                      {analysisResults.location_info.dgis_data.places.slice(0, 2).map((place, index) => (
+                        <Box key={index} sx={{ mb: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                            {place.name}
                           </Typography>
-                          <Typography variant="caption" color="textSecondary">
+                          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
                             {place.address}
                           </Typography>
                           {place.category && (
                             <Chip 
-                              label={place.category}
+                              label={Array.isArray(place.category) ? place.category.join(', ') : place.category}
                               size="small"
-                              variant="outlined"
-                              sx={{ ml: 1 }}
+                              color="secondary"
                             />
                           )}
+                        </Box>
+                      ))}
+                    </Grid>
+                  )}
+
+                  {/* Reverse Geocoding */}
+                  {analysisResults.location_info.reverse_geocoding && analysisResults.location_info.reverse_geocoding.results && analysisResults.location_info.reverse_geocoding.results.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" gutterBottom>Обратное геокодирование:</Typography>
+                      {analysisResults.location_info.reverse_geocoding.results.slice(0, 1).map((result, index) => (
+                        <Box key={index} sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                          <Typography variant="body1" sx={{ mb: 1 }}>
+                            <strong>Адрес:</strong> {result.formatted_address}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip 
+                              label={`Тип: ${result.type}`}
+                              size="small"
+                              variant="outlined"
+                            />
+                            <Chip 
+                              label={`Точность: ${Math.round(result.confidence * 100)}%`}
+                              size="small"
+                              color="primary"
+                            />
+                            <Chip 
+                              label={`Источник: ${analysisResults.location_info.reverse_geocoding.source}`}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Box>
                         </Box>
                       ))}
                     </Grid>

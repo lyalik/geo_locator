@@ -33,8 +33,28 @@ class GoogleVisionService:
         # Инициализация Gemini
         if self.gemini_api_key:
             genai.configure(api_key=self.gemini_api_key)
-            self.model = genai.GenerativeModel(self.gemini_model)
+            # Настройка модели с отключением геолокации
+            generation_config = {
+                "temperature": 0.7,
+                "top_p": 0.8,
+                "top_k": 40,
+                "max_output_tokens": 2048,
+            }
+            safety_settings = [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            ]
+            self.model = genai.GenerativeModel(
+                model_name=self.gemini_model,
+                generation_config=generation_config,
+                safety_settings=safety_settings
+            )
             logger.info(f"🤖 Gemini initialized with model: {self.gemini_model}")
+        else:
+            logger.warning("GOOGLE_API_KEY not found in environment variables")
+            self.model = None
         
         # Инициализация архивного сервиса для улучшения анализа
         try:
@@ -44,9 +64,6 @@ class GoogleVisionService:
         except Exception as e:
             logger.warning(f"Archive service not available in Google Vision: {e}")
             self.archive_service = None
-        else:
-            logger.warning("GOOGLE_API_KEY not found in environment variables")
-            self.model = None
         
         # Инициализация Google Cloud Vision
         if self.credentials_path and os.path.exists(self.credentials_path):
@@ -117,8 +134,19 @@ class GoogleVisionService:
                 return {'success': False, 'error': 'No response from Gemini'}
                 
         except Exception as e:
-            logger.error(f"Gemini API error: {e}")
-            return {'success': False, 'error': f'Gemini analysis failed: {str(e)}'}
+            error_msg = str(e)
+            logger.error(f"Gemini API error: {error_msg}")
+            
+            # Check for location-based restrictions
+            if "location" in error_msg.lower() or "region" in error_msg.lower() or "not supported" in error_msg.lower():
+                logger.warning("🌍 Gemini API blocked due to location restrictions. Try VPN to US/UK/Canada")
+                return {
+                    'success': False,
+                    'error': 'Gemini API unavailable in this region',
+                    'suggestion': 'Try VPN to US, UK, or Canada'
+                }
+            
+            return {'success': False, 'error': f'Gemini analysis failed: {error_msg}'}
     
     def extract_text_with_vision(self, image_path: str) -> Dict[str, Any]:
         """Извлечение текста с помощью Google Cloud Vision OCR"""
