@@ -69,27 +69,53 @@ class VideoCoordinateDetector:
             coordinate_candidates = []
             
             for frame_info in frames_data['frames']:
-                frame_result = self.coordinate_detector.detect_coordinates_from_image(
-                    frame_info['path'], location_hint
-                )
-                
-                frame_result['timestamp'] = frame_info['timestamp']
-                frame_result['frame_number'] = frame_info['frame_number']
-                frame_results.append(frame_result)
-                
-                # Collect objects and coordinates
-                if frame_result['success']:
-                    objects = frame_result.get('objects', [])
-                    for obj in objects:
-                        obj['frame_number'] = frame_info['frame_number']
-                        obj['timestamp'] = frame_info['timestamp']
-                    all_objects.extend(objects)
+                try:
+                    frame_result = self.coordinate_detector.detect_coordinates_from_image(
+                        frame_info['path'], location_hint
+                    )
                     
-                    if frame_result.get('coordinates'):
-                        coord = frame_result['coordinates'].copy()
-                        coord['frame_number'] = frame_info['frame_number']
-                        coord['timestamp'] = frame_info['timestamp']
-                        coordinate_candidates.append(coord)
+                    # Ensure frame_result is a dictionary
+                    if not isinstance(frame_result, dict):
+                        logger.warning(f"Frame result is not a dict: {type(frame_result)}")
+                        frame_result = {
+                            'success': False,
+                            'error': str(frame_result),
+                            'coordinates': None,
+                            'objects': []
+                        }
+                    
+                    frame_result['timestamp'] = frame_info['timestamp']
+                    frame_result['frame_number'] = frame_info['frame_number']
+                    frame_results.append(frame_result)
+                    
+                    # Collect objects and coordinates
+                    if frame_result.get('success'):
+                        objects = frame_result.get('objects', [])
+                        if isinstance(objects, list):
+                            for obj in objects:
+                                if isinstance(obj, dict):
+                                    obj['frame_number'] = frame_info['frame_number']
+                                    obj['timestamp'] = frame_info['timestamp']
+                            all_objects.extend(objects)
+                        
+                        coordinates = frame_result.get('coordinates')
+                        if coordinates and isinstance(coordinates, dict):
+                            coord = coordinates.copy()
+                            coord['frame_number'] = frame_info['frame_number']
+                            coord['timestamp'] = frame_info['timestamp']
+                            coordinate_candidates.append(coord)
+                            
+                except Exception as e:
+                    logger.error(f"Error processing frame {frame_info['frame_number']}: {str(e)}")
+                    frame_result = {
+                        'success': False,
+                        'error': str(e),
+                        'coordinates': None,
+                        'objects': [],
+                        'timestamp': frame_info['timestamp'],
+                        'frame_number': frame_info['frame_number']
+                    }
+                    frame_results.append(frame_result)
             
             # Determine best coordinates from all frames
             best_coordinates = self._determine_best_coordinates(coordinate_candidates)
@@ -211,61 +237,82 @@ class VideoCoordinateDetector:
     
     def _determine_best_coordinates(self, coordinate_candidates: List[Dict]) -> Optional[Dict[str, Any]]:
         """Determine the best coordinates from multiple frame results."""
-        if not coordinate_candidates:
+        try:
+            if not coordinate_candidates:
+                logger.info("No coordinate candidates found")
+                return None
+            
+            logger.info(f"Processing {len(coordinate_candidates)} coordinate candidates")
+            
+            # Group coordinates by source and calculate confidence
+            source_groups = {}
+            for coord in coordinate_candidates:
+                if not isinstance(coord, dict):
+                    logger.warning(f"Invalid coordinate candidate: {type(coord)}")
+                    continue
+                    
+                source = coord.get('source', 'unknown')
+                if source not in source_groups:
+                    source_groups[source] = []
+                source_groups[source].append(coord)
+            
+            if not source_groups:
+                logger.warning("No valid coordinate groups found")
+                return None
+            
+            # Find most reliable source
+            best_source = None
+            best_score = 0
+            
+            for source, coords in source_groups.items():
+                # Calculate average confidence and consistency
+                confidences = [c.get('confidence', 0) for c in coords]
+                avg_confidence = sum(confidences) / len(confidences)
+                
+                # Calculate coordinate consistency (lower standard deviation is better)
+                lats = [c.get('latitude', 0) for c in coords]
+                lons = [c.get('longitude', 0) for c in coords]
+                
+                lat_std = np.std(lats) if len(lats) > 1 else 0
+                lon_std = np.std(lons) if len(lons) > 1 else 0
+                
+                # Consistency score (lower std deviation = higher consistency)
+                consistency_score = 1.0 / (1.0 + lat_std + lon_std)
+                
+                # Combined score
+                score = avg_confidence * consistency_score * len(coords)
+                
+                if score > best_score:
+                    best_score = score
+                    best_source = source
+            
+            if not best_source:
+                return coordinate_candidates[0]  # Fallback to first result
+            
+            # Return average coordinates from best source
+            best_coords = source_groups[best_source]
+            avg_lat = sum(c.get('latitude', 0) for c in best_coords) / len(best_coords)
+            avg_lon = sum(c.get('longitude', 0) for c in best_coords) / len(best_coords)
+            avg_confidence = sum(c.get('confidence', 0) for c in best_coords) / len(best_coords)
+            
+            logger.info(f"Best coordinates from {best_source}: {avg_lat:.6f}, {avg_lon:.6f} (confidence: {avg_confidence:.2f})")
+            
+            return {
+                'latitude': avg_lat,
+                'longitude': avg_lon,
+                'confidence': avg_confidence,
+                'source': best_source,
+                'frame_count': len(best_coords),
+                'consistency_score': 1.0 / (1.0 + np.std([c.get('latitude', 0) for c in best_coords]) + 
+                                          np.std([c.get('longitude', 0) for c in best_coords]))
+            }
+            
+        except Exception as e:
+            logger.error(f"Error determining best coordinates: {str(e)}")
+            # Return first valid coordinate as fallback
+            if coordinate_candidates:
+                return coordinate_candidates[0]
             return None
-        
-        # Group coordinates by source and calculate confidence
-        source_groups = {}
-        for coord in coordinate_candidates:
-            source = coord.get('source', 'unknown')
-            if source not in source_groups:
-                source_groups[source] = []
-            source_groups[source].append(coord)
-        
-        # Find most reliable source
-        best_source = None
-        best_score = 0
-        
-        for source, coords in source_groups.items():
-            # Calculate average confidence and consistency
-            confidences = [c.get('confidence', 0) for c in coords]
-            avg_confidence = sum(confidences) / len(confidences)
-            
-            # Calculate coordinate consistency (lower standard deviation is better)
-            lats = [c.get('latitude', 0) for c in coords]
-            lons = [c.get('longitude', 0) for c in coords]
-            
-            lat_std = np.std(lats) if len(lats) > 1 else 0
-            lon_std = np.std(lons) if len(lons) > 1 else 0
-            
-            # Consistency score (lower std deviation = higher consistency)
-            consistency_score = 1.0 / (1.0 + lat_std + lon_std)
-            
-            # Combined score
-            score = avg_confidence * consistency_score * len(coords)
-            
-            if score > best_score:
-                best_score = score
-                best_source = source
-        
-        if not best_source:
-            return coordinate_candidates[0]  # Fallback to first result
-        
-        # Return average coordinates from best source
-        best_coords = source_groups[best_source]
-        avg_lat = sum(c.get('latitude', 0) for c in best_coords) / len(best_coords)
-        avg_lon = sum(c.get('longitude', 0) for c in best_coords) / len(best_coords)
-        avg_confidence = sum(c.get('confidence', 0) for c in best_coords) / len(best_coords)
-        
-        return {
-            'latitude': avg_lat,
-            'longitude': avg_lon,
-            'confidence': avg_confidence,
-            'source': best_source,
-            'frame_count': len(best_coords),
-            'consistency_score': 1.0 / (1.0 + np.std([c.get('latitude', 0) for c in best_coords]) + 
-                                      np.std([c.get('longitude', 0) for c in best_coords]))
-        }
     
     def _aggregate_object_statistics(self, all_objects: List[Dict]) -> Dict[str, Any]:
         """Aggregate statistics about detected objects across all frames."""

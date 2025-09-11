@@ -38,7 +38,8 @@ import {
   Schedule as ScheduleIcon,
   ExpandMore as ExpandMoreIcon,
   Info as InfoIcon,
-  Map as MapIcon
+  Map as MapIcon,
+  LocationOff as LocationOffIcon
 } from '@mui/icons-material';
 import { videoAnalysis } from '../services/api';
 
@@ -238,7 +239,7 @@ const VideoAnalyzer = () => {
           });
         }, 1000);
 
-        const response = await videoAnalysis.analyze(
+        const response = await videoAnalysis.analyzeVideo(
           selectedFile,
           locationHint,
           frameInterval,
@@ -491,56 +492,126 @@ const VideoAnalyzer = () => {
             Результаты анализа
           </Typography>
 
-          {/* Summary Card */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Сводка</Typography>
-              
-              <Grid container spacing={3}>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="textSecondary">Обработано кадров</Typography>
-                  <Typography variant="h6">{analysisResults.total_frames_processed}</Typography>
+          {/* Coordinates Results Card */}
+          {analysisResults.coordinates && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  📍 Найденные координаты
+                </Typography>
+                
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ p: 2, bgcolor: 'success.light', borderRadius: 1, mb: 2 }}>
+                      <Typography variant="h6" color="success.contrastText" gutterBottom>
+                        {analysisResults.coordinates.latitude.toFixed(6)}, {analysisResults.coordinates.longitude.toFixed(6)}
+                      </Typography>
+                      <Typography variant="body2" color="success.contrastText">
+                        Точность: {Math.round(analysisResults.coordinates.confidence * 100)}% • 
+                        Источник: {analysisResults.coordinates.source} • 
+                        Кадров: {analysisResults.coordinates.frame_count}
+                      </Typography>
+                    </Box>
+                    
+                    <Typography variant="subtitle2" gutterBottom>Открыть на картах:</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      <Chip 
+                        label="Яндекс Карты"
+                        clickable
+                        color="primary"
+                        onClick={() => {
+                          const { latitude, longitude } = analysisResults.coordinates;
+                          window.open(`https://yandex.ru/maps/?ll=${longitude},${latitude}&z=16&l=map`, '_blank');
+                        }}
+                      />
+                      <Chip 
+                        label="2ГИС"
+                        clickable
+                        variant="outlined"
+                        onClick={() => {
+                          const { latitude, longitude } = analysisResults.coordinates;
+                          window.open(`https://2gis.ru/geo/${latitude},${longitude}/zoom/16`, '_blank');
+                        }}
+                      />
+                      <Chip 
+                        label="OpenStreetMap"
+                        clickable
+                        variant="outlined"
+                        onClick={() => {
+                          const { latitude, longitude } = analysisResults.coordinates;
+                          window.open(`https://www.openstreetmap.org/#map=16/${latitude}/${longitude}`, '_blank');
+                        }}
+                      />
+                      <Chip 
+                        label="Google Maps"
+                        clickable
+                        variant="outlined"
+                        onClick={() => {
+                          const { latitude, longitude } = analysisResults.coordinates;
+                          window.open(`https://www.google.com/maps/@${latitude},${longitude},16z`, '_blank');
+                        }}
+                      />
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" gutterBottom>Статистика анализа:</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2">Обработано кадров:</Typography>
+                        <Typography variant="body2" fontWeight="bold">{analysisResults.total_frames_processed}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2">Успешных кадров:</Typography>
+                        <Typography variant="body2" fontWeight="bold" color="success.main">
+                          {analysisResults.successful_frames}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2">Объектов найдено:</Typography>
+                        <Typography variant="body2" fontWeight="bold">{analysisResults.total_objects_detected}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2">Время анализа:</Typography>
+                        <Typography variant="body2" fontWeight="bold">
+                          {analysisResults.processing_time ? `${analysisResults.processing_time.toFixed(1)}с` : 'N/A'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="textSecondary">Успешных кадров</Typography>
-                  <Typography variant="h6" color="success.main">
-                    {analysisResults.successful_frames}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="textSecondary">Объектов найдено</Typography>
-                  <Typography variant="h6">{analysisResults.total_objects_detected}</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="textSecondary">Точность координат</Typography>
-                  <Typography variant="h6" color="primary">
-                    {analysisResults.coordinates ? 
-                      `${Math.round(analysisResults.coordinates.confidence * 100)}%` : 'N/A'}
-                  </Typography>
-                </Grid>
-              </Grid>
+              </CardContent>
+            </Card>
+          )}
 
-              {analysisResults.coordinates && (
-                <Box sx={{ mt: 2 }}>
-                  <Chip
-                    icon={<LocationOnIcon />}
-                    label={`${analysisResults.coordinates.latitude.toFixed(6)}, ${analysisResults.coordinates.longitude.toFixed(6)}`}
-                    color="primary"
-                    sx={{ mr: 1 }}
-                  />
-                  <Chip
-                    label={`Источник: ${analysisResults.coordinates.source}`}
-                    variant="outlined"
-                    sx={{ mr: 1 }}
-                  />
-                  <Chip
-                    label={`Кадров: ${analysisResults.coordinates.frame_count}`}
-                    variant="outlined"
-                  />
+          {/* No Coordinates Found */}
+          {!analysisResults.coordinates && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <LocationOffIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Координаты не найдены
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                    Не удалось определить местоположение по видео. 
+                    Попробуйте видео с более четкими ориентирами или добавьте подсказку о местоположении.
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="textSecondary">Обработано кадров</Typography>
+                      <Typography variant="h6">{analysisResults.total_frames_processed}</Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="textSecondary">Объектов найдено</Typography>
+                      <Typography variant="h6">{analysisResults.total_objects_detected}</Typography>
+                    </Box>
+                  </Box>
                 </Box>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Object Statistics */}
           {analysisResults.object_statistics && (

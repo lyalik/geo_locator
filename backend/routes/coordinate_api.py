@@ -4,7 +4,7 @@ import logging
 from werkzeug.utils import secure_filename
 from services.coordinate_detector import CoordinateDetector
 from services.video_coordinate_detector import VideoCoordinateDetector
-from models import db, Photo, Violation
+from models import db, Photo, Violation, DetectedObject
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -419,8 +419,12 @@ def analyze_video():
             if coordinates:
                 try:
                     # Create photo record for video
+                    # Use a default user_id of 1 for video analysis (or get from session if available)
+                    user_id = getattr(request, 'user_id', 1)  # Default to user 1
+                    
                     photo = Photo(
                         file_path=file_path,
+                        user_id=user_id,
                         lat=coordinates['latitude'],
                         lon=coordinates['longitude'],
                         address_data={
@@ -456,10 +460,27 @@ def analyze_video():
                     logger.error(f"Error saving video analysis to database: {str(e)}")
                     db.session.rollback()
         
+        # Clean result from non-serializable objects recursively
+        def clean_for_json(obj):
+            """Recursively clean object for JSON serialization"""
+            if isinstance(obj, bytes):
+                return f"<bytes object of length {len(obj)}>"
+            elif isinstance(obj, dict):
+                return {k: clean_for_json(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_for_json(item) for item in obj]
+            elif hasattr(obj, '__dict__'):
+                # Handle custom objects by converting to dict
+                return clean_for_json(obj.__dict__)
+            else:
+                return obj
+        
+        clean_result = clean_for_json(result)
+        
         return jsonify({
             'success': result['success'],
             'message': f"Analyzed video with {result.get('total_frames_processed', 0)} frames" if result['success'] else 'Video analysis failed',
-            'data': result,
+            'data': clean_result,
             'error': result.get('error')
         })
         
