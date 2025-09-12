@@ -14,7 +14,8 @@ from PIL import Image
 import io
 
 from .yandex_maps_service import YandexMapsService
-from .yolo_violation_detector import YOLOViolationDetector
+from .dgis_panorama_service import DGISPanoramaService
+from .yolo_violation_detector import YOLOObjectDetector
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,8 @@ class PanoramaAnalyzer:
     
     def __init__(self, yandex_service: YandexMapsService = None):
         self.yandex_service = yandex_service or YandexMapsService()
-        self.yolo_detector = YOLOViolationDetector()
+        self.dgis_service = DGISPanoramaService()
+        self.yolo_detector = YOLOObjectDetector()
         
     def analyze_location_with_panoramas(self, 
                                       target_image_path: str, 
@@ -47,18 +49,33 @@ class PanoramaAnalyzer:
         try:
             logger.info(f"🔍 Starting panorama analysis for {lat}, {lon}")
             
-            # 1. Поиск ближайших панорам
-            panoramas_result = self.yandex_service.get_panorama_nearby(lat, lon, search_radius)
+            # 1. Поиск ближайших панорам из разных источников
+            all_panoramas = []
             
-            if not panoramas_result.get('success') or not panoramas_result.get('panoramas'):
-                logger.warning("No panoramas found in the area")
+            # Поиск панорам Yandex
+            yandex_result = self.yandex_service.get_panorama_nearby(lat, lon, search_radius)
+            if yandex_result.get('success') and yandex_result.get('panoramas'):
+                all_panoramas.extend(yandex_result['panoramas'])
+                logger.info(f"📍 Found {len(yandex_result['panoramas'])} Yandex panoramas")
+            
+            # Поиск панорам 2GIS
+            dgis_result = self.dgis_service.get_panorama_nearby(lat, lon, search_radius)
+            if dgis_result.get('success') and dgis_result.get('panoramas'):
+                all_panoramas.extend(dgis_result['panoramas'])
+                logger.info(f"📍 Found {len(dgis_result['panoramas'])} 2GIS panoramas")
+            
+            if not all_panoramas:
+                logger.warning("No panoramas found from any source")
                 return {
                     'success': False,
-                    'message': 'No panoramas available in the area',
-                    'panoramas_found': 0
+                    'message': 'No panoramas available in the area from any source',
+                    'panoramas_found': 0,
+                    'sources_checked': ['yandex', '2gis']
                 }
             
-            panoramas = panoramas_result['panoramas']
+            # Сортируем все панорамы по расстоянию
+            all_panoramas.sort(key=lambda x: x.get('distance', float('inf')))
+            panoramas = all_panoramas
             logger.info(f"📸 Found {len(panoramas)} panoramas to analyze")
             
             # 2. Анализ целевого изображения
@@ -99,9 +116,14 @@ class PanoramaAnalyzer:
                         'longitude': best_match['longitude']
                     },
                     'panorama_id': best_match['panorama_id'],
+                    'panorama_source': best_match.get('panorama_source', 'unknown'),
                     'matched_objects': best_match['matched_objects'],
                     'panoramas_analyzed': len(panorama_matches),
                     'total_panoramas_found': len(panoramas),
+                    'sources_used': {
+                        'yandex': len([p for p in panoramas if p.get('source') != '2gis']),
+                        '2gis': len([p for p in panoramas if p.get('source') == '2gis'])
+                    },
                     'analysis_details': {
                         'target_objects': len(target_objects),
                         'panorama_objects': best_match.get('panorama_objects', 0),
@@ -132,16 +154,16 @@ class PanoramaAnalyzer:
         """
         try:
             # Используем YOLO для детекции объектов
-            results = self.yolo_detector.detect_violations(image_path)
+            results = self.yolo_detector.detect_objects(image_path)
             
             objects = []
-            if results.get('success') and results.get('violations'):
-                for violation in results['violations']:
+            if results.get('success') and results.get('objects'):
+                for obj in results['objects']:
                     objects.append({
-                        'class': violation.get('category', 'unknown'),
-                        'confidence': violation.get('confidence', 0),
-                        'bbox': violation.get('bbox', {}),
-                        'area': self._calculate_bbox_area(violation.get('bbox', {}))
+                        'class': obj.get('category', 'unknown'),
+                        'confidence': obj.get('confidence', 0),
+                        'bbox': obj.get('bbox', {}),
+                        'area': self._calculate_bbox_area(obj.get('bbox', {}))
                     })
             
             # Сортируем по уверенности и размеру
@@ -163,7 +185,7 @@ class PanoramaAnalyzer:
         """
         try:
             # Скачиваем изображение панорамы
-            panorama_image_path = self._download_panorama_image(panorama['image_url'])
+            panorama_image_path = self._download_panorama_image(panorama)
             
             if not panorama_image_path:
                 return {'success': False, 'error': 'Failed to download panorama'}
@@ -193,6 +215,7 @@ class PanoramaAnalyzer:
                     'latitude': panorama['latitude'],
                     'longitude': panorama['longitude'],
                     'confidence': combined_confidence,
+                    'panorama_source': panorama.get('source', 'yandex'),
                     'matched_objects': matches,
                     'panorama_objects': len(panorama_objects),
                     'similarity_score': similarity_score,
@@ -208,11 +231,28 @@ class PanoramaAnalyzer:
             logger.error(f"Error analyzing panorama match: {e}")
             return {'success': False, 'error': str(e)}
     
-    def _download_panorama_image(self, image_url: str) -> Optional[str]:
+    def _download_panorama_image(self, panorama: Dict[str, Any]) -> Optional[str]:
         """
         Скачивание изображения панорамы во временный файл
+        Поддерживает разные источники (Yandex, 2GIS)
         """
         try:
+            image_url = None
+            
+            # Определяем URL изображения в зависимости от источника
+            if panorama.get('source') == '2gis':
+                # Для 2GIS используем первое фото из списка
+                if panorama.get('photos') and len(panorama['photos']) > 0:
+                    image_url = panorama['photos'][0].get('url')
+            else:
+                # Для Yandex используем стандартный image_url
+                image_url = panorama.get('image_url')
+            
+            if not image_url:
+                logger.warning(f"No image URL found for panorama from {panorama.get('source', 'unknown')}")
+                return None
+            
+            logger.info(f"📥 Downloading panorama from {panorama.get('source', 'unknown')}: {image_url}")
             response = requests.get(image_url, timeout=15)
             response.raise_for_status()
             
@@ -222,7 +262,7 @@ class PanoramaAnalyzer:
                 return tmp_file.name
                 
         except Exception as e:
-            logger.error(f"Error downloading panorama image: {e}")
+            logger.error(f"Error downloading panorama image from {panorama.get('source', 'unknown')}: {e}")
             return None
     
     def _compare_objects(self, 

@@ -176,20 +176,20 @@ const ViolationUploader = ({ onUploadComplete }) => {
         if (data.data && data.data.violations) {
           console.log('🔧 Processing violations from data.data.violations');
           const allViolations = data.data.violations;
-          const googleViolations = allViolations.filter(v => v.source === 'google_vision');
+          const googleViolations = allViolations.filter(v => v.source === 'mistral_ai');
           const yoloViolations = allViolations.filter(v => v.source === 'yolo' || !v.source);
           
           console.log('🔧 All violations:', allViolations);
-          console.log('🔧 Google Vision violations after filter:', googleViolations);
+          console.log('🔧 Mistral AI violations after filter:', googleViolations);
           console.log('🔧 YOLO violations after filter:', yoloViolations);
           
           if (googleViolations.length > 0) {
-            console.log('🤖 Google Vision обнаружил нарушения:', googleViolations);
+            console.log('🤖 Mistral AI обнаружил нарушения:', googleViolations);
             googleViolations.forEach(violation => {
               console.log(`- ${violation.category}: ${violation.description} (${Math.round(violation.confidence * 100)}%)`);
             });
           } else {
-            console.log('❌ Google Vision нарушения не найдены после фильтрации');
+            console.log('❌ Mistral AI нарушения не найдены после фильтрации');
           }
           
           if (yoloViolations.length > 0) {
@@ -199,7 +199,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
             });
           }
           
-          console.log(`📊 Итого: Google Vision: ${googleViolations.length}, YOLO: ${yoloViolations.length}`);
+          console.log(`📊 Итого: Mistral AI: ${googleViolations.length}, YOLO: ${yoloViolations.length}`);
         } else {
           console.log('❌ Нет violations в data.data');
         }
@@ -336,7 +336,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
         Анализ нарушений с ИИ
       </Typography>
       <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-        🤖 Google Vision + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация (до 50 фото)
+        🤖 Mistral AI + 🎯 YOLO + 🛰️ Спутниковый анализ + 📍 Геолокация (до 50 фото)
       </Typography>
       
       
@@ -461,7 +461,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                           disabled
                         />
                       }
-                      label="🤖 Google Vision AI анализ"
+                      label="🤖 Mistral AI анализ"
                     />
                   </Grid>
                   <Grid item xs={6}>
@@ -699,14 +699,14 @@ const ViolationUploader = ({ onUploadComplete }) => {
                               
                               {/* Показываем статистику по источникам ИИ */}
                               {result.violations && result.violations.length > 0 && (() => {
-                                const googleCount = result.violations.filter(v => v.source === 'google_vision').length;
+                                const googleCount = result.violations.filter(v => v.source === 'mistral_ai').length;
                                 const yoloCount = result.violations.filter(v => v.source === 'yolo' || !v.source).length;
                                 
                                 return (
                                   <>
                                     {googleCount > 0 && (
                                       <Chip 
-                                        label={`🤖 Google Vision: ${googleCount}`}
+                                        label={`🤖 Mistral AI: ${googleCount}`}
                                         color="secondary"
                                         size="small"
                                         sx={{ mr: 1, fontSize: '0.75rem' }}
@@ -742,7 +742,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                 </Typography>
                                 {result.violations.map((violation, vIndex) => {
                                   // Определяем источник детекции
-                                  const isGoogleVision = violation.source === 'google_vision';
+                                  const isGoogleVision = violation.source === 'mistral_ai';
                                   const isYOLO = violation.source === 'yolo' || !violation.source;
                                   
                                   return (
@@ -753,7 +753,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                         </Typography>
                                         {isGoogleVision && (
                                           <Chip 
-                                            label="🤖 Google Vision" 
+                                            label="🤖 Mistral AI" 
                                             size="small" 
                                             color="secondary"
                                             sx={{ fontSize: '0.7rem', height: 18 }}

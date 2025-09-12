@@ -11,6 +11,10 @@ import requests
 import json
 from datetime import datetime
 
+# Import AI services
+from .mistral_ocr_service import MistralOCRService
+from .panorama_analyzer_service import PanoramaAnalyzer
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +27,10 @@ class EnhancedCoordinateDetector:
     
     def __init__(self):
         self.geocoder = Nominatim(user_agent="geo_locator_enhanced")
+        
+        # Initialize AI services
+        self.mistral_ocr = MistralOCRService()
+        self.panorama_analyzer = PanoramaAnalyzer()
         
         # Приоритетные регионы для России
         self.russia_bounds = {
@@ -47,7 +55,7 @@ class EnhancedCoordinateDetector:
             'panorama_analysis': 0.95,  # Анализ панорам - очень высокий приоритет
             'location_hint': 0.9,       # Подсказка пользователя
             'yandex_maps': 0.85,        # Яндекс Карты
-            'google_vision': 0.8,       # Google Vision API
+            'mistral_ocr': 0.8,         # Mistral AI OCR
             'dgis': 0.8,               # 2GIS
             'nominatim': 0.7,          # OpenStreetMap Nominatim
             'image_similarity': 0.6,    # Сходство изображений
@@ -88,16 +96,16 @@ class EnhancedCoordinateDetector:
                     })
                     logger.info(f"✅ Location hint geocoded: {hint_coords}")
             
-            # 3. Анализ изображения для извлечения текстовых подсказок
-            text_coords = self._extract_coordinates_from_image_text(image_path)
-            if text_coords:
+            # 3. Анализ изображения для извлечения текстовых подсказок с Mistral AI
+            mistral_coords = self._extract_coordinates_with_mistral(image_path)
+            if mistral_coords:
                 coordinate_candidates.append({
-                    'coordinates': text_coords,
-                    'source': 'image_text',
-                    'confidence': 0.7,
-                    'weight': 0.75
+                    'coordinates': mistral_coords,
+                    'source': 'mistral_ocr',
+                    'confidence': 0.75,
+                    'weight': self.source_weights['mistral_ocr']
                 })
-                logger.info(f"✅ Coordinates from image text: {text_coords}")
+                logger.info(f"✅ Coordinates from Mistral OCR: {mistral_coords}")
             
             # 4. Анализ панорам (если есть примерные координаты)
             if coordinate_candidates:
@@ -372,4 +380,63 @@ class EnhancedCoordinateDetector:
             return None
         except Exception as e:
             logger.error(f"Error in panorama analysis: {e}")
+            return None
+    
+    def _extract_coordinates_with_mistral(self, image_path: str) -> Optional[Dict[str, float]]:
+        """
+        Извлечение координат из изображения с помощью Mistral AI OCR
+        """
+        try:
+            logger.info("🤖 Analyzing image with Mistral AI OCR...")
+            
+            # Используем Mistral OCR для извлечения адресной информации
+            ocr_result = self.mistral_ocr.extract_text_and_addresses(image_path)
+            
+            if not ocr_result.get('success'):
+                logger.info(f"Mistral OCR failed: {ocr_result.get('error', 'Unknown error')}")
+                return None
+            
+            # Извлекаем адресную информацию
+            address_info = ocr_result.get('address_info', {})
+            
+            # Пробуем найти координаты в извлеченной информации
+            coordinates = address_info.get('coordinates')
+            if coordinates and coordinates.get('latitude') and coordinates.get('longitude'):
+                logger.info(f"✅ Found coordinates in Mistral OCR: {coordinates}")
+                return {
+                    'latitude': float(coordinates['latitude']),
+                    'longitude': float(coordinates['longitude'])
+                }
+            
+            # Если прямых координат нет, пробуем геокодировать адрес
+            full_address = address_info.get('full_address')
+            if full_address:
+                logger.info(f"🔍 Geocoding address from Mistral OCR: {full_address}")
+                geocoded = self._geocode_location_hint(full_address)
+                if geocoded:
+                    logger.info(f"✅ Geocoded Mistral address: {geocoded}")
+                    return geocoded
+            
+            # Пробуем отдельные компоненты адреса
+            address_components = []
+            if address_info.get('street'):
+                address_components.append(address_info['street'])
+            if address_info.get('city'):
+                address_components.append(address_info['city'])
+            if address_info.get('region'):
+                address_components.append(address_info['region'])
+            
+            if address_components:
+                combined_address = ', '.join(address_components)
+                logger.info(f"🔍 Geocoding combined address: {combined_address}")
+                geocoded = self._geocode_location_hint(combined_address)
+                if geocoded:
+                    logger.info(f"✅ Geocoded combined address: {geocoded}")
+                    return geocoded
+            
+            logger.info("No usable address information found in Mistral OCR result")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error in Mistral OCR coordinate extraction: {e}")
             return None
