@@ -176,6 +176,80 @@ class YandexMapsService:
             logger.error(f"Unexpected error in Yandex geocoding: {e}")
             return {'success': False, 'error': str(e), 'source': 'yandex_geocoder'}
     
+    def get_panorama_nearby(self, lat: float, lon: float, radius: int = 200) -> Dict[str, Any]:
+        """
+        Поиск панорам рядом с указанными координатами
+        """
+        try:
+            url = "https://api-maps.yandex.ru/services/panoramas/1.x/"
+            params = {
+                'apikey': self.api_key,
+                'll': f"{lon},{lat}",
+                'spn': f"{radius/111000},{radius/111000}",  # Конвертируем метры в градусы
+                'format': 'json',
+                'lang': 'ru_RU'
+            }
+            
+            logger.info(f"🔍 Searching panoramas near {lat}, {lon} within {radius}m")
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            panoramas = []
+            
+            if 'panoramas' in data:
+                for pano in data['panoramas']:
+                    pano_info = {
+                        'id': pano.get('id'),
+                        'latitude': float(pano.get('Point', {}).get('coordinates', [0, 0])[1]),
+                        'longitude': float(pano.get('Point', {}).get('coordinates', [0, 0])[0]),
+                        'direction': pano.get('direction', 0),
+                        'tilt': pano.get('tilt', 0),
+                        'zoom': pano.get('zoom', 1),
+                        'image_url': f"https://api-maps.yandex.ru/services/panoramas/1.x/?panorama[id]={pano.get('id')}&panorama[direction]={pano.get('direction', 0)}&panorama[tilt]={pano.get('tilt', 0)}&panorama[zoom]=1&size=1024x512&apikey={self.api_key}",
+                        'date': pano.get('date', ''),
+                        'address': pano.get('address', ''),
+                        'distance': self._calculate_distance(lat, lon, 
+                                                           float(pano.get('Point', {}).get('coordinates', [0, 0])[1]),
+                                                           float(pano.get('Point', {}).get('coordinates', [0, 0])[0]))
+                    }
+                    panoramas.append(pano_info)
+            
+            # Сортируем по расстоянию
+            panoramas.sort(key=lambda x: x['distance'])
+            
+            logger.info(f"✅ Found {len(panoramas)} panoramas")
+            return {
+                'success': True,
+                'source': 'yandex_panorama',
+                'count': len(panoramas),
+                'panoramas': panoramas[:5]  # Ограничиваем до 5 ближайших
+            }
+            
+        except requests.RequestException as e:
+            logger.error(f"Yandex panorama search error: {e}")
+            return {'success': False, 'error': str(e), 'source': 'yandex_panorama'}
+        except Exception as e:
+            logger.error(f"Unexpected error in panorama search: {e}")
+            return {'success': False, 'error': str(e), 'source': 'yandex_panorama'}
+    
+    def _calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """
+        Вычисление расстояния между двумя точками в метрах
+        """
+        import math
+        
+        R = 6371000  # Радиус Земли в метрах
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        
+        a = math.sin(delta_phi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+        
+        return R * c
+    
     def search(self, query: str) -> Dict[str, Any]:
         """
         Универсальный поиск (включая кадастровые номера)

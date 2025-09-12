@@ -177,3 +177,504 @@ INFO:werkzeug:127.0.0.1 - - [12/Sep/2025 17:06:42] "GET /api/violations/list HTT
 INFO:app:📊 Database - Retrieved 86 violations from database
 INFO:werkzeug:127.0.0.1 - - [12/Sep/2025 17:06:42] "GET /api/violations/list HTTP/1.1" 200 -
 INFO:werkzeug:127.0.0.1 - - [12/Sep/2025 17:06:44] "[33mGET /logo192.png HTTP/1.1[0m" 404 -
+INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/yandex_maps_service.py', reloading
+✅ Maps API registered successfully
+Warning: YOLOViolationDetector not available: cannot import name 'YOLOViolationDetector' from 'services.yolo_violation_detector' (/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/yolo_violation_detector.py)
+✅ Violation API registered successfully
+✅ Geo API registered successfully
+✅ Cache API registered successfully
+✅ Rosreestr API registered successfully
+✅ OpenStreetMap API registered successfully
+❌ Sentinel API registration failed: attempted relative import beyond top-level package
+✅ Satellite API registered successfully
+✅ OCR API registered successfully
+✅ Notification API registered successfully
+✅ Coordinate API registered successfully
+✅ Object Group API registered successfully
+🚀 Starting Geo Locator Backend (Local Development)
+==================================================
+✅ PostgreSQL connection successful
+✅ Redis connection successful
+✅ Database tables created successfully
+
+🎉 All checks passed! Starting Flask development server...
+📍 Backend will be available at: http://localhost:5001
+📍 API endpoints at: http://localhost:5001/api/
+
+Press Ctrl+C to stop the server
+==================================================
+INFO:werkzeug: * Restarting with stat
+INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+WARNING:services.mistral_ai_service:MISTRAL_API_KEY not found in environment variables
+INFO:routes.geo_api:Geo services initialized successfully
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-291-728
+INFO:werkzeug:127.0.0.1 - - [12/Sep/2025 17:12:17] "OPTIONS /api/object-groups/analyze HTTP/1.1" 200 -
+INFO:routes.object_group_api:📥 Object group analysis request - files: 5, form: ['objects', 'location_hint']
+INFO:routes.object_group_api:🔍 Processing object: 123 with 5 files
+INFO:routes.object_group_api:🎯 Analyzing object group: 123 (5 files)
+INFO:services.enhanced_coordinate_detector:🔍 Enhanced coordinate detection for: /home/denis/Documents/Hackathon_2025/geo_locator/backend/uploads/object_groups/1757686011550_photo_2025-09-09_14-18-53.jpg
+INFO:services.enhanced_coordinate_detector:📍 Location hint: Краснодар улица тополиная
+INFO:services.enhanced_coordinate_detector:🚫 Skipping default city coordinates - need real image analysis
+WARNING:services.enhanced_coordinate_detector:⚠️ No valid coordinates found - returning None instead of default
+INFO:services.coordinate_detector:Detected and cached 5 objects
+ERROR:services.google_vision_service:Gemini API error: 400 User location is not supported for the API use.
+WARNING:services.google_vision_service:🌍 Gemini API blocked due to location restrictions. Try VPN to US/UK/Canada
+INFO:services.coordinate_detector:🗺️ Location hint received: 'Краснодар улица тополиная' (type: <class 'str'>, bool: True)
+INFO:services.coordinate_detector:🗺️ Processing location hint: 'Краснодар улица тополиная'
+INFO:services.geo_aggregator_service:Starting geolocation for image: /home/denis/Documents/Hackathon_2025/geo_locator/backend/uploads/object_groups/1757686011550_photo_2025-09-09_14-18-53.jpg
+INFO:services.geo_aggregator_service:Yandex found 3 places
+INFO:services.osm_overpass_service:Executing OSM Overpass query to https://overpass-api.de/api/interpreter
+INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/enhanced_coordinate_detector.py', reloading
+✅ Maps API registered successfully
+Warning: YOLOViolationDetector not available: cannot import name 'YOLOViolationDetector' from 'services.yolo_violation_detector' (/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/yolo_violation_detector.py)
+✅ Violation API registered successfully
+✅ Geo API registered successfully
+✅ Cache API registered successfully
+✅ Rosreestr API registered successfully
+✅ OpenStreetMap API registered successfully
+❌ Sentinel API registration failed: attempted relative import beyond top-level package
+✅ Satellite API registered successfully
+✅ OCR API registered successfully
+✅ Notification API registered successfully
+✅ Coordinate API registered successfully
+✅ Object Group API registered successfully
+🚀 Starting Geo Locator Backend (Local Development)
+==================================================
+✅ PostgreSQL connection successful
+✅ Redis connection successful
+✅ Database tables created successfully
+
+🎉 All checks passed! Starting Flask development server...
+📍 Backend will be available at: http://localhost:5001
+📍 API endpoints at: http://localhost:5001/api/
+
+Press Ctrl+C to stop the server
+==================================================
+INFO:werkzeug: * Restarting with stat
+INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+WARNING:services.mistral_ai_service:MISTRAL_API_KEY not found in environment variables
+INFO:routes.geo_api:Geo services initialized successfully
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-291-728
+INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/enhanced_coordinate_detector.py', reloading
+✅ Maps API registered successfully
+Warning: YOLOViolationDetector not available: cannot import name 'YOLOViolationDetector' from 'services.yolo_violation_detector' (/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/yolo_violation_detector.py)
+✅ Violation API registered successfully
+✅ Geo API registered successfully
+✅ Cache API registered successfully
+✅ Rosreestr API registered successfully
+✅ OpenStreetMap API registered successfully
+❌ Sentinel API registration failed: attempted relative import beyond top-level package
+✅ Satellite API registered successfully
+✅ OCR API registered successfully
+✅ Notification API registered successfully
+✅ Coordinate API registered successfully
+✅ Object Group API registered successfully
+🚀 Starting Geo Locator Backend (Local Development)
+==================================================
+✅ PostgreSQL connection successful
+✅ Redis connection successful
+✅ Database tables created successfully
+
+🎉 All checks passed! Starting Flask development server...
+📍 Backend will be available at: http://localhost:5001
+📍 API endpoints at: http://localhost:5001/api/
+
+Press Ctrl+C to stop the server
+==================================================
+INFO:werkzeug: * Restarting with stat
+INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+WARNING:services.mistral_ai_service:MISTRAL_API_KEY not found in environment variables
+INFO:routes.geo_api:Geo services initialized successfully
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-291-728
+INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/enhanced_coordinate_detector.py', reloading
+✅ Maps API registered successfully
+Warning: YOLOViolationDetector not available: cannot import name 'YOLOViolationDetector' from 'services.yolo_violation_detector' (/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/yolo_violation_detector.py)
+✅ Violation API registered successfully
+✅ Geo API registered successfully
+✅ Cache API registered successfully
+✅ Rosreestr API registered successfully
+✅ OpenStreetMap API registered successfully
+❌ Sentinel API registration failed: attempted relative import beyond top-level package
+✅ Satellite API registered successfully
+✅ OCR API registered successfully
+✅ Notification API registered successfully
+✅ Coordinate API registered successfully
+✅ Object Group API registered successfully
+🚀 Starting Geo Locator Backend (Local Development)
+==================================================
+✅ PostgreSQL connection successful
+✅ Redis connection successful
+✅ Database tables created successfully
+
+🎉 All checks passed! Starting Flask development server...
+📍 Backend will be available at: http://localhost:5001
+📍 API endpoints at: http://localhost:5001/api/
+
+Press Ctrl+C to stop the server
+==================================================
+INFO:werkzeug: * Restarting with stat
+INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+WARNING:services.mistral_ai_service:MISTRAL_API_KEY not found in environment variables
+INFO:routes.geo_api:Geo services initialized successfully
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-291-728
+INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/enhanced_coordinate_detector.py', reloading
+✅ Maps API registered successfully
+Warning: YOLOViolationDetector not available: cannot import name 'YOLOViolationDetector' from 'services.yolo_violation_detector' (/home/denis/Documents/Hackathon_2025/geo_locator/backend/services/yolo_violation_detector.py)
+✅ Violation API registered successfully
+✅ Geo API registered successfully
+✅ Cache API registered successfully
+✅ Rosreestr API registered successfully
+✅ OpenStreetMap API registered successfully
+❌ Sentinel API registration failed: attempted relative import beyond top-level package
+✅ Satellite API registered successfully
+✅ OCR API registered successfully
+✅ Notification API registered successfully
+✅ Coordinate API registered successfully
+✅ Object Group API registered successfully
+🚀 Starting Geo Locator Backend (Local Development)
+==================================================
+✅ PostgreSQL connection successful
+✅ Redis connection successful
+✅ Database tables created successfully
+
+🎉 All checks passed! Starting Flask development server...
+📍 Backend will be available at: http://localhost:5001
+📍 API endpoints at: http://localhost:5001/api/
+
+Press Ctrl+C to stop the server
+==================================================
+INFO:werkzeug: * Restarting with stat
+INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+WARNING:services.mistral_ai_service:MISTRAL_API_KEY not found in environment variables
+INFO:routes.geo_api:Geo services initialized successfully
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+INFO:services.google_vision_service:🤖 Gemini initialized with model: gemini-2.0-flash
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-291-728

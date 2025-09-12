@@ -44,9 +44,10 @@ class EnhancedCoordinateDetector:
         # Весовые коэффициенты для разных источников координат
         self.source_weights = {
             'gps_exif': 1.0,           # GPS из EXIF - максимальный приоритет
+            'panorama_analysis': 0.95,  # Анализ панорам - очень высокий приоритет
             'location_hint': 0.9,       # Подсказка пользователя
-            'google_vision': 0.8,       # Google Vision API
             'yandex_maps': 0.85,        # Яндекс Карты
+            'google_vision': 0.8,       # Google Vision API
             'dgis': 0.8,               # 2GIS
             'nominatim': 0.7,          # OpenStreetMap Nominatim
             'image_similarity': 0.6,    # Сходство изображений
@@ -98,7 +99,21 @@ class EnhancedCoordinateDetector:
                 })
                 logger.info(f"✅ Coordinates from image text: {text_coords}")
             
-            # 4. Определение региона по объектам на изображении
+            # 4. Анализ панорам (если есть примерные координаты)
+            if coordinate_candidates:
+                # Берем лучший кандидат для поиска панорам
+                temp_best = max(coordinate_candidates, key=lambda x: x['confidence'] * x['weight'])
+                panorama_coords = self._analyze_with_panoramas(image_path, temp_best['coordinates'])
+                if panorama_coords:
+                    coordinate_candidates.append({
+                        'coordinates': panorama_coords,
+                        'source': 'panorama_analysis',
+                        'confidence': 0.85,
+                        'weight': self.source_weights['panorama_analysis']
+                    })
+                    logger.info(f"✅ Coordinates from panorama analysis: {panorama_coords}")
+            
+            # 5. Определение региона по объектам на изображении
             region_coords = self._detect_region_from_objects(image_path, location_hint)
             if region_coords:
                 coordinate_candidates.append({
@@ -109,7 +124,7 @@ class EnhancedCoordinateDetector:
                 })
                 logger.info(f"✅ Region from objects: {region_coords}")
             
-            # 5. Выбор лучшего кандидата
+            # 6. Выбор лучшего кандидата
             if coordinate_candidates:
                 best_candidate = self._select_best_candidate(coordinate_candidates, location_hint)
                 
@@ -130,12 +145,9 @@ class EnhancedCoordinateDetector:
             logger.warning("⚠️ No valid coordinates found - returning None instead of default")
             return {
                 'success': False,
-                'coordinates': None,
-                'source': 'none',
-                'confidence': 0.0,
-                'all_candidates': coordinate_candidates,
-                'validation_passed': False,
-                'message': 'Координаты не найдены. Попробуйте добавить подсказку местоположения или использовать изображение с GPS данными.'
+                'message': 'No valid coordinates found from any source',
+                'candidates_tried': len(coordinate_candidates) if coordinate_candidates else 0,
+                'validation_failed': True
             }
             
         except Exception as e:
@@ -327,3 +339,37 @@ class EnhancedCoordinateDetector:
             'confidence': 0.0,
             'message': 'Координаты не определены. Добавьте подсказку местоположения для улучшения точности.'
         }
+    
+    def _analyze_with_panoramas(self, image_path: str, approximate_coords: Dict[str, float]) -> Optional[Dict[str, float]]:
+        """
+        Анализ изображения с использованием панорам для уточнения координат
+        """
+        try:
+            from .panorama_analyzer_service import PanoramaAnalyzer
+            from .yandex_maps_service import YandexMapsService
+            
+            # Инициализируем сервисы
+            yandex_service = YandexMapsService()
+            panorama_analyzer = PanoramaAnalyzer(yandex_service)
+            
+            # Анализируем с панорамами
+            result = panorama_analyzer.analyze_location_with_panoramas(
+                image_path,
+                approximate_coords['latitude'],
+                approximate_coords['longitude'],
+                search_radius=300
+            )
+            
+            if result.get('success') and result.get('coordinates'):
+                logger.info(f"🎯 Panorama analysis successful: confidence {result.get('confidence', 0):.2f}")
+                return result['coordinates']
+            else:
+                logger.info(f"📸 Panorama analysis failed: {result.get('message', 'Unknown error')}")
+                return None
+                
+        except ImportError as e:
+            logger.warning(f"Panorama analyzer not available: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error in panorama analysis: {e}")
+            return None
