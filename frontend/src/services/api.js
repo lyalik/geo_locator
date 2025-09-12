@@ -6,6 +6,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 120000, // 2 минуты таймаут для файловых операций
   headers: {
     'Content-Type': 'application/json',
   },
@@ -147,50 +148,110 @@ export const maps = {
 export const coordinateAnalysis = {
   // Photo coordinate detection
   detectFromPhoto: (file, locationHint = '') => {
+    console.log('📤 detectFromPhoto called with:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      locationHint: locationHint
+    });
+    
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('file', file);
     if (locationHint) {
       formData.append('location_hint', locationHint);
     }
     
-    return api.post('/api/coordinates/detect', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    // Логируем содержимое FormData
+    console.log('📤 FormData contents:');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value} (type: ${typeof value})`);
+      }
+    }
+    
+    // Дополнительная проверка файла
+    console.log('📤 File object check:', {
+      isFile: file instanceof File,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      constructor: file.constructor.name
     });
+    
+    // Используем fetch вместо axios для корректной передачи файлов
+    return fetch(`${API_URL}/api/coordinates/detect`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`
+      }
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }).then(data => ({ data }));
   },
   
   // Video coordinate analysis
   analyzeVideo: (file, locationHint = '', frameInterval = 30, maxFrames = 10) => {
+    console.log('📤 analyzeVideo called with:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      locationHint: locationHint,
+      frameInterval: frameInterval,
+      maxFrames: maxFrames
+    });
+    
     const formData = new FormData();
-    formData.append('video', file);
+    formData.append('file', file);
     formData.append('location_hint', locationHint);
     formData.append('frame_interval', frameInterval.toString());
     formData.append('max_frames', maxFrames.toString());
     
-    return api.post('/api/coordinates/video/analyze', formData, {
+    // Логируем содержимое FormData
+    console.log('📤 FormData contents:');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
+    
+    // Используем fetch вместо axios для корректной передачи файлов
+    return fetch(`${API_URL}/api/coordinates/video/analyze`, {
+      method: 'POST',
+      body: formData,
       headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+        'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`
+      }
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }).then(data => ({ data }));
   },
   
   estimateProcessingTime: (file, frameInterval = 30, maxFrames = 10) => {
     const formData = new FormData();
-    formData.append('video', file);
+    formData.append('file', file);
     formData.append('frame_interval', frameInterval.toString());
     formData.append('max_frames', maxFrames.toString());
     
-    return api.post('/api/coordinates/video/estimate', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post('/api/coordinates/video/estimate', formData);
   }
 };
 
 // Legacy video analysis API (for backward compatibility)
 export const videoAnalysis = coordinateAnalysis;
+
+// Image analysis API (alias for coordinate analysis)
+export const imageAnalysis = coordinateAnalysis;
 
 export { api };
 export default api;

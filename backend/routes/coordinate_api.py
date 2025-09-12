@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 import os
+import time
 import logging
 from werkzeug.utils import secure_filename
 from services.coordinate_detector import CoordinateDetector
@@ -43,15 +44,18 @@ def detect_coordinates():
     JSON response with detected objects and coordinates
     """
     try:
+        logger.info(f"📥 Coordinate detection request - files: {list(request.files.keys())}, form: {list(request.form.keys())}")
+        
         # Check if image file is provided
-        if 'image' not in request.files:
+        if 'file' not in request.files:
+            logger.error(f"❌ Missing file in request. Available files: {list(request.files.keys())}")
             return jsonify({
                 'success': False,
                 'message': 'No image file provided',
                 'error': 'MISSING_IMAGE'
             }), 400
         
-        file = request.files['image']
+        file = request.files['file']
         
         if file.filename == '':
             return jsonify({
@@ -371,15 +375,18 @@ def analyze_video():
     JSON response with video analysis results
     """
     try:
+        logger.info(f"📥 Video analysis request - files: {list(request.files.keys())}, form: {list(request.form.keys())}")
+        
         # Check if video file is provided
-        if 'video' not in request.files:
+        if 'file' not in request.files:
+            logger.error(f"❌ Missing file in request. Available files: {list(request.files.keys())}")
             return jsonify({
                 'success': False,
                 'message': 'No video file provided',
                 'error': 'MISSING_VIDEO'
             }), 400
         
-        file = request.files['video']
+        file = request.files['file']
         
         if file.filename == '':
             return jsonify({
@@ -408,10 +415,41 @@ def analyze_video():
         file_path = os.path.join(upload_dir, filename)
         file.save(file_path)
         
-        # Analyze video
+        # Check video duration (limit to 10 seconds)
+        try:
+            import cv2
+            cap = cv2.VideoCapture(file_path)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            duration = frame_count / fps if fps > 0 else 0
+            cap.release()
+            
+            logger.info(f"📹 Video duration: {duration:.1f}s (fps: {fps:.1f}, frames: {frame_count})")
+            
+            if duration > 10.0:
+                logger.warning(f"⚠️ Video too long: {duration:.1f}s > 10s limit")
+                os.remove(file_path)  # Clean up uploaded file
+                return jsonify({
+                    'success': False,
+                    'message': f'Видео слишком длинное ({duration:.1f}с). Максимальная длительность: 10 секунд',
+                    'error': 'VIDEO_TOO_LONG',
+                    'duration': duration
+                }), 400
+                
+        except Exception as e:
+            logger.error(f"❌ Error checking video duration: {str(e)}")
+            # Continue processing even if duration check fails
+        
+        # Analyze video with logging
+        logger.info(f"🎬 Starting video analysis: {filename} (frame_interval={frame_interval}, max_frames={max_frames})")
+        start_time = time.time()
+        
         result = video_detector.analyze_video(
             file_path, location_hint, frame_interval, max_frames
         )
+        
+        duration = time.time() - start_time
+        logger.info(f"✅ Video analysis completed in {duration:.1f}s: {result.get('success', False)}")
         
         if result['success']:
             # Save to database if coordinates were found

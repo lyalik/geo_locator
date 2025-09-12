@@ -721,13 +721,20 @@ class CoordinateDetector:
             final_location = geo_result.get('final_location')
             if final_location and final_location.get('coordinates'):
                 coords = final_location['coordinates']
-                coordinate_candidates.append({
-                    'latitude': coords.get('latitude', coords.get('lat')),
-                    'longitude': coords.get('longitude', coords.get('lon')),
-                    'source': 'geolocation_service',
-                    'confidence': final_location.get('confidence', 0.7),
-                    'priority': 2
-                })
+                lat = coords.get('latitude', coords.get('lat'))
+                lon = coords.get('longitude', coords.get('lon'))
+                
+                # Filter out Beijing coordinates (likely default values)
+                if lat and lon and not self._is_beijing_coordinates(lat, lon):
+                    coordinate_candidates.append({
+                        'latitude': lat,
+                        'longitude': lon,
+                        'source': 'geolocation_service',
+                        'confidence': final_location.get('confidence', 0.7),
+                        'priority': 2
+                    })
+                else:
+                    logger.warning(f"🚫 Filtered out Beijing coordinates from geolocation_service: {lat}, {lon}")
         
         # Add Google Vision OCR coordinates
         if google_ocr_coords:
@@ -842,6 +849,10 @@ class CoordinateDetector:
         
         return base_score * confidence * relevance_multiplier
     
+    def _is_beijing_coordinates(self, lat: float, lon: float) -> bool:
+        """Check if coordinates are Beijing (likely default values)"""
+        return abs(lat - 39.9042) < 0.1 and abs(lon - 116.4074) < 0.1
+
     def _get_location_context(self, obj: Dict, latitude: float, longitude: float) -> Dict[str, Any]:
         """Get additional location context for the detected object."""
         try:

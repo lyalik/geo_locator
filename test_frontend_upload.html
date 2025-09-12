@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test File Upload</title>
+</head>
+<body>
+    <h1>Test File Upload to Backend</h1>
+    
+    <form id="uploadForm">
+        <input type="file" id="fileInput" accept="image/*,video/*" />
+        <button type="submit">Upload File</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+            
+            console.log('📤 File selected:', {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                isFile: file instanceof File
+            });
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('location_hint', 'Москва');
+            
+            console.log('📤 FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+                } else {
+                    console.log(`  ${key}: ${value}`);
+                }
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5001/api/coordinates/detect', {
+                    method: 'POST',
+                    body: formData,
+                    // НЕ устанавливаем Content-Type - браузер сделает это автоматически
+                });
+                
+                const result = await response.json();
+                console.log('📥 Response:', result);
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>Response (${response.status}):</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                
+                if (response.ok) {
+                    alert('✅ Upload successful!');
+                } else {
+                    alert('❌ Upload failed: ' + result.message);
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                alert('❌ Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

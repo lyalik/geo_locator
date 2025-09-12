@@ -102,47 +102,59 @@ const BatchAnalyzer = () => {
 
   // Анализ одного файла
   const analyzeFile = async (fileData) => {
+    const startTime = Date.now();
+    const file = fileData.file || fileData; // Извлекаем сырой File объект
+    console.log(`🔍 Starting analysis of ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+    
     try {
-      setCurrentAnalyzing(fileData.id);
+      // Определяем тип файла по расширению, если MIME-type недоступен
+      const fileName = file.name.toLowerCase();
+      const isImage = file.type.startsWith('image/') || 
+                     fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || 
+                     fileName.endsWith('.png') || fileName.endsWith('.gif') || 
+                     fileName.endsWith('.bmp') || fileName.endsWith('.webp');
+      const isVideo = file.type.startsWith('video/') || 
+                     fileName.endsWith('.mp4') || fileName.endsWith('.avi') || 
+                     fileName.endsWith('.mov') || fileName.endsWith('.mkv') || 
+                     fileName.endsWith('.webm') || fileName.endsWith('.flv');
       
-      // Обновляем статус файла
-      setFiles(prev => prev.map(f => 
-        f.id === fileData.id 
-          ? { ...f, status: 'analyzing', progress: 0 }
-          : f
-      ));
-
-      const formData = new FormData();
-      formData.append('file', fileData.file);
-      if (locationHint) formData.append('location_hint', locationHint);
+      // Увеличиваем timeout для видео до 5 минут, для изображений оставляем 2 минуты
+      const timeoutDuration = isVideo ? 300000 : 120000; // 5 мин для видео, 2 мин для фото
+      const timeoutMessage = isVideo ? 'Превышено время ожидания анализа видео (5 мин)' : 'Превышено время ожидания анализа изображения (2 мин)';
+      
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(timeoutMessage)), timeoutDuration)
+      );
       
       let result;
-      if (fileData.type === 'video') {
-        formData.append('frame_interval', frameInterval.toString());
-        formData.append('max_frames', maxFrames.toString());
-        result = await videoAnalysis(formData);
-      } else {
-        result = await imageAnalysis(formData);
-      }
-
-      // Обновляем результат
-      setFiles(prev => prev.map(f => 
-        f.id === fileData.id 
-          ? { ...f, status: 'completed', progress: 100, result }
-          : f
-      ));
-
-      return { fileId: fileData.id, success: true, result };
-    } catch (error) {
-      console.error(`Ошибка анализа файла ${fileData.name}:`, error);
       
-      setFiles(prev => prev.map(f => 
-        f.id === fileData.id 
-          ? { ...f, status: 'error', error: error.message }
-          : f
-      ));
-
-      return { fileId: fileData.id, success: false, error: error.message };
+      if (isImage) {
+        const analysisPromise = imageAnalysis.detectFromPhoto(file, locationHint || '');
+        result = await Promise.race([analysisPromise, timeoutPromise]);
+      } else if (isVideo) {
+        // Для видео используем более консервативные параметры
+        const analysisPromise = videoAnalysis.analyzeVideo(file, locationHint || '', 60, 5);
+        result = await Promise.race([analysisPromise, timeoutPromise]);
+      } else {
+        throw new Error(`Неподдерживаемый тип файла: ${fileName}. Поддерживаются изображения (jpg, png, gif, bmp, webp) и видео (mp4, avi, mov, mkv, webm, flv)`);
+      }
+      
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`✅ Analysis completed in ${duration}s:`, result);
+      
+      return {
+        success: true,
+        data: result,
+        duration: parseFloat(duration)
+      };
+    } catch (error) {
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.error(`❌ Analysis failed after ${duration}s:`, error);
+      return {
+        success: false,
+        error: error.message,
+        duration: parseFloat(duration)
+      };
     }
   };
 
@@ -162,12 +174,62 @@ const BatchAnalyzer = () => {
 
     for (let i = 0; i < pendingFiles.length; i++) {
       const fileData = pendingFiles[i];
-      const result = await analyzeFile(fileData);
-      results.push(result);
+      console.log(`📊 Processing file ${i + 1}/${pendingFiles.length}: ${fileData.file?.name || fileData.name}`);
+      
+      // Обновляем статус файла на "analyzing"
+      setFiles(prev => prev.map(f => 
+        f.id === fileData.id ? { ...f, status: 'analyzing' } : f
+      ));
+      
+      try {
+        const result = await analyzeFile(fileData);
+        results.push(result);
+        
+        // Логируем структуру результата для отладки
+        console.log(`🔍 Result structure for ${fileData.file?.name || fileData.name}:`, {
+          success: result.success,
+          data: result.data,
+          hasCoordinates: result.data?.data?.data?.coordinates ? 'YES' : 'NO',
+          coordinates: result.data?.data?.data?.coordinates,
+          fullData: result.data?.data
+        });
+
+        // Обновляем файл с результатом
+        setFiles(prev => prev.map(f => 
+          f.id === fileData.id ? { 
+            ...f, 
+            status: result.success ? 'completed' : 'error',
+            result: result.success ? result.data?.data : null,
+            error: result.success ? null : result.error,
+            progress: 100
+          } : f
+        ));
+        
+        console.log(`✅ File ${i + 1} processed successfully`);
+      } catch (error) {
+        console.error(`❌ Error processing file ${i + 1}:`, error);
+        const errorResult = {
+          success: false,
+          error: error.message,
+          duration: 0
+        };
+        results.push(errorResult);
+        
+        // Обновляем файл с ошибкой
+        setFiles(prev => prev.map(f => 
+          f.id === fileData.id ? { 
+            ...f, 
+            status: 'error',
+            error: error.message,
+            progress: 100
+          } : f
+        ));
+      }
       
       // Обновляем общий прогресс
       const progress = ((i + 1) / pendingFiles.length) * 100;
       setOverallProgress(progress);
+      console.log(`📊 Progress: ${progress.toFixed(1)}% (${i + 1}/${pendingFiles.length})`);
     }
 
     setAnalysisResults(results);
@@ -214,7 +276,7 @@ const BatchAnalyzer = () => {
     const completed = files.filter(f => f.status === 'completed').length;
     const errors = files.filter(f => f.status === 'error').length;
     const pending = files.filter(f => f.status === 'pending').length;
-    const withCoordinates = files.filter(f => f.result?.coordinates).length;
+    const withCoordinates = files.filter(f => f.result?.data?.coordinates).length;
     
     return { total, completed, errors, pending, withCoordinates };
   };
@@ -385,38 +447,32 @@ const BatchAnalyzer = () => {
                     <ListItemIcon>
                       {fileData.type === 'video' ? <VideoIcon /> : <ImageIcon />}
                     </ListItemIcon>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body1">{fileData.name}</Typography>
-                          {fileData.status === 'completed' && <CheckIcon color="success" />}
-                          {fileData.status === 'error' && <ErrorIcon color="error" />}
-                          {currentAnalyzing === fileData.id && (
-                            <Chip size="small" label="Анализируется..." color="primary" />
-                          )}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>{fileData.name}</Typography>
+                        {fileData.status === 'completed' && <CheckIcon color="success" />}
+                        {fileData.status === 'error' && <ErrorIcon color="error" />}
+                        {currentAnalyzing === fileData.id && (
+                          <Chip size="small" label="Анализируется..." color="primary" />
+                        )}
+                      </Box>
+                      <Box sx={{ color: 'text.secondary', fontSize: '0.875rem', mb: 1 }}>
+                        {(fileData.size / 1024 / 1024).toFixed(1)} MB • {fileData.type}
+                      </Box>
+                      {fileData.status === 'analyzing' && (
+                        <LinearProgress sx={{ mb: 1 }} />
+                      )}
+                      {fileData.status === 'error' && (
+                        <Alert severity="error" sx={{ mb: 1 }}>
+                          {fileData.error}
+                        </Alert>
+                      )}
+                      {fileData.result?.data?.coordinates && (
+                        <Box sx={{ color: 'success.main', fontSize: '0.875rem' }}>
+                          📍 Координаты найдены: {fileData.result.data.coordinates.latitude.toFixed(4)}, {fileData.result.data.coordinates.longitude.toFixed(4)}
                         </Box>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="textSecondary">
-                            {(fileData.size / 1024 / 1024).toFixed(1)} MB • {fileData.type}
-                          </Typography>
-                          {fileData.status === 'analyzing' && (
-                            <LinearProgress sx={{ mt: 1 }} />
-                          )}
-                          {fileData.status === 'error' && (
-                            <Alert severity="error" sx={{ mt: 1 }}>
-                              {fileData.error}
-                            </Alert>
-                          )}
-                          {fileData.result?.coordinates && (
-                            <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
-                              📍 Координаты найдены: {fileData.result.coordinates.latitude.toFixed(4)}, {fileData.result.coordinates.longitude.toFixed(4)}
-                            </Typography>
-                          )}
-                        </Box>
-                      }
-                    />
+                      )}
+                    </Box>
                     <IconButton
                       onClick={() => removeFile(fileData.id)}
                       disabled={isAnalyzing}
@@ -443,14 +499,14 @@ const BatchAnalyzer = () => {
           </AccordionSummary>
           <AccordionDetails>
             {files
-              .filter(f => f.result?.coordinates)
+              .filter(f => f.result?.data?.coordinates)
               .map(fileData => (
                 <Box key={fileData.id} sx={{ mb: 3 }}>
                   <Typography variant="subtitle1" gutterBottom>
                     {fileData.name}
                   </Typography>
                   <InteractiveResultsMap
-                    coordinates={fileData.result.coordinates}
+                    coordinates={fileData.result.data.coordinates}
                     satelliteData={fileData.result.satellite_data}
                     locationInfo={fileData.result.location_info}
                     height={300}
@@ -494,15 +550,15 @@ const BatchAnalyzer = () => {
                         {fileData.status === 'analyzing' && <Chip label="Анализ" color="primary" size="small" />}
                       </TableCell>
                       <TableCell>
-                        {fileData.result?.coordinates ? (
-                          `${fileData.result.coordinates.latitude.toFixed(4)}, ${fileData.result.coordinates.longitude.toFixed(4)}`
+                        {fileData.result?.data?.coordinates ? (
+                          `${fileData.result.data.coordinates.latitude.toFixed(4)}, ${fileData.result.data.coordinates.longitude.toFixed(4)}`
                         ) : (
                           '—'
                         )}
                       </TableCell>
                       <TableCell>
-                        {fileData.result?.coordinates ? 
-                          `${Math.round(fileData.result.coordinates.confidence * 100)}%` : 
+                        {fileData.result?.data?.confidence ? 
+                          `${Math.round(fileData.result.data.confidence * 100)}%` : 
                           '—'
                         }
                       </TableCell>

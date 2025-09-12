@@ -32,7 +32,9 @@ const InteractiveResultsMap = ({
   showSatelliteToggle = true 
 }) => {
   const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
   const [map, setMap] = useState(null);
+  const mapId = useRef(`map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   const [satelliteMode, setSatelliteMode] = useState(false);
   const [layersMenuAnchor, setLayersMenuAnchor] = useState(null);
   const [currentLayer, setCurrentLayer] = useState('osm');
@@ -65,95 +67,124 @@ const InteractiveResultsMap = ({
   useEffect(() => {
     if (!coordinates || !mapRef.current) return;
 
+    // Очищаем предыдущую карту если она существует
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+      setMap(null);
+    }
+
+    // Очищаем контейнер карты
+    if (mapRef.current) {
+      mapRef.current.innerHTML = '';
+      mapRef.current._leaflet_id = null;
+    }
+
     // Динамический импорт Leaflet
     const initMap = async () => {
-      const L = await import('leaflet');
-      await import('leaflet/dist/leaflet.css');
+      try {
+        const L = await import('leaflet');
+        await import('leaflet/dist/leaflet.css');
 
-      // Исправляем иконки маркеров Leaflet
-      delete L.Icon.Default.prototype._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-      });
+        // Проверяем, что контейнер еще существует
+        if (!mapRef.current) return;
 
-      const mapInstance = L.map(mapRef.current).setView(
-        [coordinates.latitude, coordinates.longitude], 
-        15
-      );
+        // Исправляем иконки маркеров Leaflet
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
 
-      // Добавляем базовый слой
-      const tileLayer = L.tileLayer(mapLayers[currentLayer].url, {
-        attribution: mapLayers[currentLayer].attribution,
-        maxZoom: 18
-      }).addTo(mapInstance);
+        const mapInstance = L.map(mapRef.current).setView(
+          [coordinates.latitude, coordinates.longitude], 
+          15
+        );
 
-      // Создаем кастомную иконку для найденных координат
-      const resultIcon = L.divIcon({
-        html: `
-          <div style="
-            background: #2196F3;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-          ">📍</div>
-        `,
-        className: 'custom-result-marker',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
-      });
+        mapInstanceRef.current = mapInstance;
 
-      // Добавляем маркер с результатами
-      const marker = L.marker([coordinates.latitude, coordinates.longitude], {
-        icon: resultIcon
-      }).addTo(mapInstance);
+        // Добавляем базовый слой
+        const tileLayer = L.tileLayer(mapLayers[currentLayer].url, {
+          attribution: mapLayers[currentLayer].attribution,
+          maxZoom: 18
+        }).addTo(mapInstance);
 
-      // Создаем popup с информацией
-      const popupContent = `
-        <div style="min-width: 200px;">
-          <h4 style="margin: 0 0 8px 0; color: #2196F3;">📍 Найденные координаты</h4>
-          <p style="margin: 4px 0;"><strong>Широта:</strong> ${coordinates.latitude.toFixed(6)}</p>
-          <p style="margin: 4px 0;"><strong>Долгота:</strong> ${coordinates.longitude.toFixed(6)}</p>
-          <p style="margin: 4px 0;"><strong>Точность:</strong> ${Math.round(coordinates.confidence * 100)}%</p>
-          <p style="margin: 4px 0;"><strong>Источник:</strong> ${coordinates.source}</p>
-          ${locationInfo?.address ? `<p style="margin: 4px 0;"><strong>Адрес:</strong> ${locationInfo.address}</p>` : ''}
-          <div style="margin-top: 8px;">
-            <a href="https://yandex.ru/maps/?ll=${coordinates.longitude},${coordinates.latitude}&z=15&pt=${coordinates.longitude},${coordinates.latitude}" 
-               target="_blank" style="color: #2196F3; text-decoration: none;">
-              🗺️ Открыть в Яндекс.Картах
-            </a>
+        // Создаем кастомную иконку для найденных координат
+        const resultIcon = L.divIcon({
+          html: `
+            <div style="
+              background: #2196F3;
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              border: 3px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-weight: bold;
+              font-size: 12px;
+            ">📍</div>
+          `,
+          className: 'custom-result-marker',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+
+        // Добавляем маркер с результатами
+        const marker = L.marker([coordinates.latitude, coordinates.longitude], {
+          icon: resultIcon
+        }).addTo(mapInstance);
+
+        // Создаем popup с информацией
+        const popupContent = `
+          <div style="min-width: 200px;">
+            <h4 style="margin: 0 0 8px 0; color: #2196F3;">📍 Найденные координаты</h4>
+            <p style="margin: 4px 0;"><strong>Широта:</strong> ${coordinates.latitude.toFixed(6)}</p>
+            <p style="margin: 4px 0;"><strong>Долгота:</strong> ${coordinates.longitude.toFixed(6)}</p>
+            <p style="margin: 4px 0;"><strong>Точность:</strong> ${Math.round(coordinates.confidence * 100)}%</p>
+            <p style="margin: 4px 0;"><strong>Источник:</strong> ${coordinates.source}</p>
+            ${locationInfo?.address ? `<p style="margin: 4px 0;"><strong>Адрес:</strong> ${locationInfo.address}</p>` : ''}
+            <div style="margin-top: 8px;">
+              <a href="https://yandex.ru/maps/?ll=${coordinates.longitude},${coordinates.latitude}&z=15&pt=${coordinates.longitude},${coordinates.latitude}" 
+                 target="_blank" style="color: #2196F3; text-decoration: none;">
+                🗺️ Открыть в Яндекс.Картах
+              </a>
+            </div>
           </div>
-        </div>
-      `;
+        `;
 
-      marker.bindPopup(popupContent).openPopup();
+        marker.bindPopup(popupContent).openPopup();
 
-      // Добавляем круг точности
-      const accuracyRadius = (1 - coordinates.confidence) * 100; // Радиус в метрах
-      L.circle([coordinates.latitude, coordinates.longitude], {
-        color: '#2196F3',
-        fillColor: '#2196F3',
-        fillOpacity: 0.1,
-        radius: accuracyRadius
-      }).addTo(mapInstance);
+        // Добавляем круг точности (только если confidence валидное число)
+        if (coordinates.confidence && !isNaN(coordinates.confidence)) {
+          const accuracyRadius = Math.max(10, (1 - coordinates.confidence) * 100); // Минимум 10 метров
+          L.circle([coordinates.latitude, coordinates.longitude], {
+            color: '#2196F3',
+            fillColor: '#2196F3',
+            fillOpacity: 0.1,
+            radius: accuracyRadius
+          }).addTo(mapInstance);
+        }
 
-      setMap(mapInstance);
-
-      return () => {
-        mapInstance.remove();
-      };
+        setMap(mapInstance);
+      } catch (error) {
+        console.error('Ошибка инициализации карты:', error);
+      }
     };
 
     initMap();
+
+    // Cleanup функция для удаления карты
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        setMap(null);
+      }
+    };
   }, [coordinates, currentLayer]);
 
   // Переключение слоев карты
