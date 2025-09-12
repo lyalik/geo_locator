@@ -253,5 +253,67 @@ export const videoAnalysis = coordinateAnalysis;
 // Image analysis API (alias for coordinate analysis)
 export const imageAnalysis = coordinateAnalysis;
 
+// Object Group Analysis API
+export const objectGroupAnalysis = {
+  analyzeGroups: (objects, locationHint = '') => {
+    console.log('📤 analyzeGroups called with:', {
+      objectsCount: objects.length,
+      locationHint: locationHint,
+      objects: objects.map(obj => ({
+        id: obj.id,
+        name: obj.name,
+        filesCount: obj.files.length
+      }))
+    });
+    
+    const formData = new FormData();
+    
+    // Add objects metadata
+    const objectsData = objects.map((obj, index) => ({
+      id: obj.id,
+      name: obj.name,
+      description: obj.description,
+      file_keys: obj.files.map((_, fileIndex) => `object_${obj.id}_file_${fileIndex}`)
+    }));
+    
+    formData.append('objects', JSON.stringify(objectsData));
+    
+    if (locationHint) {
+      formData.append('location_hint', locationHint);
+    }
+    
+    // Add all files with unique keys
+    objects.forEach((obj) => {
+      obj.files.forEach((fileData, fileIndex) => {
+        const fileKey = `object_${obj.id}_file_${fileIndex}`;
+        formData.append(fileKey, fileData.file);
+      });
+    });
+
+    // Log FormData contents
+    console.log('📤 FormData contents:');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
+
+    return fetch(`${API_URL}/api/object-groups/analyze`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`
+      }
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }).then(data => ({ data }));
+  }
+};
+
 export { api };
 export default api;

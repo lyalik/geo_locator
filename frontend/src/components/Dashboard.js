@@ -8,7 +8,7 @@ import {
   Map as MapIcon, Upload as UploadIcon, Analytics as AnalyticsIcon,
   Schedule as ScheduleIcon, GetApp as DownloadIcon, Refresh as RefreshIcon,
   Home as PropertyIcon, LocationCity as UrbanIcon, Satellite as SatelliteIcon,
-  TextFields as OCRIcon
+  TextFields as OCRIcon, PhotoLibrary as MultiPhotoIcon
 } from '@mui/icons-material';
 import InteractiveMap from './InteractiveMap';
 import ViolationUploader from './ViolationUploader';
@@ -19,6 +19,7 @@ import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
 import VideoAnalyzer from './VideoAnalyzer';
 import BatchAnalyzer from './BatchAnalyzer';
+import MultiPhotoAnalyzer from './MultiPhotoAnalyzer';
 import ViolationEditDialog from './ViolationEditDialog';
 import { violations } from '../services/api';
 
@@ -301,6 +302,12 @@ const Dashboard = () => {
       icon: <UploadIcon />, 
       description: 'Загрузка и анализ нескольких файлов одновременно с отображением результатов на интерактивной карте',
       component: <BatchAnalyzer /> 
+    },
+    { 
+      label: 'Мульти-фото анализ', 
+      icon: <MultiPhotoIcon />, 
+      description: 'Группировка нескольких фотографий одного объекта для повышения точности определения координат',
+      component: <MultiPhotoAnalyzer /> 
     }
   ];
 

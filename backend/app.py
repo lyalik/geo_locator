@@ -236,6 +236,16 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+# Register Object Group API
+try:
+    from routes.object_group_api import bp as object_group_api_bp
+    app.register_blueprint(object_group_api_bp)
+    print("✅ Object Group API registered successfully")
+except Exception as e:
+    print(f"❌ Object Group API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
+
 # OpenStreetMap API already registered above
 
 @app.route('/')
