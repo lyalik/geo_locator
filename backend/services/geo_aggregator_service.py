@@ -14,25 +14,13 @@ from .yandex_maps_service import YandexMapsService
 from .dgis_service import DGISService
 from .roscosmos_satellite_service import RoscosmosService
 from .yandex_satellite_service import YandexSatelliteService
+from .osm_overpass_service import OSMOverpassService
 from .image_database_service import ImageDatabaseService
 
-# Import OpenStreetMap service
-try:
-    from .openstreetmap_service import (
-        sync_geocode_address,
-        sync_reverse_geocode,
-        sync_get_buildings_in_area,
-        sync_analyze_urban_context,
-        sync_search_places
-    )
-    OSM_SERVICE_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"OpenStreetMap service not available: {e}")
-    OSM_SERVICE_AVAILABLE = False
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Circular import fix - import GeoLocationService only when needed
-
-logger = logging.getLogger(__name__)
 
 class GeoAggregatorService:
     """
@@ -53,6 +41,7 @@ class GeoAggregatorService:
         self.roscosmos_service = RoscosmosService()
         self.yandex_satellite_service = YandexSatelliteService()
         self.image_db_service = ImageDatabaseService()
+        self.osm_service = OSMOverpassService()
         # Lazy import to avoid circular dependency
         self.geo_service = None
         
@@ -250,15 +239,32 @@ class GeoAggregatorService:
             results['dgis']['error'] = str(e)
         
         try:
-            # OSM поиск (если доступен)
-            if hasattr(self, 'osm_service') and self.osm_service:
-                osm_result = self.osm_service.search_places(location_hint.strip())
-                if osm_result.get('success'):
-                    results['osm'] = osm_result
-                    logger.info(f"OSM found {osm_result.get('total_found', 0)} places")
+            # OpenStreetMap Overpass поиск по названию
+            osm_result = self.osm_service.search_by_name(location_hint.strip())
+            if osm_result.get('success') and osm_result.get('objects'):
+                # Берем первый найденный объект с координатами
+                for obj in osm_result['objects']:
+                    if obj.get('coordinates'):
+                        coords = obj['coordinates']
+                        results['osm'] = {
+                            'success': True,
+                            'source': 'osm_overpass',
+                            'coordinates': {
+                                'latitude': coords['lat'],
+                                'longitude': coords['lon']
+                            },
+                            'place_info': {
+                                'name': obj.get('name', 'Unknown OSM Object'),
+                                'type': obj.get('type', 'unknown'),
+                                'tags': obj.get('tags', {})
+                            },
+                            'confidence': 0.65
+                        }
+                        logger.info(f"OSM found object: {obj.get('name', 'Unknown')}")
+                        break
         except Exception as e:
-            logger.error(f"OSM search failed: {e}")
-            results['osm']['error'] = str(e)
+            logger.error(f"OSM Overpass search failed: {e}")
+            results['osm'] = {'error': str(e)}
         
         return results
     
@@ -608,6 +614,7 @@ class GeoAggregatorService:
                     'dgis': hasattr(self.dgis_service, 'api_key') and bool(self.dgis_service.api_key),
                     'roscosmos_satellite': True,  # Российские спутниковые данные
                     'yandex_satellite': hasattr(self.yandex_satellite_service, 'api_key') and bool(self.yandex_satellite_service.api_key),
+                    'osm_overpass': True,  # OpenStreetMap Overpass API
                     'image_database': True
                 }
             }

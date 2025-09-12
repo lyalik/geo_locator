@@ -13,6 +13,7 @@ from .yandex_maps_service import YandexMapsService
 from .dgis_service import DGISService
 from .roscosmos_satellite_service import RoscosmosService
 from .yandex_satellite_service import YandexSatelliteService
+from .enhanced_coordinate_detector import EnhancedCoordinateDetector
 
 # Import Google services
 try:
@@ -68,6 +69,10 @@ class CoordinateDetector:
             logger.warning(f"Failed to initialize Archive Photo service: {e}")
             self.archive_service = None
         
+        # Initialize Enhanced Coordinate Detector
+        self.enhanced_detector = EnhancedCoordinateDetector()
+        logger.info("🎯 Enhanced Coordinate Detector initialized")
+        
         logger.info("Coordinate Detector initialized")
     
     def detect_coordinates_from_image(self, image_path: str, location_hint: Optional[str] = None) -> Dict[str, Any]:
@@ -82,6 +87,19 @@ class CoordinateDetector:
             Dictionary containing detected objects and their coordinates
         """
         try:
+            # First try enhanced coordinate detection
+            enhanced_result = self.enhanced_detector.detect_coordinates_enhanced(image_path, location_hint)
+            if enhanced_result['success'] and enhanced_result['coordinates']:
+                logger.info(f"✅ Enhanced detector found coordinates: {enhanced_result['coordinates']}")
+                return {
+                    'success': True,
+                    'coordinates': enhanced_result['coordinates'],
+                    'source': enhanced_result['source'],
+                    'confidence': enhanced_result['confidence'],
+                    'objects': [],
+                    'enhanced_detection': True
+                }
+            
             # Check cache for complete coordinate analysis first
             services_used = ['yolo', 'google_vision', 'gemini', 'geo_services']
             cached_coords = ObjectDetectionCache.get_cached_coordinates(

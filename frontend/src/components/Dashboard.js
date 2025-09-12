@@ -18,6 +18,7 @@ import UrbanAnalyzer from './UrbanAnalyzer';
 import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
 import VideoAnalyzer from './VideoAnalyzer';
+import BatchAnalyzer from './BatchAnalyzer';
 import ViolationEditDialog from './ViolationEditDialog';
 import { violations } from '../services/api';
 
@@ -294,6 +295,12 @@ const Dashboard = () => {
       icon: <ScheduleIcon />, 
       description: 'Определение координат из фото и видео файлов с детекцией объектов и анализом геолокационных данных',
       component: <VideoAnalyzer /> 
+    },
+    { 
+      label: 'Пакетный анализ', 
+      icon: <UploadIcon />, 
+      description: 'Загрузка и анализ нескольких файлов одновременно с отображением результатов на интерактивной карте',
+      component: <BatchAnalyzer /> 
     }
   ];
 

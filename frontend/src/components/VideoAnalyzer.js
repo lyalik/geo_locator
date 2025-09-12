@@ -27,7 +27,8 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Tooltip
+  Tooltip,
+  Divider
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -39,9 +40,12 @@ import {
   ExpandMore as ExpandMoreIcon,
   Info as InfoIcon,
   Map as MapIcon,
-  LocationOff as LocationOffIcon
+  LocationOff as LocationOffIcon,
+  OpenInNew as OpenInNewIcon,
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 import { videoAnalysis } from '../services/api';
+import InteractiveResultsMap from './InteractiveResultsMap';
 
 const VideoAnalyzer = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -609,6 +613,16 @@ const VideoAnalyzer = () => {
                       </Box>
                     </Box>
                   </Grid>
+                </Grid>
+
+                {/* Interactive Map */}
+                <Grid item xs={12}>
+                  <InteractiveResultsMap 
+                    coordinates={analysisResults.coordinates}
+                    satelliteData={analysisResults.satellite_data}
+                    locationInfo={analysisResults.location_info}
+                    height={400}
+                  />
                 </Grid>
               </CardContent>
             </Card>
