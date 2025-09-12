@@ -4,6 +4,8 @@ import cv2
 import tempfile
 from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from services.coordinate_detector import CoordinateDetector
 from services.cache_service import DetectionCache
 
@@ -23,6 +25,49 @@ class VideoCoordinateDetector:
         self.supported_formats = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm'}
         logger.info("Video Coordinate Detector initialized")
     
+    def _is_frame_quality_acceptable(self, frame: np.ndarray, min_brightness: float = 30.0, 
+                                   blur_threshold: float = 100.0) -> Tuple[bool, Dict[str, float]]:
+        """
+        Check if frame has acceptable quality for analysis.
+        
+        Args:
+            frame: OpenCV frame (BGR format)
+            min_brightness: Minimum average brightness (0-255)
+            blur_threshold: Minimum Laplacian variance for sharpness
+            
+        Returns:
+            Tuple of (is_acceptable, quality_metrics)
+        """
+        try:
+            # Convert to grayscale for analysis
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            
+            # Calculate brightness (average pixel intensity)
+            brightness = np.mean(gray)
+            
+            # Calculate sharpness using Laplacian variance
+            laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+            
+            # Check if frame meets quality criteria
+            is_bright_enough = brightness >= min_brightness
+            is_sharp_enough = laplacian_var >= blur_threshold
+            
+            quality_metrics = {
+                'brightness': float(brightness),
+                'sharpness': float(laplacian_var),
+                'is_bright_enough': is_bright_enough,
+                'is_sharp_enough': is_sharp_enough
+            }
+            
+            is_acceptable = is_bright_enough and is_sharp_enough
+            
+            return is_acceptable, quality_metrics
+            
+        except Exception as e:
+            logger.error(f"Error checking frame quality: {str(e)}")
+            # If quality check fails, assume frame is acceptable
+            return True, {'error': str(e)}
+    
     def analyze_video(self, video_path: str, location_hint: Optional[str] = None,
                      frame_interval: int = 30, max_frames: int = 10) -> Dict[str, Any]:
         """
@@ -35,23 +80,10 @@ class VideoCoordinateDetector:
             max_frames: Maximum number of frames to process (default: 10)
             
         Returns:
-            Dictionary containing analysis results
+            Dictionary with analysis results
         """
         try:
-            # Validate video file
-            if not os.path.exists(video_path):
-                raise FileNotFoundError(f"Video file not found: {video_path}")
-            
-            file_ext = os.path.splitext(video_path)[1].lower()
-            if file_ext not in self.supported_formats:
-                raise ValueError(f"Unsupported video format: {file_ext}")
-            
-            # Check cache first
-            cache_key = f"video_{os.path.basename(video_path)}_{frame_interval}_{max_frames}"
-            cached_result = DetectionCache.get_cached_detection_result(video_path, cache_key)
-            if cached_result:
-                logger.debug(f"Cache hit for video analysis: {video_path}")
-                return cached_result
+            logger.info(f"Starting video analysis: {video_path}")
             
             # Extract frames from video
             frames_data = self._extract_frames(video_path, frame_interval, max_frames)
@@ -63,12 +95,60 @@ class VideoCoordinateDetector:
                     'video_info': frames_data['video_info']
                 }
             
-            # Process each frame for coordinate detection
+            # Filter frames by quality before processing
+            quality_filtered_frames = []
+            quality_stats = {
+                'total_frames': len(frames_data['frames']),
+                'filtered_frames': 0,
+                'quality_metrics': []
+            }
+            
+            for frame_info in frames_data['frames']:
+                try:
+                    # Load frame for quality check
+                    frame = cv2.imread(frame_info['path'])
+                    if frame is None:
+                        logger.warning(f"Could not load frame: {frame_info['path']}")
+                        continue
+                    
+                    # Check frame quality
+                    is_acceptable, quality_metrics = self._is_frame_quality_acceptable(frame)
+                    quality_metrics['frame_number'] = frame_info['frame_number']
+                    quality_stats['quality_metrics'].append(quality_metrics)
+                    
+                    if is_acceptable:
+                        quality_filtered_frames.append(frame_info)
+                        logger.info(f"Frame {frame_info['frame_number']}: brightness={quality_metrics['brightness']:.1f}, sharpness={quality_metrics['sharpness']:.1f} - ACCEPTED")
+                    else:
+                        quality_stats['filtered_frames'] += 1
+                        logger.info(f"Frame {frame_info['frame_number']}: brightness={quality_metrics['brightness']:.1f}, sharpness={quality_metrics['sharpness']:.1f} - FILTERED OUT")
+                        
+                except Exception as e:
+                    logger.error(f"Error checking quality for frame {frame_info['frame_number']}: {str(e)}")
+                    # If quality check fails, include frame anyway
+                    quality_filtered_frames.append(frame_info)
+            
+            logger.info(f"Quality filtering: {len(quality_filtered_frames)}/{quality_stats['total_frames']} frames passed quality check")
+            
+            if not quality_filtered_frames:
+                return {
+                    'success': False,
+                    'error': 'All frames were filtered out due to poor quality (too dark or blurry)',
+                    'video_info': frames_data['video_info'],
+                    'quality_stats': quality_stats
+                }
+            
+            # Process quality-filtered frames in parallel for better performance
+            start_time = time.time()
             frame_results = []
             all_objects = []
             coordinate_candidates = []
             
-            for frame_info in frames_data['frames']:
+            # Determine optimal number of workers (max 4 to avoid overloading)
+            max_workers = min(4, len(quality_filtered_frames), os.cpu_count() or 1)
+            
+            def process_single_frame(frame_info):
+                """Process a single frame and return results"""
                 try:
                     frame_result = self.coordinate_detector.detect_coordinates_from_image(
                         frame_info['path'], location_hint
@@ -86,6 +166,28 @@ class VideoCoordinateDetector:
                     
                     frame_result['timestamp'] = frame_info['timestamp']
                     frame_result['frame_number'] = frame_info['frame_number']
+                    return frame_result
+                    
+                except Exception as e:
+                    logger.error(f"Error processing frame {frame_info['frame_number']}: {str(e)}")
+                    return {
+                        'success': False,
+                        'error': str(e),
+                        'coordinates': None,
+                        'objects': [],
+                        'timestamp': frame_info['timestamp'],
+                        'frame_number': frame_info['frame_number']
+                    }
+            
+            # Execute parallel processing on quality-filtered frames
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all frame processing tasks
+                future_to_frame = {executor.submit(process_single_frame, frame_info): frame_info 
+                                 for frame_info in quality_filtered_frames}
+                
+                # Collect results as they complete
+                for future in as_completed(future_to_frame):
+                    frame_result = future.result()
                     frame_results.append(frame_result)
                     
                     # Collect objects and coordinates
@@ -94,28 +196,21 @@ class VideoCoordinateDetector:
                         if isinstance(objects, list):
                             for obj in objects:
                                 if isinstance(obj, dict):
-                                    obj['frame_number'] = frame_info['frame_number']
-                                    obj['timestamp'] = frame_info['timestamp']
+                                    obj['frame_number'] = frame_result['frame_number']
+                                    obj['timestamp'] = frame_result['timestamp']
                             all_objects.extend(objects)
                         
                         coordinates = frame_result.get('coordinates')
                         if coordinates and isinstance(coordinates, dict):
                             coord = coordinates.copy()
-                            coord['frame_number'] = frame_info['frame_number']
-                            coord['timestamp'] = frame_info['timestamp']
+                            coord['frame_number'] = frame_result['frame_number']
+                            coord['timestamp'] = frame_result['timestamp']
                             coordinate_candidates.append(coord)
                             
-                except Exception as e:
-                    logger.error(f"Error processing frame {frame_info['frame_number']}: {str(e)}")
-                    frame_result = {
-                        'success': False,
-                        'error': str(e),
-                        'coordinates': None,
-                        'objects': [],
-                        'timestamp': frame_info['timestamp'],
-                        'frame_number': frame_info['frame_number']
-                    }
-                    frame_results.append(frame_result)
+            # Sort frame results by frame number to maintain order
+            sorted_frame_results = sorted(frame_results, key=lambda x: x.get('frame_number', 0))
+            processing_time = time.time() - start_time
+            logger.info(f"Parallel processing completed in {processing_time:.2f} seconds")
             
             # Determine best coordinates from all frames
             best_coordinates = self._determine_best_coordinates(coordinate_candidates)
@@ -123,25 +218,26 @@ class VideoCoordinateDetector:
             # Aggregate object statistics
             object_stats = self._aggregate_object_statistics(all_objects)
             
-            # Create summary
+            # Determine coordinate sources and confidence
+            coordinate_sources = self._analyze_coordinate_sources(coordinate_candidates) if coordinate_candidates else {}
+            confidence_score = self._calculate_confidence_score(coordinate_candidates, all_objects) if coordinate_candidates else 0.0
+            
+            # Create result summary
             result = {
                 'success': True,
-                'video_info': frames_data['video_info'],
                 'coordinates': best_coordinates,
-                'frame_results': frame_results,
+                'objects': all_objects,
+                'total_objects': len(all_objects),
+                'frame_results': sorted_frame_results,
                 'total_frames_processed': len(frame_results),
-                'successful_frames': len([r for r in frame_results if r['success']]),
-                'total_objects_detected': len(all_objects),
-                'object_statistics': object_stats,
-                'processing_parameters': {
-                    'frame_interval': frame_interval,
-                    'max_frames': max_frames,
-                    'location_hint': location_hint
-                }
+                'total_frames_extracted': quality_stats['total_frames'],
+                'frames_filtered_out': quality_stats['filtered_frames'],
+                'video_info': frames_data['video_info'],
+                'processing_time_seconds': processing_time,
+                'coordinate_sources': coordinate_sources,
+                'confidence_score': confidence_score,
+                'quality_stats': quality_stats
             }
-            
-            # Cache the result
-            DetectionCache.cache_detection_result(video_path, result, cache_key)
             
             # Cleanup temporary frame files
             self._cleanup_temp_frames(frames_data['frames'])
@@ -153,263 +249,171 @@ class VideoCoordinateDetector:
             return {
                 'success': False,
                 'error': str(e),
-                'coordinates': None
+                'coordinates': None,
+                'objects': [],
+                'total_objects': 0
             }
     
-    def _extract_frames(self, video_path: str, frame_interval: int, max_frames: int) -> Dict[str, Any]:
-        """Extract frames from video file."""
-        frames = []
-        video_info = {}
+    def _determine_best_coordinates(self, coordinate_candidates: List[Dict]) -> Optional[Dict]:
+        """Determine the best coordinates from multiple candidates."""
+        if not coordinate_candidates:
+            return None
         
+        # Simple implementation: return the first valid coordinate
+        # In a more sophisticated version, we could weight by confidence, consistency, etc.
+        for coord in coordinate_candidates:
+            if coord and coord.get('latitude') and coord.get('longitude'):
+                return coord
+        return None
+    
+    def _aggregate_object_statistics(self, all_objects: List[Dict]) -> Dict:
+        """Aggregate statistics from all detected objects."""
+        if not all_objects:
+            return {'category_counts': {}, 'category_avg_confidence': {}}
+        
+        category_counts = {}
+        category_confidences = {}
+        
+        for obj in all_objects:
+            if isinstance(obj, dict):
+                category = obj.get('category', 'unknown')
+                confidence = obj.get('confidence', 0.0)
+                
+                if category not in category_counts:
+                    category_counts[category] = 0
+                    category_confidences[category] = []
+                
+                category_counts[category] += 1
+                category_confidences[category].append(confidence)
+        
+        # Calculate average confidences
+        category_avg_confidence = {}
+        for category, confidences in category_confidences.items():
+            category_avg_confidence[category] = sum(confidences) / len(confidences) if confidences else 0.0
+        
+        return {
+            'category_counts': category_counts,
+            'category_avg_confidence': category_avg_confidence
+        }
+    
+    def _analyze_coordinate_sources(self, coordinate_candidates: List[Dict]) -> Dict:
+        """Analyze coordinate sources from candidates."""
+        if not coordinate_candidates:
+            return {}
+        
+        sources = {}
+        for coord in coordinate_candidates:
+            if isinstance(coord, dict):
+                source = coord.get('source', 'unknown')
+                if source not in sources:
+                    sources[source] = 0
+                sources[source] += 1
+        
+        return sources
+    
+    def _calculate_confidence_score(self, coordinate_candidates: List[Dict], all_objects: List[Dict]) -> float:
+        """Calculate overall confidence score."""
+        if not coordinate_candidates and not all_objects:
+            return 0.0
+        
+        coord_confidence = 0.0
+        if coordinate_candidates:
+            confidences = [c.get('confidence', 0.0) for c in coordinate_candidates if isinstance(c, dict)]
+            coord_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        
+        obj_confidence = 0.0
+        if all_objects:
+            confidences = [o.get('confidence', 0.0) for o in all_objects if isinstance(o, dict)]
+            obj_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        
+        # Weighted average
+        if coordinate_candidates and all_objects:
+            return (coord_confidence * 0.7 + obj_confidence * 0.3)
+        elif coordinate_candidates:
+            return coord_confidence
+        else:
+            return obj_confidence
+    
+    def _cleanup_temp_frames(self, frames: List[Dict]):
+        """Clean up temporary frame files."""
+        for frame_info in frames:
+            try:
+                frame_path = frame_info.get('path')
+                if frame_path and os.path.exists(frame_path):
+                    os.remove(frame_path)
+                    logger.debug(f"Cleaned up temporary frame: {frame_path}")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup frame {frame_info.get('path')}: {str(e)}")
+    
+    def _extract_frames(self, video_path: str, frame_interval: int = 30, max_frames: int = 10) -> Dict[str, Any]:
+        """Extract frames from video file."""
         try:
-            # Open video file
             cap = cv2.VideoCapture(video_path)
-            
             if not cap.isOpened():
-                raise ValueError("Could not open video file")
+                return {
+                    'frames': [],
+                    'video_info': {'error': 'Could not open video file'},
+                    'success': False
+                }
             
             # Get video properties
             fps = cap.get(cv2.CAP_PROP_FPS)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            duration = total_frames / fps if fps > 0 else 0
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = frame_count / fps if fps > 0 else 0
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
             video_info = {
                 'fps': fps,
-                'total_frames': total_frames,
+                'frame_count': frame_count,
                 'duration_seconds': duration,
                 'width': width,
-                'height': height,
-                'file_size': os.path.getsize(video_path)
+                'height': height
             }
             
-            # Create temporary directory for frames
-            temp_dir = tempfile.mkdtemp(prefix='video_frames_')
-            
-            frame_count = 0
+            frames = []
+            frame_number = 0
             extracted_count = 0
             
-            while cap.isOpened() and extracted_count < max_frames:
+            # Create temporary directory for frames
+            temp_dir = tempfile.mkdtemp()
+            
+            while extracted_count < max_frames:
                 ret, frame = cap.read()
-                
                 if not ret:
                     break
                 
-                # Extract frame at specified interval
-                if frame_count % frame_interval == 0:
-                    timestamp = frame_count / fps if fps > 0 else 0
-                    
-                    # Save frame as temporary image
-                    frame_filename = f"frame_{frame_count:06d}.jpg"
+                # Extract every frame_interval-th frame
+                if frame_number % frame_interval == 0:
+                    timestamp = frame_number / fps if fps > 0 else 0
+                    frame_filename = f"frame_{frame_number:06d}.jpg"
                     frame_path = os.path.join(temp_dir, frame_filename)
                     
+                    # Save frame
                     cv2.imwrite(frame_path, frame)
                     
                     frames.append({
                         'path': frame_path,
-                        'frame_number': frame_count,
-                        'timestamp': timestamp,
-                        'filename': frame_filename
+                        'frame_number': frame_number,
+                        'timestamp': timestamp
                     })
                     
                     extracted_count += 1
                 
-                frame_count += 1
+                frame_number += 1
             
             cap.release()
-            
-            logger.info(f"Extracted {extracted_count} frames from video")
             
             return {
                 'frames': frames,
                 'video_info': video_info,
-                'temp_dir': temp_dir
+                'success': True
             }
             
         except Exception as e:
             logger.error(f"Error extracting frames: {str(e)}")
             return {
                 'frames': [],
-                'video_info': video_info,
-                'error': str(e)
+                'video_info': {'error': str(e)},
+                'success': False
             }
-    
-    def _determine_best_coordinates(self, coordinate_candidates: List[Dict]) -> Optional[Dict[str, Any]]:
-        """Determine the best coordinates from multiple frame results."""
-        try:
-            if not coordinate_candidates:
-                logger.info("No coordinate candidates found")
-                return None
-            
-            logger.info(f"Processing {len(coordinate_candidates)} coordinate candidates")
-            
-            # Group coordinates by source and calculate confidence
-            source_groups = {}
-            for coord in coordinate_candidates:
-                if not isinstance(coord, dict):
-                    logger.warning(f"Invalid coordinate candidate: {type(coord)}")
-                    continue
-                    
-                source = coord.get('source', 'unknown')
-                if source not in source_groups:
-                    source_groups[source] = []
-                source_groups[source].append(coord)
-            
-            if not source_groups:
-                logger.warning("No valid coordinate groups found")
-                return None
-            
-            # Find most reliable source
-            best_source = None
-            best_score = 0
-            
-            for source, coords in source_groups.items():
-                # Calculate average confidence and consistency
-                confidences = [c.get('confidence', 0) for c in coords]
-                avg_confidence = sum(confidences) / len(confidences)
-                
-                # Calculate coordinate consistency (lower standard deviation is better)
-                lats = [c.get('latitude', 0) for c in coords]
-                lons = [c.get('longitude', 0) for c in coords]
-                
-                lat_std = np.std(lats) if len(lats) > 1 else 0
-                lon_std = np.std(lons) if len(lons) > 1 else 0
-                
-                # Consistency score (lower std deviation = higher consistency)
-                consistency_score = 1.0 / (1.0 + lat_std + lon_std)
-                
-                # Combined score
-                score = avg_confidence * consistency_score * len(coords)
-                
-                if score > best_score:
-                    best_score = score
-                    best_source = source
-            
-            if not best_source:
-                return coordinate_candidates[0]  # Fallback to first result
-            
-            # Return average coordinates from best source
-            best_coords = source_groups[best_source]
-            avg_lat = sum(c.get('latitude', 0) for c in best_coords) / len(best_coords)
-            avg_lon = sum(c.get('longitude', 0) for c in best_coords) / len(best_coords)
-            avg_confidence = sum(c.get('confidence', 0) for c in best_coords) / len(best_coords)
-            
-            logger.info(f"Best coordinates from {best_source}: {avg_lat:.6f}, {avg_lon:.6f} (confidence: {avg_confidence:.2f})")
-            
-            return {
-                'latitude': avg_lat,
-                'longitude': avg_lon,
-                'confidence': avg_confidence,
-                'source': best_source,
-                'frame_count': len(best_coords),
-                'consistency_score': 1.0 / (1.0 + np.std([c.get('latitude', 0) for c in best_coords]) + 
-                                          np.std([c.get('longitude', 0) for c in best_coords]))
-            }
-            
-        except Exception as e:
-            logger.error(f"Error determining best coordinates: {str(e)}")
-            # Return first valid coordinate as fallback
-            if coordinate_candidates:
-                return coordinate_candidates[0]
-            return None
-    
-    def _aggregate_object_statistics(self, all_objects: List[Dict]) -> Dict[str, Any]:
-        """Aggregate statistics about detected objects across all frames."""
-        if not all_objects:
-            return {}
-        
-        # Count objects by category
-        category_counts = {}
-        category_confidences = {}
-        
-        for obj in all_objects:
-            category = obj.get('category', 'unknown')
-            confidence = obj.get('confidence', 0)
-            
-            if category not in category_counts:
-                category_counts[category] = 0
-                category_confidences[category] = []
-            
-            category_counts[category] += 1
-            category_confidences[category].append(confidence)
-        
-        # Calculate average confidences
-        category_avg_confidence = {}
-        for category, confidences in category_confidences.items():
-            category_avg_confidence[category] = sum(confidences) / len(confidences)
-        
-        # Find most common objects
-        sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
-        
-        # Calculate geolocation utility
-        total_utility = 0
-        for obj in all_objects:
-            utility = obj.get('geolocation_utility', 0)
-            total_utility += utility
-        
-        avg_utility = total_utility / len(all_objects) if all_objects else 0
-        
-        return {
-            'total_objects': len(all_objects),
-            'unique_categories': len(category_counts),
-            'category_counts': category_counts,
-            'category_avg_confidence': category_avg_confidence,
-            'most_common_objects': sorted_categories[:5],
-            'average_geolocation_utility': avg_utility,
-            'high_utility_objects': len([obj for obj in all_objects if obj.get('geolocation_utility', 0) > 0.7])
-        }
-    
-    def _cleanup_temp_frames(self, frames: List[Dict]):
-        """Clean up temporary frame files."""
-        try:
-            for frame in frames:
-                frame_path = frame.get('path')
-                if frame_path and os.path.exists(frame_path):
-                    os.remove(frame_path)
-            
-            # Remove temporary directory if empty
-            if frames:
-                temp_dir = os.path.dirname(frames[0]['path'])
-                if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-                    os.rmdir(temp_dir)
-                    
-        except Exception as e:
-            logger.warning(f"Error cleaning up temporary frames: {str(e)}")
-    
-    def get_supported_formats(self) -> List[str]:
-        """Get list of supported video formats."""
-        return list(self.supported_formats)
-    
-    def estimate_processing_time(self, video_path: str, frame_interval: int = 30, 
-                               max_frames: int = 10) -> Dict[str, Any]:
-        """Estimate processing time for a video file."""
-        try:
-            cap = cv2.VideoCapture(video_path)
-            
-            if not cap.isOpened():
-                return {'error': 'Could not open video file'}
-            
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            duration = total_frames / fps if fps > 0 else 0
-            
-            cap.release()
-            
-            # Estimate frames to be processed
-            frames_to_process = min(max_frames, total_frames // frame_interval)
-            
-            # Estimate processing time (rough estimate: 2-5 seconds per frame)
-            estimated_time_per_frame = 3.5  # seconds
-            estimated_total_time = frames_to_process * estimated_time_per_frame
-            
-            return {
-                'video_duration': duration,
-                'total_frames': total_frames,
-                'frames_to_process': frames_to_process,
-                'estimated_processing_time': estimated_total_time,
-                'frame_interval': frame_interval
-            }
-            
-        except Exception as e:
-            return {'error': str(e)}

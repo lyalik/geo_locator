@@ -8,7 +8,7 @@ import cv2
 # from .google_vision_service import GoogleVisionService  # Временно отключено
 from .geo_aggregator_service import GeoAggregatorService
 from .archive_photo_service import ArchivePhotoService
-from services.cache_service import DetectionCache
+from services.cache_service import DetectionCache, ObjectDetectionCache
 from .yandex_maps_service import YandexMapsService
 from .dgis_service import DGISService
 from .roscosmos_satellite_service import RoscosmosService
@@ -82,12 +82,33 @@ class CoordinateDetector:
             Dictionary containing detected objects and their coordinates
         """
         try:
-            # Step 1: Detect objects using YOLO
-            if self.yolo_detector:
-                objects = self.yolo_detector.detect_objects(image_path)
+            # Check cache for complete coordinate analysis first
+            services_used = ['yolo', 'google_vision', 'gemini', 'geo_services']
+            cached_coords = ObjectDetectionCache.get_cached_coordinates(
+                image_path, location_hint or "", services_used
+            )
+            if cached_coords:
+                logger.info(f"Cache hit for complete coordinate analysis: {image_path}")
+                return {
+                    'success': True,
+                    'coordinates': cached_coords,
+                    'objects': ObjectDetectionCache.get_cached_objects(image_path) or [],
+                    'cache_hit': True
+                }
+            
+            # Step 1: Detect objects using YOLO (with caching)
+            objects = ObjectDetectionCache.get_cached_objects(image_path)
+            if objects is None:
+                if self.yolo_detector:
+                    objects = self.yolo_detector.detect_objects(image_path)
+                    # Cache object detection results
+                    ObjectDetectionCache.cache_objects(image_path, objects)
+                    logger.info(f"Detected and cached {len(objects)} objects")
+                else:
+                    objects = []
+                    logger.info("YOLO detector not available, skipping object detection")
             else:
-                objects = []
-                logger.info("YOLO detector not available, skipping object detection")
+                logger.info(f"Using cached objects: {len(objects)} objects")
             
             # Продолжаем даже если объекты не найдены - можем использовать другие источники координат
             
@@ -264,8 +285,15 @@ class CoordinateDetector:
                 satellite_data = self._get_satellite_imagery(final_coordinates)
                 location_info = self._get_enhanced_location_info(final_coordinates, location_hint)
             
+            # Cache the final coordinate result
+            if final_coordinates:
+                ObjectDetectionCache.cache_coordinates(
+                    image_path, final_coordinates, location_hint or "", services_used
+                )
+                logger.info("Cached coordinate analysis results")
+            
             # Return success even if no objects or coordinates found, as long as detection process worked
-            return {
+            result = {
                 'success': True,
                 'coordinates': final_coordinates,
                 'objects': enhanced_objects,
@@ -281,8 +309,11 @@ class CoordinateDetector:
                     'archive_photo_match': archive_coords is not None
                 },
                 'annotated_image_path': None,  # YOLO detection result not available
-                'detection_status': 'no_objects_detected' if len(objects) == 0 else 'objects_detected'
+                'detection_status': 'no_objects_detected' if len(objects) == 0 else 'objects_detected',
+                'cache_hit': False
             }
+            
+            return result
             
         except Exception as e:
             logger.error(f"Error in coordinate detection: {str(e)}")

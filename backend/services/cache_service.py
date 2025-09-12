@@ -135,6 +135,80 @@ class CacheService:
 # Global cache instance
 cache = CacheService()
 
+class ObjectDetectionCache:
+    """Enhanced caching for object detection and coordinate analysis."""
+    
+    @staticmethod
+    def get_image_hash(image_path: str) -> str:
+        """Generate consistent hash for image file."""
+        try:
+            # Use file modification time and size for faster hashing
+            stat = os.stat(image_path)
+            content = f"{image_path}:{stat.st_size}:{stat.st_mtime}"
+            return hashlib.md5(content.encode()).hexdigest()
+        except:
+            return hashlib.md5(image_path.encode()).hexdigest()
+    
+    @staticmethod
+    def get_object_detection_key(image_path: str, model_version: str = "yolo_v8") -> str:
+        """Generate cache key for object detection results."""
+        image_hash = ObjectDetectionCache.get_image_hash(image_path)
+        return f"objects:{model_version}:{image_hash}"
+    
+    @staticmethod
+    def get_coordinate_analysis_key(image_path: str, location_hint: str = "", 
+                                  services: List[str] = None) -> str:
+        """Generate cache key for coordinate analysis results."""
+        image_hash = ObjectDetectionCache.get_image_hash(image_path)
+        services_str = ":".join(sorted(services or []))
+        hint_hash = hashlib.md5(location_hint.encode()).hexdigest()[:8]
+        return f"coords:{image_hash}:{hint_hash}:{services_str}"
+    
+    @staticmethod
+    def cache_objects(image_path: str, objects: List[Dict], ttl: int = 7200):
+        """Cache object detection results (2 hours TTL)."""
+        key = ObjectDetectionCache.get_object_detection_key(image_path)
+        cache.set(key, {
+            'objects': objects,
+            'timestamp': datetime.now().isoformat(),
+            'image_path': image_path
+        }, ttl)
+        logger.debug(f"Cached {len(objects)} objects for {image_path}")
+    
+    @staticmethod
+    def get_cached_objects(image_path: str) -> Optional[List[Dict]]:
+        """Get cached object detection results."""
+        key = ObjectDetectionCache.get_object_detection_key(image_path)
+        cached = cache.get(key)
+        if cached:
+            logger.debug(f"Cache hit for objects: {image_path}")
+            return cached.get('objects', [])
+        return None
+    
+    @staticmethod
+    def cache_coordinates(image_path: str, coordinates: Dict, location_hint: str = "",
+                         services: List[str] = None, ttl: int = 3600):
+        """Cache coordinate analysis results (1 hour TTL)."""
+        key = ObjectDetectionCache.get_coordinate_analysis_key(image_path, location_hint, services)
+        cache.set(key, {
+            'coordinates': coordinates,
+            'timestamp': datetime.now().isoformat(),
+            'location_hint': location_hint,
+            'services_used': services or []
+        }, ttl)
+        logger.debug(f"Cached coordinates for {image_path}")
+    
+    @staticmethod
+    def get_cached_coordinates(image_path: str, location_hint: str = "",
+                             services: List[str] = None) -> Optional[Dict]:
+        """Get cached coordinate analysis results."""
+        key = ObjectDetectionCache.get_coordinate_analysis_key(image_path, location_hint, services)
+        cached = cache.get(key)
+        if cached:
+            logger.debug(f"Cache hit for coordinates: {image_path}")
+            return cached.get('coordinates')
+        return None
+
 class GeolocationCache:
     """Specialized caching for geolocation results."""
     
