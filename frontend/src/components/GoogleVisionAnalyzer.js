@@ -133,7 +133,7 @@ const GoogleVisionAnalyzer = () => {
       </Typography>
       
       <Typography variant="body1" color="text.secondary" paragraph>
-        Продвинутый анализ изображений с помощью Google Cloud Vision и Gemini 2.0-flash
+        Продвинутый анализ изображений с помощью Mistral AI
       </Typography>
 
       <Grid container spacing={3}>

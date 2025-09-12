@@ -472,7 +472,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                           disabled
                         />
                       }
-                      label="🎯 Google Gemini анализ"
+                      label="🎯 YOLO детекция объектов"
                     />
                   </Grid>
                 </Grid>

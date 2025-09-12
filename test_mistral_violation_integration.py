@@ -19,7 +19,7 @@ def test_mistral_violation_api():
     print("🧪 Тестирование Mistral AI интеграции в violation API...")
     
     # URL для тестирования
-    base_url = "http://localhost:5000"
+    base_url = "http://localhost:5001"
     detect_url = f"{base_url}/api/violations/detect"
     batch_url = f"{base_url}/api/violations/batch_detect"
     
@@ -100,7 +100,7 @@ def test_mistral_batch_processing():
     
     print("\n🔍 Тест 2: Batch анализ изображений")
     
-    base_url = "http://localhost:5000"
+    base_url = "http://localhost:5001"
     batch_url = f"{base_url}/api/violations/batch_detect"
     
     test_image = "test_image.jpg"
@@ -137,7 +137,12 @@ def test_mistral_batch_processing():
                 total_yolo = 0
                 
                 for i, file_result in enumerate(batch_results):
-                    violations = file_result.get('detection', {}).get('violations', [])
+                    if isinstance(file_result, dict):
+                        violations = file_result.get('detection', {}).get('violations', [])
+                    else:
+                        print(f"⚠️ Неожиданная структура данных для файла {i+1}: {type(file_result)}")
+                        violations = []
+                    
                     mistral_count = len([v for v in violations if v.get('source') == 'mistral_ai'])
                     yolo_count = len([v for v in violations if v.get('source') == 'yolo'])
                     
