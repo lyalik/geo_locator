@@ -6,8 +6,8 @@ from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-from services.coordinate_detector import CoordinateDetector
-from services.cache_service import DetectionCache
+from .coordinate_detector import CoordinateDetector
+from .cache_service import DetectionCache
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +23,11 @@ class VideoCoordinateDetector:
         """Initialize the video coordinate detector."""
         self.coordinate_detector = CoordinateDetector()
         self.supported_formats = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm'}
+        
+        # Frame quality filtering thresholds
+        self.brightness_threshold = 30.0  # Minimum average brightness (0-255)
+        self.sharpness_threshold = 100.0  # Minimum sharpness (blur detection)
+        
         logger.info("Video Coordinate Detector initialized")
     
     def _is_frame_quality_acceptable(self, frame: np.ndarray, min_brightness: float = 30.0, 

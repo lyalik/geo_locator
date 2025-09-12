@@ -12,6 +12,10 @@ from datetime import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 import exifread
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 try:
     from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean
     from sqlalchemy.ext.declarative import declarative_base
@@ -88,7 +92,17 @@ class ImageDatabaseService:
             
         try:
             if not db_url:
-                db_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost/geo_locator')
+                # Use DATABASE_URL from environment or build from individual components
+                db_url = os.getenv('DATABASE_URL')
+                if not db_url:
+                    # Use PostgreSQL environment variables (POSTGRES_*)
+                    db_host = os.getenv('POSTGRES_HOST', 'localhost')
+                    db_port = os.getenv('POSTGRES_PORT', '5432')
+                    db_name = os.getenv('POSTGRES_DB', 'geo_locator')
+                    db_user = os.getenv('POSTGRES_USER', 'postgres')
+                    db_password = os.getenv('POSTGRES_PASSWORD', '')
+                    
+                    db_url = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
             
             self.engine = create_engine(db_url)
             Base.metadata.create_all(self.engine)

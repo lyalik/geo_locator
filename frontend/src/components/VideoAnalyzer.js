@@ -250,7 +250,37 @@ const VideoAnalyzer = () => {
         setProgress(100);
 
         if (response.data.success) {
-          setAnalysisResults(response.data.data);
+          console.log('🎥 Полученные данные анализа видео:', response.data);
+          
+          // Извлекаем данные из правильной структуры API ответа для видео
+          const videoData = response.data.data;
+          const objectsArray = Array.isArray(videoData.objects) ? videoData.objects : [];
+          
+          const transformedVideoResults = {
+            total_frames_processed: videoData.total_frames_processed || 0,
+            successful_frames: videoData.frame_results ? videoData.frame_results.filter(f => f.success).length : 0,
+            total_objects_detected: videoData.total_objects || objectsArray.length,
+            processing_time: videoData.processing_time_seconds || 0,
+            coordinates: videoData.coordinates ? {
+              latitude: videoData.coordinates.latitude || videoData.coordinates.lat,
+              longitude: videoData.coordinates.longitude || videoData.coordinates.lon,
+              confidence: videoData.coordinates.confidence || 0,
+              source: videoData.coordinates.source || 'Video Analysis',
+              frame_count: videoData.total_frames_processed || 0
+            } : null,
+            has_analysis_data: true,
+            satellite_data: videoData.satellite_data || null,
+            location_info: videoData.location_info || null,
+            object_stats: videoData.object_stats || null,
+            frame_results: videoData.frame_results || [],
+            recommendations: videoData.recommendations || [],
+            sources_used: videoData.sources_used || [],
+            coordinate_sources: videoData.coordinate_sources || {},
+            quality_stats: videoData.quality_stats || null,
+            video_info: videoData.video_info || null
+          };
+          
+          setAnalysisResults(transformedVideoResults);
           enqueueSnackbar('Анализ видео завершен успешно!', { variant: 'success' });
         } else {
           throw new Error(response.data.message || 'Ошибка при анализе видео');

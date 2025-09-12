@@ -463,8 +463,18 @@ def analyze_video():
         # Clean result from non-serializable objects recursively
         def clean_for_json(obj):
             """Recursively clean object for JSON serialization"""
+            import numpy as np
+            
             if isinstance(obj, bytes):
                 return f"<bytes object of length {len(obj)}>"
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            elif isinstance(obj, (np.integer, np.int64, np.int32)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, np.float64, np.float32)):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
             elif isinstance(obj, dict):
                 return {k: clean_for_json(v) for k, v in obj.items()}
             elif isinstance(obj, list):
