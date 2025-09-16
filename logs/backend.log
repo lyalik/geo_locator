@@ -121,3 +121,294 @@ INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a
 INFO:werkzeug:[33mPress CTRL+C to quit[0m
 INFO:werkzeug: * Restarting with stat
 INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:routes.geo_api:Geo services initialized successfully
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:routes.osm_api:OSM service initialized successfully
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-291-728
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:14] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:14] "GET /api/violations/analytics HTTP/1.1" 200 -
+INFO:app:📊 Generated stats for user 2: 0 photos, 0 violations
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:14] "GET /api/violations/user/2/stats HTTP/1.1" 200 -
+INFO:app:📱 Mobile - Retrieved 89 history items for user all
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:17] "GET /api/violations/history HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:20] "GET /api/violations/details/94 HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:28] "GET /api/violations/details/95 HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:31] "GET /api/violations/details/96 HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:41] "GET /api/violations/details/85 HTTP/1.1" 200 -
+INFO:app:📱 Mobile - Retrieved 89 history items for user all
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:58:56] "GET /api/violations/history HTTP/1.1" 200 -
+INFO:app:📁 File upload - Filename: 'violation.jpg', Content-Type: 'image/jpeg'
+INFO:app:📁 File validation - allowed_file result: True
+INFO:app:🔍 Detection - Starting violation detection for: b40d0c7f-46ea-4fe0-8cf4-56de7157f79a.jpg
+INFO:app:🔍 YOLO Detection - Using real YOLO detector
+
+0: 480x640 2 cars, 83.4ms
+Speed: 3.1ms preprocess, 83.4ms inference, 1.0ms postprocess per image at shape (1, 3, 480, 640)
+INFO:app:🔍 YOLO Detection - Result: {'success': True, 'objects': [{'id': 1, 'category': 'transportation', 'confidence': 0.26523637771606445, 'bbox': {'x1': 1572.967529296875, 'y1': 1748.4954833984375, 'x2': 1800.6131591796875, 'y2': 1872.6982421875, 'width': 227.6456298828125, 'height': 124.2027587890625}, 'bbox_normalized': {'x1': 0.3855312571806066, 'y1': 0.5714037527445874, 'x2': 0.4413267547009038, 'y2': 0.6119928896037582}, 'description': 'Транспорт', 'relevance': 'low', 'source': 'yolo'}, {'id': 2, 'category': 'transportation', 'confidence': 0.2555278241634369, 'bbox': {'x1': 1001.1493530273438, 'y1': 1314.6009521484375, 'x2': 1188.3594970703125, 'y2': 1393.6708984375, 'width': 187.21014404296875, 'height': 79.0699462890625}, 'bbox_normalized': {'x1': 0.24537974338905483, 'y1': 0.429608154296875, 'x2': 0.29126458261527266, 'y2': 0.4554480060253268}, 'description': 'Транспорт', 'relevance': 'low', 'source': 'yolo'}], 'total_objects': 2, 'annotated_image_path': '/home/denis/Documents/Hackathon_2025/geo_locator/backend/uploads/violations/b40d0c7f-46ea-4fe0-8cf4-56de7157f79a_annotated_yolo.jpg', 'model_info': {'model_type': 'YOLOv8', 'confidence_threshold': 0.25, 'device': 'cpu'}}
+INFO:app:🤖 Mistral AI - Starting enhanced violation analysis
+INFO:app:🤖 Mistral AI - Service available: True
+INFO:services.mistral_ai_service:🤖 AI raw result: {'success': True, 'source': 'mistral_ai', 'analysis': 'На основе предоставленного изображения, вот анализ выявленных нарушений использования нежилого фонда:\n\n```json\n{\n  "violations_detected": true,\n  "violations": [\n    {\n      "type": "Использование территории",\n      "description": "Незаконная парковка и складирование материалов на территории",\n      "severity": "medium",\n      "confidence": 85.0\n    },\n    {\n      "type": "Нарушения фасадов",\n      "description": "Неразрешенные вывески и изменения архитектурного облика",\n      "severity": "low",\n      "confidence": 70.0\n    },\n    {\n      "type": "Техническое состояние",\n      "description": "Аварийное состояние конструкций и нарушения безопасности",\n      "severity": "high",\n      "confidence": 90.0\n    }\n  ],\n  "building_analysis": "Здания в целом находятся в удовлетворительном состоянии, но есть серьезные проблемы с незаконной парковкой, складированием материалов и аварийным состоянием конструкций. Также присутствуют неразрешенные вывески и изменения архитектурного облика.",\n  "recommendations": [\n    "Провести инвентаризацию и устранение незаконных парковочных мест и складирования материалов",\n    "Обеспечить соблюдение архитектурных норм и стандартов для фасадов зданий",\n    "Провести техническую экспертизу и устранение аварийных состояний конструкций",\n    "Организовать регулярные проверки и мониторинг соблюдения правил использования нежилого фонда"\n  ]\n}\n```\n\nЭтот анализ основан на видимых нарушениях и потенциальных проблемах, выявленных на изображении.', 'model': 'pixtral-12b-2409', 'tokens_used': 3881}
+INFO:services.mistral_ai_service:🤖 AI analysis text: На основе предоставленного изображения, вот анализ выявленных нарушений использования нежилого фонда:
+
+```json
+{
+  "violations_detected": true,
+  "violations": [
+    {
+      "type": "Использование территории",
+      "description": "Незаконная парковка и складирование материалов на территории",
+      "severity": "medium",
+      "confidence": 85.0
+    },
+    {
+      "type": "Нарушения фасадов",
+      "description": "Неразрешенные вывески и изменения архитектурного облика",
+      "severity": "low",
+      "confidence": 70.0
+    },
+    {
+      "type": "Техническое состояние",
+      "description": "Аварийное состояние конструкций и нарушения безопасности",
+      "severity": "high",
+      "confidence": 90.0
+    }
+  ],
+  "building_analysis": "Здания в целом находятся в удовлетворительном состоянии, но есть серьезные проблемы с незаконной парковкой, складированием материалов и аварийным состоянием конструкций. Также присутствуют неразрешенные вывески и изменения архитектурного облика.",
+  "recommendations": [
+    "Провести инвентаризацию и устранение незаконных парковочных мест и складирования материалов",
+    "Обеспечить соблюдение архитектурных норм и стандартов для фасадов зданий",
+    "Провести техническую экспертизу и устранение аварийных состояний конструкций",
+    "Организовать регулярные проверки и мониторинг соблюдения правил использования нежилого фонда"
+  ]
+}
+```
+
+Этот анализ основан на видимых нарушениях и потенциальных проблемах, выявленных на изображении.
+INFO:services.mistral_ai_service:🤖 AI parsed JSON: {'violations_detected': True, 'violations': [{'type': 'Использование территории', 'description': 'Незаконная парковка и складирование материалов на территории', 'severity': 'medium', 'confidence': 85.0}, {'type': 'Нарушения фасадов', 'description': 'Неразрешенные вывески и изменения архитектурного облика', 'severity': 'low', 'confidence': 70.0}, {'type': 'Техническое состояние', 'description': 'Аварийное состояние конструкций и нарушения безопасности', 'severity': 'high', 'confidence': 90.0}], 'building_analysis': 'Здания в целом находятся в удовлетворительном состоянии, но есть серьезные проблемы с незаконной парковкой, складированием материалов и аварийным состоянием конструкций. Также присутствуют неразрешенные вывески и изменения архитектурного облика.', 'recommendations': ['Провести инвентаризацию и устранение незаконных парковочных мест и складирования материалов', 'Обеспечить соблюдение архитектурных норм и стандартов для фасадов зданий', 'Провести техническую экспертизу и устранение аварийных состояний конструкций', 'Организовать регулярные проверки и мониторинг соблюдения правил использования нежилого фонда']}
+INFO:services.mistral_ai_service:🤖 AI - Found 3 real violations
+INFO:app:🤖 Mistral AI - Raw result: {'success': True, 'violations': [{'type': 'Использование территории', 'description': 'Незаконная парковка и складирование материалов на территории', 'severity': 'medium', 'confidence': 85.0}, {'type': 'Нарушения фасадов', 'description': 'Неразрешенные вывески и изменения архитектурного облика', 'severity': 'low', 'confidence': 70.0}, {'type': 'Техническое состояние', 'description': 'Аварийное состояние конструкций и нарушения безопасности', 'severity': 'high', 'confidence': 90.0}], 'building_analysis': 'Здания в целом находятся в удовлетворительном состоянии, но есть серьезные проблемы с незаконной парковкой, складированием материалов и аварийным состоянием конструкций. Также присутствуют неразрешенные вывески и изменения архитектурного облика.', 'recommendations': ['Провести инвентаризацию и устранение незаконных парковочных мест и складирования материалов', 'Обеспечить соблюдение архитектурных норм и стандартов для фасадов зданий', 'Провести техническую экспертизу и устранение аварийных состояний конструкций', 'Организовать регулярные проверки и мониторинг соблюдения правил использования нежилого фонда']}
+INFO:app:🤖 Mistral AI - Converted 3 violations to standard format
+INFO:app:🤖 Mistral AI - Final violations: [{'category': 'Использование территории', 'confidence': 0.85, 'description': 'Незаконная парковка и складирование материалов на территории', 'severity': 'medium', 'source': 'mistral_ai', 'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}}, {'category': 'Нарушения фасадов', 'confidence': 0.7, 'description': 'Неразрешенные вывески и изменения архитектурного облика', 'severity': 'low', 'source': 'mistral_ai', 'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}}, {'category': 'Техническое состояние', 'confidence': 0.9, 'description': 'Аварийное состояние конструкций и нарушения безопасности', 'severity': 'high', 'source': 'mistral_ai', 'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}}]
+INFO:app:🔍 Combined Detection - Total violations: 3
+INFO:app:🌍 Geolocation - Starting geolocation processing for: b40d0c7f-46ea-4fe0-8cf4-56de7157f79a.jpg
+INFO:app:🌍 Geolocation - Location hint: ''
+INFO:app:🌍 Geolocation - Using real geolocation service
+INFO:app:🌍 Geolocation - Result: {'success': False, 'coordinates': None, 'address': None, 'error': 'No EXIF data found in image', 'has_gps': False, 'suggest_manual_input': False}
+INFO:app:📍 Using auto-detected location: {'coordinates': None, 'address': None, 'has_gps': False, 'source': 'auto'}
+INFO:app:📍 Saving coordinates: lat=None, lon=None, has_gps=False
+INFO:app:💾 Database - Saved photo 73 with 3 violations
+INFO:app:✅ Final Response - Violation ID: 2ed1d655-45a1-42ff-bc76-1e27ba2957eb
+INFO:app:✅ Final Response - Violations found: 3
+INFO:app:✅ Final Response - Location: {'coordinates': None, 'address': None, 'has_gps': False, 'source': 'auto'}
+INFO:app:✅ Final Response - Full data: {'violation_id': '2ed1d655-45a1-42ff-bc76-1e27ba2957eb', 'image_path': '/uploads/violations/b40d0c7f-46ea-4fe0-8cf4-56de7157f79a.jpg', 'annotated_image_path': '/uploads/violations/b40d0c7f-46ea-4fe0-8cf4-56de7157f79a_annotated_yolo.jpg', 'violations': [{'category': 'Использование территории', 'confidence': 0.85, 'description': 'Незаконная парковка и складирование материалов на территории', 'severity': 'medium', 'source': 'mistral_ai', 'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}}, {'category': 'Нарушения фасадов', 'confidence': 0.7, 'description': 'Неразрешенные вывески и изменения архитектурного облика', 'severity': 'low', 'source': 'mistral_ai', 'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}}, {'category': 'Техническое состояние', 'confidence': 0.9, 'description': 'Аварийное состояние конструкций и нарушения безопасности', 'severity': 'high', 'source': 'mistral_ai', 'bbox': {'x1': 0, 'y1': 0, 'x2': 100, 'y2': 100, 'width': 100, 'height': 100, 'center_x': 50, 'center_y': 50}}], 'location': {'coordinates': None, 'address': None, 'has_gps': False, 'source': 'auto'}, 'metadata': {'timestamp': '2025-09-16T11:59:40.907849Z', 'user_id': 'anonymous', 'location_notes': '', 'location_hint': '', 'image_size': None}}
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:59:40] "POST /api/violations/detect HTTP/1.1" 200 -
+INFO:app:📱 Mobile - Retrieved 92 history items for user all
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 14:59:58] "GET /api/violations/history HTTP/1.1" 200 -
+INFO:app:📱 Mobile - Retrieved 92 history items for user all
+INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 15:00:14] "GET /api/violations/history HTTP/1.1" 200 -
+INFO:app:📝 Violation 96 updated by user None
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:06:33] "PUT /api/violations/details/96 HTTP/1.1" 200 -
+INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/app.py', reloading
+✅ Maps API registered successfully
+✅ Violation API registered successfully
+✅ Geo API registered successfully
+✅ Cache API registered successfully
+✅ Rosreestr API registered successfully
+✅ OpenStreetMap API registered successfully
+✅ OSM API registered successfully
+✅ Coordinate API registered successfully
+❌ Sentinel API registration failed: attempted relative import beyond top-level package
+✅ Satellite API registered successfully
+✅ OCR API registered successfully
+✅ Notification API registered successfully
+✅ Object Group API registered successfully
+🚀 Starting Geo Locator Backend (Local Development)
+==================================================
+✅ PostgreSQL connection successful
+✅ Redis connection successful
+✅ Database tables created successfully
+
+🎉 All checks passed! Starting Flask development server...
+📍 Backend will be available at: http://localhost:5001
+📍 API endpoints at: http://localhost:5001/api/
+
+Press Ctrl+C to stop the server
+==================================================
+INFO:werkzeug: * Restarting with stat
+INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:routes.geo_api:Geo services initialized successfully
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:routes.osm_api:OSM service initialized successfully
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:✅ YOLO detector initialized
+INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
+WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
+WARNING:services.google_vision_service:Google Cloud Vision credentials not found
+INFO:services.coordinate_detector:✅ Google Vision service initialized
+INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
+INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
+INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
+INFO:services.coordinate_detector:Coordinate Detector initialized
+INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 111-291-728

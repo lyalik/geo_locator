@@ -251,6 +251,16 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+# Register Admin API
+try:
+    from routes.admin_api import bp as admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    print("✅ Admin API registered successfully")
+except Exception as e:
+    print(f"❌ Admin API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
+
 # OpenStreetMap API already registered above
 
 @app.route('/')

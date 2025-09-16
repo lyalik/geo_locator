@@ -21,6 +21,7 @@ import VideoAnalyzer from './VideoAnalyzer';
 import BatchAnalyzer from './BatchAnalyzer';
 import MultiPhotoAnalyzer from './MultiPhotoAnalyzer';
 import ViolationEditDialog from './ViolationEditDialog';
+import AdminPanel from './AdminPanel';
 import { violations } from '../services/api';
 
 const Dashboard = () => {
@@ -308,6 +309,12 @@ const Dashboard = () => {
       icon: <MultiPhotoIcon />, 
       description: 'Группировка нескольких фотографий одного объекта для повышения точности определения координат',
       component: <MultiPhotoAnalyzer /> 
+    },
+    { 
+      label: 'Админ-панель', 
+      icon: <AnalyticsIcon />, 
+      description: 'Управление всеми пользователями, нарушениями и модерация контента. Доступно только администраторам',
+      component: <AdminPanel /> 
     }
   ];
 
