@@ -1,22 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Dimensions,
-  Image,
-  ActivityIndicator,
   Platform,
-  ScrollView,
   Animated,
-  Vibration
+  Vibration,
+  Dimensions
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/ApiService';
+import OfflineStorageService from '../services/OfflineStorageService';
+import PerformanceOptimizer from '../services/PerformanceOptimizer';
 
 const { width, height } = Dimensions.get('window');
 
@@ -31,6 +30,8 @@ export default function CameraScreen() {
   const [flashMode, setFlashMode] = useState('off');
   const [focusPoint, setFocusPoint] = useState(null);
   const [isReady, setIsReady] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingPhotosCount, setPendingPhotosCount] = useState(0);
   const cameraRef = useRef(null);
   const focusAnimation = useRef(new Animated.Value(0)).current;
   const shutterAnimation = useRef(new Animated.Value(1)).current;
@@ -38,7 +39,37 @@ export default function CameraScreen() {
   useEffect(() => {
     requestLocationPermission();
     getCurrentLocation();
+    initializeOfflineMode();
   }, []);
+
+  const initializeOfflineMode = async () => {
+    try {
+      await OfflineStorageService.initializeOfflineStorage();
+      await checkNetworkStatus();
+      await updatePendingPhotosCount();
+    } catch (error) {
+      console.error('❌ Ошибка инициализации офлайн режима:', error);
+    }
+  };
+
+  const checkNetworkStatus = async () => {
+    try {
+      const online = await OfflineStorageService.isOnline();
+      setIsOnline(online);
+    } catch (error) {
+      console.error('❌ Ошибка проверки сети:', error);
+      setIsOnline(false);
+    }
+  };
+
+  const updatePendingPhotosCount = async () => {
+    try {
+      const count = await OfflineStorageService.getPendingPhotosCount();
+      setPendingPhotosCount(count);
+    } catch (error) {
+      console.error('❌ Ошибка получения количества неотправленных фото:', error);
+    }
+  };
 
   const requestLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -114,10 +145,110 @@ export default function CameraScreen() {
       });
       
       setCapturedImage(photo);
-      await analyzeImage(photo);
+      
+      // Проверяем состояние сети
+      await checkNetworkStatus();
+      
+      if (isOnline) {
+        // Если онлайн - анализируем сразу
+        await analyzeImage(photo);
+      } else {
+        // Если офлайн - сохраняем локально
+        await savePhotoOffline(photo);
+      }
     } catch (error) {
       Alert.alert('Ошибка', 'Не удалось сделать фото');
       console.error('Ошибка камеры:', error);
+    }
+  };
+
+  const savePhotoOffline = async (photo) => {
+    try {
+      setIsAnalyzing(true);
+      
+      const offlinePhoto = await OfflineStorageService.savePhotoOffline(
+        photo.uri,
+        location,
+        {
+          quality: 0.8,
+          timestamp: Date.now(),
+          facing: facing,
+          flashMode: flashMode
+        }
+      );
+
+      await updatePendingPhotosCount();
+      
+      Alert.alert(
+        'Фото сохранено офлайн',
+        `Фото сохранено локально и будет отправлено при подключении к интернету.\nВсего неотправленных: ${pendingPhotosCount + 1}`,
+        [
+          { text: 'OK' },
+          { text: 'Синхронизировать', onPress: syncOfflinePhotos }
+        ]
+      );
+
+      setAnalysisResult({
+        success: true,
+        message: 'Фото сохранено офлайн',
+        offline: true,
+        photoId: offlinePhoto.id
+      });
+
+    } catch (error) {
+      console.error('❌ Ошибка сохранения фото офлайн:', error);
+      Alert.alert('Ошибка', 'Не удалось сохранить фото офлайн');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const syncOfflinePhotos = async () => {
+    try {
+      setIsAnalyzing(true);
+      
+      const result = await OfflineStorageService.syncOfflinePhotos(async (offlinePhoto) => {
+        // Функция загрузки фото на сервер
+        try {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: offlinePhoto.localPath,
+            type: 'image/jpeg',
+            name: `photo_${offlinePhoto.id}.jpg`,
+          });
+
+          if (offlinePhoto.location) {
+            formData.append('latitude', offlinePhoto.location.latitude.toString());
+            formData.append('longitude', offlinePhoto.location.longitude.toString());
+          }
+
+          const response = await ApiService.uploadViolation(formData);
+          return { success: true, data: response.data };
+        } catch (error) {
+          console.error('❌ Ошибка загрузки фото:', error);
+          return { success: false, error: error.message };
+        }
+      });
+
+      await updatePendingPhotosCount();
+
+      if (result.success && result.uploaded > 0) {
+        Alert.alert(
+          'Синхронизация завершена',
+          `Успешно загружено ${result.uploaded} из ${result.total} фото`
+        );
+      } else if (result.errors && result.errors.length > 0) {
+        Alert.alert(
+          'Ошибки синхронизации',
+          `Не удалось загрузить некоторые фото:\n${result.errors.slice(0, 3).join('\n')}`
+        );
+      }
+
+    } catch (error) {
+      console.error('❌ Ошибка синхронизации:', error);
+      Alert.alert('Ошибка', 'Не удалось синхронизировать фото');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -138,6 +269,30 @@ export default function CameraScreen() {
     setAnalysisResult(null);
 
     try {
+      // Проверяем кэш для быстрого результата
+      const cachedResult = await PerformanceOptimizer.getCachedAnalysisResult(photo.uri);
+      if (cachedResult) {
+        console.log('🎯 Используем кэшированный результат');
+        setAnalysisResult(cachedResult);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Оптимизируем изображение перед отправкой
+      console.log('🔧 Оптимизируем изображение...');
+      const optimizedImage = await PerformanceOptimizer.optimizeImage(photo.uri, {
+        maxSize: 1280,
+        quality: 0.8
+      });
+
+      const imageToUse = optimizedImage.optimized ? optimizedImage.uri : photo.uri;
+      console.log('📊 Результат оптимизации:', {
+        optimized: optimizedImage.optimized,
+        originalSize: optimizedImage.originalSize,
+        finalSize: optimizedImage.finalSize,
+        compressionRatio: optimizedImage.compressionRatio
+      });
+
       // Создаем FormData для отправки изображения
       const formData = new FormData();
       console.log('📦 Создаем FormData...');
@@ -150,9 +305,9 @@ export default function CameraScreen() {
         console.log('📄 Blob создан:', blob.size, 'bytes');
         formData.append('file', blob, 'violation.jpg');
       } else {
-        console.log('📱 Используем URI для мобильной версии:', photo.uri);
+        console.log('📱 Используем оптимизированное изображение:', imageToUse);
         formData.append('file', {
-          uri: photo.uri,
+          uri: imageToUse,
           type: 'image/jpeg',
           name: 'violation.jpg',
         });
@@ -170,17 +325,17 @@ export default function CameraScreen() {
       console.log('🚀 Отправляем запрос на анализ...');
       // Отправляем на анализ
       const result = await ApiService.detectViolation(formData);
-      console.log('✅ Получен результат анализа:', result);
-      setAnalysisResult(result);
+      console.log('📊 Результат анализа:', result.data);
+      setAnalysisResult(result.data);
 
-      if (result.success && result.data.violations.length > 0) {
-        console.log('🎯 Нарушения найдены:', result.data.violations.length);
+      // Кэшируем результат для повторного использования
+      await PerformanceOptimizer.cacheAnalysisResult(photo.uri, result.data);
+
+      if (result.data.violations && result.data.violations.length > 0) {
+        console.log(`🚨 Обнаружено ${result.data.violations.length} нарушений`);
         Alert.alert(
-          'Нарушения обнаружены!', 
-          `Найдено ${result.data.violations.length} нарушений`,
-          [
-            { text: 'OK', style: 'default' }
-          ]
+          'Нарушения обнаружены!',
+          `Найдено ${result.data.violations.length} нарушений. Проверьте детали.`
         );
       } else {
         console.log('✅ Нарушений не обнаружено');
@@ -311,6 +466,29 @@ export default function CameraScreen() {
           >
             <View style={styles.overlay}>
               <View style={styles.topControls}>
+                {/* Индикатор статуса сети */}
+                <View style={[styles.networkStatus, { backgroundColor: isOnline ? '#4CAF50' : '#FF5722' }]}>
+                  <Ionicons 
+                    name={isOnline ? "wifi" : "wifi-off"} 
+                    size={16} 
+                    color="white" 
+                  />
+                  <Text style={styles.networkText}>
+                    {isOnline ? 'Онлайн' : 'Офлайн'}
+                  </Text>
+                </View>
+
+                {/* Счетчик неотправленных фото */}
+                {pendingPhotosCount > 0 && (
+                  <TouchableOpacity 
+                    style={styles.pendingPhotos}
+                    onPress={syncOfflinePhotos}
+                  >
+                    <Ionicons name="cloud-upload" size={16} color="white" />
+                    <Text style={styles.pendingText}>{pendingPhotosCount}</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
                   style={styles.controlButton}
                   onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
@@ -415,8 +593,46 @@ const styles = StyleSheet.create({
     topControls: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      alignItems: 'center',
       paddingTop: 50,
       paddingHorizontal: 20,
+    },
+    networkStatus: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    networkText: {
+      color: 'white',
+      fontSize: 12,
+      fontWeight: '600',
+      marginLeft: 4,
+    },
+    pendingPhotos: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#FF9800',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    pendingText: {
+      color: 'white',
+      fontSize: 12,
+      fontWeight: '600',
+      marginLeft: 4,
     },
     controlButton: {
       width: 50,
