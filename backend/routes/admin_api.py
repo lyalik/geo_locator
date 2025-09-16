@@ -4,6 +4,7 @@ from functools import wraps
 from models import db, User, Violation, Photo
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
+from pathlib import Path
 
 bp = Blueprint('admin_api', __name__)
 
@@ -204,7 +205,7 @@ def get_all_violations():
                 'created_at': photo.created_at.isoformat() + 'Z' if photo else None,
                 'user_id': str(photo.user_id) if photo else None,
                 'username': user.username if user else 'Unknown',
-                'image_path': photo.file_path if photo else None,
+                'image_path': f"http://192.168.1.67:5001/uploads/violations/{Path(photo.file_path).name}" if photo and photo.file_path else None,
                 'location': {
                     'latitude': photo.lat if photo else None,
                     'longitude': photo.lon if photo else None,

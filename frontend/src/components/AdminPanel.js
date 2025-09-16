@@ -145,7 +145,7 @@ export default function AdminPanel() {
       if (analyticsFilters.user_id) params.user_id = analyticsFilters.user_id;
       
       const response = await api.get('/admin/analytics/detailed', { params });
-      setAnalytics(response.data);
+      setAnalytics(response.data.data || response.data);
     } catch (error) {
       console.error('Ошибка загрузки аналитики:', error);
     }
