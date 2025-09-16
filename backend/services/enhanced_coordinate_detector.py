@@ -341,6 +341,7 @@ class EnhancedCoordinateDetector:
                 }
         
         # Если нет подсказки или она не распознана - НЕ возвращаем координаты
+        logger.info("🚫 No valid location hint - not returning fallback coordinates")
         return {
             'coordinates': None,
             'source': 'no_fallback',

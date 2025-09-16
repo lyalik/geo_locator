@@ -268,25 +268,14 @@ export const objectGroupAnalysis = {
     
     const formData = new FormData();
     
-    // Add objects metadata
-    const objectsData = objects.map((obj, index) => ({
-      id: obj.id,
-      name: obj.name,
-      description: obj.description,
-      file_keys: obj.files.map((_, fileIndex) => `object_${obj.id}_file_${fileIndex}`)
-    }));
-    
-    formData.append('objects', JSON.stringify(objectsData));
-    
     if (locationHint) {
       formData.append('location_hint', locationHint);
     }
     
-    // Add all files with unique keys
+    // Добавляем все файлы из всех групп как простой список для batch_detect
     objects.forEach((obj) => {
-      obj.files.forEach((fileData, fileIndex) => {
-        const fileKey = `object_${obj.id}_file_${fileIndex}`;
-        formData.append(fileKey, fileData.file);
+      obj.files.forEach((fileData) => {
+        formData.append('files', fileData.file);
       });
     });
 
@@ -300,7 +289,8 @@ export const objectGroupAnalysis = {
       }
     }
 
-    return fetch(`${API_URL}/api/object-groups/analyze`, {
+    // Используем существующий batch_detect endpoint вместо несуществующего object-groups
+    return fetch(`${API_URL}/api/violations/batch_detect`, {
       method: 'POST',
       body: formData,
       headers: {

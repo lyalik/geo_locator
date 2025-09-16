@@ -87,7 +87,26 @@ class CoordinateDetector:
             Dictionary containing detected objects and their coordinates
         """
         try:
-            # First try enhanced coordinate detection
+            # Step 1: Detect objects using YOLO first (always run this)
+            objects = ObjectDetectionCache.get_cached_objects(image_path)
+            if objects is None:
+                if self.yolo_detector:
+                    yolo_result = self.yolo_detector.detect_objects(image_path)
+                    if yolo_result.get('success'):
+                        objects = yolo_result.get('objects', [])
+                        # Cache object detection results
+                        ObjectDetectionCache.cache_objects(image_path, objects)
+                        logger.info(f"🎯 YOLO detected and cached {len(objects)} objects")
+                    else:
+                        objects = []
+                        logger.warning(f"YOLO detection failed: {yolo_result.get('error', 'unknown error')}")
+                else:
+                    objects = []
+                    logger.info("YOLO detector not available, skipping object detection")
+            else:
+                logger.info(f"🎯 Using cached YOLO objects: {len(objects)} objects")
+
+            # Try enhanced coordinate detection
             enhanced_result = self.enhanced_detector.detect_coordinates_enhanced(image_path, location_hint)
             if enhanced_result['success'] and enhanced_result['coordinates']:
                 logger.info(f"✅ Enhanced detector found coordinates: {enhanced_result['coordinates']}")
@@ -96,7 +115,7 @@ class CoordinateDetector:
                     'coordinates': enhanced_result['coordinates'],
                     'source': enhanced_result['source'],
                     'confidence': enhanced_result['confidence'],
-                    'objects': [],
+                    'objects': objects,  # Include YOLO objects in response
                     'enhanced_detection': True
                 }
             

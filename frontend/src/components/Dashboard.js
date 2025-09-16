@@ -258,7 +258,7 @@ const Dashboard = () => {
     { 
       label: 'Анализ с ИИ', 
       icon: <UploadIcon />, 
-      description: 'Загрузка изображений для автоматического обнаружения нарушений с помощью ИИ (Google Vision API + YOLO) и определения координат объектов',
+      description: 'Загрузка изображений для автоматического обнаружения нарушений с помощью ИИ (AI API + YOLO) и определения координат объектов',
       component: <ViolationUploader onUploadComplete={handleUploadComplete} /> 
     },
     { 

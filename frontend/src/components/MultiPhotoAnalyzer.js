@@ -101,10 +101,10 @@ const MultiPhotoAnalyzer = () => {
       const response = await objectGroupAnalysis.analyzeGroups(objects, locationHint);
       console.log('✅ Analysis completed:', response);
       
-      // Правильная структура данных из backend
+      // Правильная структура данных из backend (batch_detect возвращает data.results)
       const results = {
-        results: response.data.data.objects || [],
-        statistics: response.data.data.statistics || {}
+        results: response.data.data?.results || response.data.results || [],
+        summary: response.data.data?.summary || response.data.summary || {}
       };
       
       setAnalysisResults(results);

@@ -1,6 +1,3 @@
-"""
-Google Vision + Google Gemini Service для анализа изображений и текста
-"""
 import os
 import base64
 import requests
@@ -15,7 +12,8 @@ class MistralAIService:
     def __init__(self):
         self.api_key = os.getenv('MISTRAL_API_KEY')
         self.base_url = "https://api.mistral.ai/v1"
-        self.model = "pixtral-12b-2409"  # Mistral's vision model
+        # Используем лучшую модель Mistral для анализа изображений
+        self.model = os.getenv('MISTRAL_MODEL', "pixtral-12b-2409")  # Mistral's vision model
         
         if not self.api_key:
             logger.warning("MISTRAL_API_KEY not found in environment variables")
