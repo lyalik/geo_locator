@@ -290,6 +290,16 @@ def serve_satellite_image(filename):
     else:
         return jsonify({'error': 'Image not found'}), 404
 
+@app.route('/uploads/violations/<filename>')
+def serve_violation_image(filename):
+    """Serve violation images from uploads directory"""
+    import os
+    uploads_dir = os.path.join(os.getcwd(), 'uploads', 'violations')
+    if os.path.exists(os.path.join(uploads_dir, filename)):
+        return send_from_directory(uploads_dir, filename)
+    else:
+        return jsonify({'error': 'Image not found'}), 404
+
 @app.route('/health', methods=['GET'])
 def health():
     try:

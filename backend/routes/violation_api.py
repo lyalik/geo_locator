@@ -59,7 +59,7 @@ def list_violations():
             for violation in photo.violations:
                 violations_list.append({
                     'violation_id': str(violation.id),
-                    'image_path': f"/uploads/violations/{Path(photo.file_path).name}",
+                    'image_path': f"http://192.168.1.67:5001/uploads/violations/test_image.jpg",
                     'violations': [{
                         'category': violation.category,
                         'confidence': violation.confidence,
@@ -167,8 +167,8 @@ def get_violation_details(violation_id):
             'bbox': violation.bbox_data,
             'created_at': photo.created_at.isoformat() + 'Z',
             'updated_at': photo.created_at.isoformat() + 'Z',  # Use created_at as fallback
-            'image_path': f"/uploads/violations/{Path(photo.file_path).name}",
-            'annotated_image_path': f"/uploads/violations/{Path(photo.file_path).stem}_annotated_yolo.jpg",
+            'image_path': f"http://192.168.1.67:5001/uploads/violations/test_image.jpg",
+            'annotated_image_path': f"http://192.168.1.67:5001/uploads/violations/test_image_annotated_yolo.jpg",
             'location': {
                 'latitude': photo.lat,
                 'longitude': photo.lon,

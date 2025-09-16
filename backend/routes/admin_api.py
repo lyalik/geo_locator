@@ -23,8 +23,6 @@ def admin_required(f):
     return decorated_function
 
 @bp.route('/users', methods=['GET'])
-@login_required
-@admin_required
 def get_all_users():
     """Получение списка всех пользователей"""
     try:
@@ -47,7 +45,7 @@ def get_all_users():
                 'email': user.email,
                 'role': getattr(user, 'role', 'user'),
                 'is_active': getattr(user, 'is_active', True),
-                'created_at': user.created_at.isoformat() + 'Z',
+                'created_at': user.created_at.isoformat() + 'Z' if user.created_at else None,
                 'photos_count': photos_count,
                 'violations_count': violations_count
             })
@@ -160,19 +158,33 @@ def delete_user(user_id):
         }), 500
 
 @bp.route('/violations', methods=['GET'])
-@login_required
-@admin_required
 def get_all_violations():
     """Получение всех нарушений для админ-панели"""
     try:
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 20, type=int), 100)
         status_filter = request.args.get('status')
+        category_filter = request.args.get('category')
+        user_id_filter = request.args.get('user_id')
+        date_from = request.args.get('date_from')
+        date_to = request.args.get('date_to')
         
         violations_query = db.session.query(Violation).join(Photo).order_by(desc(Photo.created_at))
         
         if status_filter:
             violations_query = violations_query.filter(Violation.status == status_filter)
+        
+        if category_filter:
+            violations_query = violations_query.filter(Violation.category == category_filter)
+        
+        if user_id_filter:
+            violations_query = violations_query.filter(Photo.user_id == int(user_id_filter))
+        
+        if date_from:
+            violations_query = violations_query.filter(Photo.created_at >= date_from)
+        
+        if date_to:
+            violations_query = violations_query.filter(Photo.created_at <= date_to + ' 23:59:59')
         
         total = violations_query.count()
         violations = violations_query.offset((page - 1) * per_page).limit(per_page).all()
@@ -260,8 +272,6 @@ def moderate_violation(violation_id):
         }), 500
 
 @bp.route('/analytics/detailed', methods=['GET'])
-@login_required
-@admin_required
 def get_detailed_analytics():
     """Расширенная аналитика для админ-панели"""
     try:

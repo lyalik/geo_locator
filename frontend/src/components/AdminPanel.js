@@ -18,13 +18,13 @@ import {
   DialogActions,
   TextField,
   Select,
-  MenuItem,
+  Grid,
   FormControl,
   InputLabel,
+  MenuItem,
   Chip,
   IconButton,
   Alert,
-  Grid,
   Card,
   CardContent,
   Pagination
@@ -60,6 +60,18 @@ export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [violations, setViolations] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [violationFilters, setViolationFilters] = useState({
+    status: '',
+    category: '',
+    user_id: '',
+    date_from: '',
+    date_to: ''
+  });
+  const [analyticsFilters, setAnalyticsFilters] = useState({
+    period: '30',
+    category: '',
+    user_id: ''
+  });
   const [loading, setLoading] = useState(false);
   const [editDialog, setEditDialog] = useState({ open: false, type: null, data: null });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, type: null, id: null });
@@ -94,7 +106,7 @@ export default function AdminPanel() {
 
   const loadUsers = async () => {
     try {
-      const response = await api.get('/auth/users', {
+      const response = await api.get('/admin/users', {
         params: { page, per_page: 20 }
       });
       setUsers(response.data.users || []);
@@ -106,9 +118,16 @@ export default function AdminPanel() {
 
   const loadViolations = async () => {
     try {
-      const response = await api.get('/api/violations/list', {
-        params: { page, per_page: 20 }
-      });
+      const params = { page, per_page: 20 };
+      
+      // Добавляем фильтры если они установлены
+      if (violationFilters.status) params.status = violationFilters.status;
+      if (violationFilters.category) params.category = violationFilters.category;
+      if (violationFilters.user_id) params.user_id = violationFilters.user_id;
+      if (violationFilters.date_from) params.date_from = violationFilters.date_from;
+      if (violationFilters.date_to) params.date_to = violationFilters.date_to;
+      
+      const response = await api.get('/admin/violations', { params });
       setViolations(response.data.violations || []);
       setTotalPages(Math.ceil((response.data.total || 0) / 20));
     } catch (error) {
@@ -118,8 +137,15 @@ export default function AdminPanel() {
 
   const loadAnalytics = async () => {
     try {
-      const response = await api.get('/api/violations/analytics');
-      setAnalytics(response.data.data);
+      const params = {};
+      
+      // Добавляем фильтры аналитики
+      if (analyticsFilters.period) params.period = analyticsFilters.period;
+      if (analyticsFilters.category) params.category = analyticsFilters.category;
+      if (analyticsFilters.user_id) params.user_id = analyticsFilters.user_id;
+      
+      const response = await api.get('/admin/analytics/detailed', { params });
+      setAnalytics(response.data);
     } catch (error) {
       console.error('Ошибка загрузки аналитики:', error);
     }
@@ -143,7 +169,7 @@ export default function AdminPanel() {
       const { type, data } = editDialog;
       
       if (type === 'user') {
-        await api.put(`/auth/users/${data.id}`, {
+        await api.put(`/admin/users/${data.id}`, {
           username: data.username,
           email: data.email,
           role: data.role,
@@ -172,7 +198,7 @@ export default function AdminPanel() {
       const { type, id } = deleteDialog;
       
       if (type === 'user') {
-        await api.delete(`/auth/users/${id}`);
+        await api.delete(`/admin/users/${id}`);
         await loadUsers();
         showAlert('Пользователь удален', 'success');
       } else if (type === 'violation') {
@@ -320,6 +346,90 @@ export default function AdminPanel() {
           Управление нарушениями
         </Typography>
         
+        {/* Фильтры нарушений */}
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>Фильтры</Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Статус</InputLabel>
+                <Select
+                  value={violationFilters.status}
+                  onChange={(e) => setViolationFilters({...violationFilters, status: e.target.value})}
+                  label="Статус"
+                >
+                  <MenuItem value="">Все</MenuItem>
+                  <MenuItem value="pending">В ожидании</MenuItem>
+                  <MenuItem value="approved">Одобрено</MenuItem>
+                  <MenuItem value="rejected">Отклонено</MenuItem>
+                  <MenuItem value="resolved">Решено</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Категория</InputLabel>
+                <Select
+                  value={violationFilters.category}
+                  onChange={(e) => setViolationFilters({...violationFilters, category: e.target.value})}
+                  label="Категория"
+                >
+                  <MenuItem value="">Все</MenuItem>
+                  <MenuItem value="parking_violation">Парковка</MenuItem>
+                  <MenuItem value="traffic_violation">ПДД</MenuItem>
+                  <MenuItem value="building_violation">Строительство</MenuItem>
+                  <MenuItem value="environmental">Экология</MenuItem>
+                  <MenuItem value="other">Другое</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                label="ID пользователя"
+                value={violationFilters.user_id}
+                onChange={(e) => setViolationFilters({...violationFilters, user_id: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Дата от"
+                type="date"
+                value={violationFilters.date_from}
+                onChange={(e) => setViolationFilters({...violationFilters, date_from: e.target.value})}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Дата до"
+                type="date"
+                value={violationFilters.date_to}
+                onChange={(e) => setViolationFilters({...violationFilters, date_to: e.target.value})}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => {
+                  setPage(1);
+                  loadViolations();
+                }}
+                sx={{ height: '40px' }}
+              >
+                Применить
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+        
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -403,6 +513,65 @@ export default function AdminPanel() {
         <Typography variant="h5" gutterBottom>
           Системная аналитика
         </Typography>
+        
+        {/* Фильтры аналитики */}
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>Фильтры</Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={4} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Период</InputLabel>
+                <Select
+                  value={analyticsFilters.period}
+                  onChange={(e) => setAnalyticsFilters({...analyticsFilters, period: e.target.value})}
+                  label="Период"
+                >
+                  <MenuItem value="7">7 дней</MenuItem>
+                  <MenuItem value="30">30 дней</MenuItem>
+                  <MenuItem value="90">90 дней</MenuItem>
+                  <MenuItem value="365">1 год</MenuItem>
+                  <MenuItem value="all">Все время</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Категория</InputLabel>
+                <Select
+                  value={analyticsFilters.category}
+                  onChange={(e) => setAnalyticsFilters({...analyticsFilters, category: e.target.value})}
+                  label="Категория"
+                >
+                  <MenuItem value="">Все</MenuItem>
+                  <MenuItem value="parking_violation">Парковка</MenuItem>
+                  <MenuItem value="traffic_violation">ПДД</MenuItem>
+                  <MenuItem value="building_violation">Строительство</MenuItem>
+                  <MenuItem value="environmental">Экология</MenuItem>
+                  <MenuItem value="other">Другое</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="ID пользователя"
+                value={analyticsFilters.user_id}
+                onChange={(e) => setAnalyticsFilters({...analyticsFilters, user_id: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4} md={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={loadAnalytics}
+                sx={{ height: '40px' }}
+              >
+                Обновить
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
         
         {analytics && (
           <Grid container spacing={3}>
