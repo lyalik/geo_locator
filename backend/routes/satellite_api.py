@@ -46,6 +46,68 @@ def health_check():
             'error': str(e)
         }), 500
 
+@satellite_bp.route('/imagery', methods=['GET'])
+def get_satellite_imagery():
+    """Получение спутниковых снимков по координатам"""
+    try:
+        lat = request.args.get('lat', type=float)
+        lon = request.args.get('lon', type=float)
+        zoom = request.args.get('zoom', default=15, type=int)
+        
+        if not lat or not lon:
+            return jsonify({
+                'success': False,
+                'error': 'Требуются параметры lat и lon'
+            }), 400
+        
+        # Приоритетная система: Роскосмос → Яндекс → ScanEx
+        imagery_data = None
+        source_used = None
+        
+        # 1. Пробуем Роскосмос
+        if RoscosmosService:
+            try:
+                roscosmos = RoscosmosService()
+                imagery_data = roscosmos.get_satellite_image(lat, lon, zoom)
+                if imagery_data:
+                    source_used = 'roscosmos'
+            except Exception as e:
+                logger.warning(f"Roscosmos service error: {e}")
+        
+        # 2. Пробуем Яндекс Спутник
+        if not imagery_data and YandexSatelliteService:
+            try:
+                yandex_sat = YandexSatelliteService()
+                imagery_data = yandex_sat.get_satellite_image(lat, lon, zoom)
+                if imagery_data:
+                    source_used = 'yandex_satellite'
+            except Exception as e:
+                logger.warning(f"Yandex satellite service error: {e}")
+        
+        # 3. Fallback к базовому URL
+        if not imagery_data:
+            imagery_data = {
+                'url': f'https://core-sat.maps.yandex.net/tiles?l=sat&v=3.1007.0&x={int((lon + 180) / 360 * (2 ** zoom))}&y={int((1 - (lat + 90) / 180) * (2 ** zoom))}&z={zoom}',
+                'source': 'yandex_fallback',
+                'quality': 'standard',
+                'coordinates': {'lat': lat, 'lon': lon, 'zoom': zoom}
+            }
+            source_used = 'yandex_fallback'
+        
+        return jsonify({
+            'success': True,
+            'imagery': imagery_data,
+            'source': source_used,
+            'coordinates': {'lat': lat, 'lon': lon, 'zoom': zoom}
+        })
+        
+    except Exception as e:
+        logger.error(f"Satellite imagery error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @satellite_bp.route('/sources', methods=['GET'])
 def get_satellite_sources():
     """Получение списка доступных спутниковых источников"""

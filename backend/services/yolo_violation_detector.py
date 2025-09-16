@@ -447,3 +447,7 @@ class YOLOObjectDetector:
             'supported_categories': list(self.CATEGORY_DESCRIPTIONS.keys()),
             'total_categories': len(self.CATEGORY_DESCRIPTIONS)
         }
+
+
+# Alias for backward compatibility
+YOLOViolationDetector = YOLOObjectDetector

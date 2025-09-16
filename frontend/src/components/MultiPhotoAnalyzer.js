@@ -32,6 +32,18 @@ import ObjectGrouper from './ObjectGrouper';
 import InteractiveResultsMap from './InteractiveResultsMap';
 import { objectGroupAnalysis } from '../services/api';
 
+/**
+ * MultiPhotoAnalyzer - Компонент для пакетного анализа множественных изображений нарушений
+ * 
+ * Функциональность:
+ * - Пошаговый мастер создания групп объектов с фотографиями
+ * - Пакетная обработка изображений через batch_detect API
+ * - Группировка результатов по объектам и локациям
+ * - Интерактивная карта с результатами анализа
+ * - Статистика по обнаруженным нарушениям
+ * - Экспорт результатов группового анализа
+ * - Интеграция с YOLO + Mistral AI для детекции
+ */
 const MultiPhotoAnalyzer = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [objects, setObjects] = useState([]);

@@ -191,6 +191,20 @@ except Exception as e:
     print(f"❌ OpenStreetMap API registration failed: {e}")
 
 try:
+    from routes.osm_api import osm_bp
+    app.register_blueprint(osm_bp)
+    print("✅ OSM API registered successfully")
+except Exception as e:
+    print(f"❌ OSM API registration failed: {e}")
+
+try:
+    from routes.coordinate_api import bp as coordinate_bp
+    app.register_blueprint(coordinate_bp)
+    print("✅ Coordinate API registered successfully")
+except Exception as e:
+    print(f"❌ Coordinate API registration failed: {e}")
+
+try:
     from routes.sentinel_api import sentinel_api
     app.register_blueprint(sentinel_api, url_prefix='/api/sentinel')
     print("✅ Sentinel API registered successfully")
@@ -224,15 +238,6 @@ try:
     print("✅ Notification API registered successfully")
 except Exception as e:
     print(f"❌ Notification API registration failed: {e}")
-    import traceback
-    traceback.print_exc()
-
-try:
-    from routes.coordinate_api import bp as coordinate_api_bp
-    app.register_blueprint(coordinate_api_bp)
-    print("✅ Coordinate API registered successfully")
-except Exception as e:
-    print(f"❌ Coordinate API registration failed: {e}")
     import traceback
     traceback.print_exc()
 

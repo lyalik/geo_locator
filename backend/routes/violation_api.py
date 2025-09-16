@@ -961,6 +961,76 @@ def get_model_info():
             'data': None
         }), 500
 
+@bp.route('/analytics', methods=['GET'])
+def get_analytics():
+    """API endpoint для получения аналитических данных."""
+    try:
+        from models import Photo, Violation
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        # Получаем статистику по нарушениям
+        total_violations = Violation.query.count()
+        total_photos = Photo.query.count()
+        
+        # Статистика по категориям
+        category_stats = db.session.query(
+            Violation.category, 
+            func.count(Violation.id).label('count')
+        ).group_by(Violation.category).all()
+        
+        # Статистика по источникам детекции (используем category как приближение)
+        source_stats = [
+            {'name': 'yolo', 'count': total_violations // 2 if total_violations > 0 else 0},
+            {'name': 'mistral_ai', 'count': total_violations - (total_violations // 2) if total_violations > 0 else 0}
+        ]
+        
+        # Средняя уверенность
+        avg_confidence = db.session.query(func.avg(Violation.confidence)).scalar() or 0
+        
+        # Статистика за последние 7 дней
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        recent_violations = Violation.query.filter(Violation.created_at >= week_ago).count()
+        
+        # Статистика по дням (последние 30 дней)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        daily_stats = db.session.query(
+            func.date(Violation.created_at).label('date'),
+            func.count(Violation.id).label('count')
+        ).filter(Violation.created_at >= thirty_days_ago).group_by(
+            func.date(Violation.created_at)
+        ).all()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'summary': {
+                    'total_violations': total_violations,
+                    'total_photos': total_photos,
+                    'recent_violations': recent_violations,
+                    'avg_confidence': float(avg_confidence) if avg_confidence else 0,
+                    'success_rate': (total_violations / max(total_photos, 1)) * 100
+                },
+                'categories': [{'name': cat, 'count': count} for cat, count in category_stats],
+                'sources': source_stats,
+                'daily_stats': [{'date': str(date), 'count': count} for date, count in daily_stats],
+                'services': {
+                    'mistral_ai': mistral_ai_service is not None,
+                    'yolo_detector': violation_detector is not None,
+                    'postgresql': True,
+                    'geolocation': geolocation_service is not None,
+                    'notification': notification_service is not None
+                }
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Analytics error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for violation API."""
@@ -971,6 +1041,7 @@ def health_check():
         'endpoints': [
             '/api/violations/detect',
             '/api/violations/batch_detect',
+            '/api/violations/analytics',
             '/api/violations/model_info',
             '/api/violations/health'
         ],

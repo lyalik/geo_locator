@@ -7,6 +7,21 @@ import { LocationOn, Visibility, FilterList, GetApp, Satellite, Map as MapIcon }
 import { api } from '../services/api';
 import 'leaflet/dist/leaflet.css';
 
+/**
+ * InteractiveMap - Компонент интерактивной карты для отображения нарушений и геоданных
+ * 
+ * Функциональность:
+ * - Отображение нарушений на карте с кластеризацией маркеров
+ * - Фильтрация по категориям, датам и уровню уверенности
+ * - Переключение между обычным и спутниковым видом
+ * - Слои OSM зданий и инфраструктуры
+ * - Цветовая дифференциация по источникам (YOLO, Mistral AI)
+ * - Интерактивные попапы с детальной информацией
+ * - Экспорт данных карты в различных форматах
+ * - Поддержка выбора координат кликом по карте
+ * - Интеграция с российскими картографическими сервисами
+ */
+
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({

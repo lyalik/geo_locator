@@ -7,6 +7,18 @@ import { api } from '../services/api';
 // ГЛОБАЛЬНОЕ хранилище результатов вне React компонента
 let GLOBAL_SINGLE_RESULTS = [];
 
+/**
+ * ViolationUploader - Компонент для загрузки и анализа одиночных изображений нарушений
+ * 
+ * Функциональность:
+ * - Drag & Drop загрузка изображений (JPEG, PNG, GIF, BMP, WebP)
+ * - Автоматическая детекция нарушений через YOLO + Mistral AI
+ * - Геолокационный анализ с подсказками местоположения
+ * - Ручной ввод координат при необходимости
+ * - Опциональный спутниковый и геоанализ
+ * - Сохранение результатов в PostgreSQL
+ * - Отображение результатов с детальной информацией
+ */
 const ViolationUploader = ({ onUploadComplete }) => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);

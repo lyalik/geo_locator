@@ -528,17 +528,63 @@ def find_nearby_places():
         lon = request.args.get('lon', type=float)
         category = request.args.get('category', '')
         radius = request.args.get('radius', 1000, type=int)
-        source = request.args.get('source', 'dgis')
+        source = request.args.get('source', 'all')
         
         if lat is None or lon is None:
             return jsonify({'error': 'Latitude and longitude are required'}), 400
         
-        if source == 'dgis':
-            result = dgis_service.find_nearby_places(lat, lon, category, radius)
-        else:
-            return jsonify({'error': 'Only 2GIS source is supported for nearby search'}), 400
+        all_places = []
+        sources_used = []
         
-        return jsonify(result), 200
+        # Поиск через 2GIS
+        if source in ['dgis', 'all']:
+            try:
+                dgis_result = dgis_service.find_nearby_places(lat, lon, category, radius)
+                if dgis_result.get('success'):
+                    for place in dgis_result.get('places', []):
+                        place['source'] = '2gis'
+                        # Добавляем категорию для совместимости с фронтендом
+                        if 'rubrics' in place and place['rubrics']:
+                            place['category'] = place['rubrics'][0]
+                        else:
+                            place['category'] = category or 'other'
+                        all_places.append(place)
+                    sources_used.append('2gis')
+            except Exception as e:
+                logger.error(f"2GIS nearby search error: {e}")
+        
+        # Поиск через Yandex (если доступен)
+        if source in ['yandex', 'all']:
+            try:
+                # Используем поиск мест Yandex как альтернативу
+                yandex_result = yandex_service.search_places(category or 'организация', lat, lon, radius)
+                if yandex_result.get('success'):
+                    for place in yandex_result.get('places', []):
+                        place['source'] = 'yandex'
+                        place['category'] = category or 'other'
+                        # Добавляем поля для совместимости
+                        if 'coordinates' not in place and 'latitude' in place:
+                            place['coordinates'] = {
+                                'lat': place['latitude'],
+                                'lon': place['longitude']
+                            }
+                        all_places.append(place)
+                    sources_used.append('yandex')
+            except Exception as e:
+                logger.error(f"Yandex nearby search error: {e}")
+        
+        # Сортируем по расстоянию если есть поле distance
+        all_places.sort(key=lambda x: x.get('distance', 999999))
+        
+        return jsonify({
+            'success': True,
+            'center_coordinates': {'latitude': lat, 'longitude': lon},
+            'category': category,
+            'radius': radius,
+            'total_found': len(all_places),
+            'places': all_places[:50],  # Ограничиваем до 50 результатов
+            'sources_used': sources_used
+        }), 200
     
     except Exception as e:
         logger.error(f"Error in find_nearby_places: {e}")

@@ -16,6 +16,19 @@ import {
 } from '@mui/icons-material';
 import { api } from '../services/api';
 
+/**
+ * PropertyAnalyzer - Компонент для анализа недвижимости и объектов по адресу или координатам
+ * 
+ * Функциональность:
+ * - Поиск недвижимости по адресу, кадастровому номеру или координатам
+ * - Интеграция с Яндекс Карты и 2GIS для получения данных об объектах
+ * - Анализ окружающей инфраструктуры через OSM данные
+ * - Поиск ближайших объектов и удобств в радиусе
+ * - Детальная информация о зданиях и их характеристиках
+ * - Валидация и проверка данных недвижимости
+ * - Экспорт результатов анализа
+ * - Интерактивная карта с найденными объектами
+ */
 const PropertyAnalyzer = ({ coordinates, onPropertySelect }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('address'); // 'address', 'cadastral', 'coordinates'
