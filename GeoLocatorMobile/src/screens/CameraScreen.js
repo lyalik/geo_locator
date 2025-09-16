@@ -8,9 +8,12 @@ import {
   Platform,
   Animated,
   Vibration,
-  Dimensions
+  Dimensions,
+  ScrollView,
+  Image,
+  ActivityIndicator
 } from 'react-native';
-import { Camera } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/ApiService';
@@ -458,7 +461,10 @@ export default function CameraScreen() {
           flash={flashMode}
           ref={cameraRef}
           onCameraReady={handleCameraReady}
-        >
+        />
+        
+        {/* Overlay с абсолютным позиционированием */}
+        <View style={styles.cameraOverlay}>
           <TouchableOpacity
             style={styles.focusArea}
             activeOpacity={1}
@@ -566,7 +572,7 @@ export default function CameraScreen() {
               </View>
             </View>
           </TouchableOpacity>
-        </CameraView>
+        </View>
       </Animated.View>
     </View>
   );
@@ -585,6 +591,14 @@ const styles = StyleSheet.create({
     },
     focusArea: {
       flex: 1,
+    },
+    cameraOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1,
     },
     overlay: {
       flex: 1,

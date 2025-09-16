@@ -1,5 +1,4 @@
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from './ApiService';
@@ -64,23 +63,25 @@ class NotificationService {
       });
     }
 
-    if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus !== 'granted') {
-        console.log('❌ Разрешение на уведомления не получено');
-        return null;
-      }
-      
+    // Проверяем разрешения на уведомления
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    
+    if (finalStatus !== 'granted') {
+      console.log('❌ Разрешение на уведомления не получено');
+      return null;
+    }
+    
+    try {
       token = (await Notifications.getExpoPushTokenAsync()).data;
-    } else {
-      console.log('⚠️ Необходимо физическое устройство для push уведомлений');
+    } catch (error) {
+      console.log('⚠️ Ошибка получения push токена:', error.message);
+      return null;
     }
 
     return token;
@@ -93,9 +94,8 @@ class NotificationService {
         const userData = JSON.parse(user);
         
         // Отправляем токен на сервер для сохранения
-        await ApiService.post('/users/push-token', {
-          user_id: userData.id,
-          push_token: token,
+        await ApiService.api.post('/api/notifications/save-push-token', {
+          pushToken: token,
           platform: Platform.OS
         });
         

@@ -117,6 +117,16 @@ class PerformanceOptimizer {
       const blob = await response.blob();
       
       return new Promise((resolve, reject) => {
+        if (typeof Image === 'undefined') {
+          // Fallback для React Native
+          resolve({
+            width: 1920,
+            height: 1080,
+            size: blob.size
+          });
+          return;
+        }
+        
         const img = new Image();
         img.onload = () => {
           resolve({
