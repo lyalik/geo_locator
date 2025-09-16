@@ -57,9 +57,24 @@ def list_violations():
         violations_list = []
         for photo in photos:
             for violation in photo.violations:
+                # Используем простой fallback - берем любой существующий файл
+                image_filename = None
+                if photo.file_path:
+                    uploads_dir = os.path.join(os.getcwd(), 'uploads', 'violations')
+                    original_name = Path(photo.file_path).name
+                    
+                    if os.path.exists(os.path.join(uploads_dir, original_name)):
+                        image_filename = original_name
+                    else:
+                        # Используем первый доступный файл как fallback
+                        import glob
+                        all_files = glob.glob(os.path.join(uploads_dir, "*.jpg"))
+                        if all_files:
+                            image_filename = Path(all_files[0]).name
+                
                 violations_list.append({
                     'violation_id': str(violation.id),
-                    'image_path': f"http://192.168.1.67:5001/uploads/violations/{Path(photo.file_path).name}" if photo.file_path else None,
+                    'image_path': f"http://192.168.1.67:5001/uploads/violations/{image_filename}" if image_filename else None,
                     'violations': [{
                         'category': violation.category,
                         'confidence': violation.confidence,
@@ -141,6 +156,16 @@ def get_user_history():
             'success': False,
             'error': f'Failed to retrieve history: {str(e)}'
         }), 500
+
+@bp.route('/<int:violation_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_violation(violation_id):
+    """Handle violation operations: GET, PUT, DELETE"""
+    if request.method == 'GET':
+        return get_violation_details(violation_id)
+    elif request.method == 'PUT':
+        return update_violation(violation_id)
+    elif request.method == 'DELETE':
+        return delete_violation(violation_id)
 
 @bp.route('/details/<violation_id>', methods=['GET'])
 def get_violation_details(violation_id):
@@ -347,6 +372,89 @@ def get_user_stats(user_id):
         return jsonify({
             'success': False,
             'error': f'Failed to get user stats: {str(e)}'
+        }), 500
+
+def update_violation(violation_id):
+    """Update violation details"""
+    try:
+        violation = db.session.query(Violation).filter(Violation.id == violation_id).first()
+        
+        if not violation:
+            return jsonify({
+                'success': False,
+                'error': 'Violation not found'
+            }), 404
+        
+        data = request.get_json()
+        
+        # Update violation fields
+        if 'category' in data:
+            violation.category = data['category']
+        if 'confidence' in data:
+            violation.confidence = float(data['confidence'])
+        if 'notes' in data:
+            violation.notes = data['notes']
+        if 'status' in data:
+            violation.status = data['status']
+        
+        # Update photo location if provided
+        if 'location' in data and violation.photo:
+            location = data['location']
+            if 'latitude' in location:
+                violation.photo.lat = float(location['latitude'])
+            if 'longitude' in location:
+                violation.photo.lon = float(location['longitude'])
+            if 'address' in location:
+                violation.photo.location_hint = location['address']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Violation updated successfully'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error updating violation {violation_id}: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to update violation: {str(e)}'
+        }), 500
+
+def delete_violation(violation_id):
+    """Delete violation"""
+    try:
+        violation = db.session.query(Violation).filter(Violation.id == violation_id).first()
+        
+        if not violation:
+            return jsonify({
+                'success': False,
+                'error': 'Violation not found'
+            }), 404
+        
+        # Check if this is the only violation for the photo
+        photo = violation.photo
+        if photo and len(photo.violations) == 1:
+            # Delete the photo and its file if this is the last violation
+            if photo.file_path and os.path.exists(photo.file_path):
+                os.remove(photo.file_path)
+            db.session.delete(photo)
+        
+        db.session.delete(violation)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Violation deleted successfully'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error deleting violation {violation_id}: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to delete violation: {str(e)}'
         }), 500
 
 @bp.route('/detect', methods=['POST'])

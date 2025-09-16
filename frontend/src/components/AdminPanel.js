@@ -379,6 +379,12 @@ export default function AdminPanel() {
                   <MenuItem value="traffic_violation">ПДД</MenuItem>
                   <MenuItem value="building_violation">Строительство</MenuItem>
                   <MenuItem value="environmental">Экология</MenuItem>
+                  <MenuItem value="unauthorized_modification">Несанкционированные изменения</MenuItem>
+                  <MenuItem value="unauthorized_signage">Несанкционированные вывески</MenuItem>
+                  <MenuItem value="blocked_entrance">Заблокированный вход</MenuItem>
+                  <MenuItem value="improper_waste_disposal">Неправильная утилизация</MenuItem>
+                  <MenuItem value="structural_damage">Структурные повреждения</MenuItem>
+                  <MenuItem value="unsafe_conditions">Небезопасные условия</MenuItem>
                   <MenuItem value="other">Другое</MenuItem>
                 </Select>
               </FormControl>
