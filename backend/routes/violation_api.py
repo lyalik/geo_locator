@@ -311,6 +311,52 @@ def delete_violation(violation_id):
             'error': f'Failed to delete violation: {str(e)}'
         }), 500
 
+@bp.route('/coordinates', methods=['GET'])
+def get_violations_with_coordinates():
+    """
+    API endpoint to get violations that have valid coordinates for map display.
+    """
+    try:
+        # Получаем все фото с нарушениями и координатами
+        photos = db.session.query(Photo).join(Violation).filter(
+            Photo.lat.isnot(None),
+            Photo.lon.isnot(None)
+        ).all()
+        
+        violations_with_coords = []
+        for photo in photos:
+            for violation in photo.violations:
+                if violation.status != 'deleted':  # Исключаем удаленные нарушения
+                    violations_with_coords.append({
+                        'violation_id': str(violation.id),
+                        'id': str(violation.id),
+                        'category': violation.category,
+                        'confidence': violation.confidence,
+                        'latitude': float(photo.lat),
+                        'longitude': float(photo.lon),
+                        'created_at': photo.created_at.isoformat() + 'Z',
+                        'timestamp': photo.created_at.isoformat() + 'Z',
+                        'address': photo.address_data.get('formatted_address', '') if photo.address_data and isinstance(photo.address_data, dict) else '',
+                        'source': 'yolo' if 'yolo' in violation.category.lower() else 'mistral_ai',
+                        'image_path': f"http://192.168.1.67:5001/uploads/violations/{Path(photo.file_path).name}" if photo.file_path else None,
+                        'user_id': str(photo.user_id)
+                    })
+        
+        current_app.logger.info(f"📍 Coordinates API - Retrieved {len(violations_with_coords)} violations with coordinates")
+        
+        return jsonify({
+            'success': True,
+            'data': violations_with_coords,
+            'message': f'Retrieved {len(violations_with_coords)} violations with coordinates'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving violations with coordinates: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to retrieve violations with coordinates: {str(e)}'
+        }), 500
+
 @bp.route('/user/<user_id>/stats', methods=['GET'])
 def get_user_stats(user_id):
     """

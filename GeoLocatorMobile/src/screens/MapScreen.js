@@ -67,24 +67,26 @@ export default function MapScreen() {
   const loadViolations = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.getUserHistory();
+      const response = await ApiService.getViolationsWithCoordinates();
       
       if (response.success && response.data) {
-        // Фильтруем только нарушения с координатами
-        const violationsWithCoords = response.data.filter(item => 
-          item.latitude && item.longitude
-        ).map(item => ({
-          id: item.id,
-          category: item.category,
-          confidence: item.confidence,
+        // Обрабатываем данные нарушений
+        const violationsWithCoords = response.data.map(item => ({
+          id: item.violation_id || item.id,
+          category: item.category || 'Нарушение',
+          confidence: item.confidence || 0,
           latitude: parseFloat(item.latitude),
           longitude: parseFloat(item.longitude),
-          created_at: item.created_at,
+          created_at: item.created_at || item.timestamp,
           address: item.address || '',
-          source: 'system'
-        }));
+          source: item.source || 'system'
+        })).filter(item => 
+          item.latitude && item.longitude && 
+          !isNaN(item.latitude) && !isNaN(item.longitude)
+        );
         
         console.log(`📍 Загружено ${violationsWithCoords.length} нарушений с координатами`);
+        console.log('Первые 3 нарушения:', violationsWithCoords.slice(0, 3));
         setViolations(violationsWithCoords);
       }
     } catch (error) {

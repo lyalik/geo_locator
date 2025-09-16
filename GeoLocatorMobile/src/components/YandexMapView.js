@@ -18,11 +18,14 @@ export default function YandexMapView({
 
   const generateMapHtml = () => {
     const markers = violations.map((violation, index) => {
-      if (!violation.coordinates || !violation.coordinates.latitude || !violation.coordinates.longitude) {
+      // Проверяем координаты напрямую в объекте violation
+      if (!violation.latitude || !violation.longitude) {
+        console.log('Пропускаем нарушение без координат:', violation);
         return '';
       }
 
-      const { latitude, longitude } = violation.coordinates;
+      const latitude = violation.latitude;
+      const longitude = violation.longitude;
       const category = violation.category || 'Неизвестно';
       const confidence = violation.confidence ? Math.round(violation.confidence * 100) : 0;
       

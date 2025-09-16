@@ -159,17 +159,29 @@ class ApiService {
 
   /**
    * Получение истории загрузок пользователя
-   * @param {string} userId - ID пользователя (опционально)
-   * @returns {Promise} История загрузок
-   */
-  async getUserHistory(userId = null) {
+   * @returns  // Получение истории пользователя
+  async getUserHistory() {
     try {
-      const params = userId ? { user_id: userId } : {};
-      const response = await this.api.get('/api/violations/history', { params });
+      console.log('📊 Получение истории пользователя...');
+      const response = await this.api.get('/api/user/history');
+      console.log('✅ История получена:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Ошибка получения истории:', error);
-      throw error;
+      console.error('❌ Ошибка получения истории:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Получение нарушений с координатами
+  async getViolationsWithCoordinates() {
+    try {
+      console.log('📍 Получение нарушений с координатами...');
+      const response = await this.api.get('/api/violations/coordinates');
+      console.log('✅ Нарушения с координатами получены:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Ошибка получения нарушений с координатами:', error);
+      return { success: false, error: error.message };
     }
   }
 
@@ -393,6 +405,137 @@ class ApiService {
     } catch (error) {
       console.error('Ошибка пакетной детекции:', error);
       throw error;
+    }
+  }
+
+  // Получение нарушений с координатами
+  async getViolationsWithCoordinates() {
+    try {
+      console.log('📍 Получение нарушений с координатами...');
+      const response = await this.api.get('/api/violations/coordinates');
+      console.log('✅ Нарушения с координатами получены:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Ошибка получения нарушений с координатами:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Получение OSM городского контекста
+  async getOSMUrbanContext(latitude, longitude, radius = 500) {
+    try {
+      console.log('🗺️ Получение OSM городского контекста...');
+      const response = await this.api.get('/api/osm/urban-context', {
+        params: { lat: latitude, lon: longitude, radius }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ OSM контекст получен:', response.data.context);
+        return response.data;
+      }
+      return { success: false, error: 'No OSM data available' };
+    } catch (error) {
+      console.error('❌ Ошибка получения OSM контекста:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Проверка доступности OSM сервиса
+  async checkOSMHealth() {
+    try {
+      const response = await this.api.get('/api/osm/health');
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка проверки OSM сервиса:', error);
+      return { status: 'error', error: error.message };
+    }
+  }
+
+  // Получение нарушений с OSM контекстом
+  async getViolationsWithOSMContext() {
+    try {
+      const violations = await this.getViolationsWithCoordinates();
+      
+      if (violations.success && violations.data) {
+        // Обогащаем каждое нарушение OSM данными
+        const enrichedViolations = await Promise.all(
+          violations.data.map(async (violation) => {
+            if (violation.latitude && violation.longitude) {
+              const osmContext = await this.getOSMUrbanContext(
+                violation.latitude, 
+                violation.longitude, 
+                200
+              );
+              
+              return {
+                ...violation,
+                osmContext: osmContext.success ? osmContext.context : null,
+                zoneType: osmContext.success ? 
+                  this.categorizeByOSMContext(osmContext.context) : 'unknown'
+              };
+            }
+            return violation;
+          })
+        );
+        
+        return { success: true, data: enrichedViolations };
+      }
+      
+      return violations;
+    } catch (error) {
+      console.error('Ошибка получения нарушений с OSM контекстом:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Категоризация по OSM контексту
+  categorizeByOSMContext(context) {
+    if (!context) return 'unknown';
+    
+    const { buildings, amenities } = context;
+    
+    // Образовательные учреждения
+    const educationAmenities = ['school', 'kindergarten', 'university', 'college'];
+    if (amenities.some(a => educationAmenities.includes(a.amenity))) {
+      return 'education_zone';
+    }
+    
+    // Медицинские учреждения
+    const healthAmenities = ['hospital', 'clinic', 'pharmacy', 'dentist'];
+    if (amenities.some(a => healthAmenities.includes(a.amenity))) {
+      return 'healthcare_zone';
+    }
+    
+    // Торговые зоны
+    const commercialAmenities = ['shop', 'mall', 'marketplace', 'restaurant'];
+    if (amenities.some(a => commercialAmenities.includes(a.category))) {
+      return 'commercial_zone';
+    }
+    
+    // Жилые зоны
+    const residentialBuildings = ['residential', 'apartments', 'house', 'dormitory'];
+    if (buildings.some(b => residentialBuildings.includes(b.building_type))) {
+      return 'residential_zone';
+    }
+    
+    return 'general_zone';
+  }
+
+  // Генерация контекстных уведомлений
+  generateContextualAlert(violation, osmContext) {
+    const zoneType = this.categorizeByOSMContext(osmContext);
+    
+    switch (zoneType) {
+      case 'education_zone':
+        return `⚠️ Нарушение в школьной зоне! Повышенная опасность для детей.`;
+      case 'healthcare_zone':
+        return `🚨 Нарушение у медучреждения! Может препятствовать скорой помощи.`;
+      case 'residential_zone':
+        return `🏠 Нарушение в жилой зоне. Влияет на комфорт жителей.`;
+      case 'commercial_zone':
+        return `🏪 Нарушение в торговой зоне. Может затруднить доступ покупателей.`;
+      default:
+        return `📍 Зафиксировано нарушение в данной области.`;
     }
   }
 }
