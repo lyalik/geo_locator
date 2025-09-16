@@ -7,19 +7,17 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 const api = axios.create({
   baseURL: API_URL,
   timeout: 120000, // 2 минуты таймаут для файловых операций
+  withCredentials: true, // Включаем отправку cookies для сессионной авторизации
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add auth token to requests
+// Request interceptor для сессионной авторизации
 api.interceptors.request.use(
   (config) => {
-    // Проверяем оба возможных ключа токена
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Для сессионной авторизации Flask-Login не нужны Bearer токены
+    // Cookies будут автоматически отправляться с withCredentials: true
     return config;
   },
   (error) => {
@@ -184,9 +182,7 @@ export const coordinateAnalysis = {
     return fetch(`${API_URL}/api/coordinates/detect`, {
       method: 'POST',
       body: formData,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`
-      }
+      credentials: 'include' // Включаем cookies для сессионной авторизации
     }).then(response => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -226,9 +222,7 @@ export const coordinateAnalysis = {
     return fetch(`${API_URL}/api/coordinates/video/analyze`, {
       method: 'POST',
       body: formData,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`
-      }
+      credentials: 'include' // Включаем cookies для сессионной авторизации
     }).then(response => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -293,9 +287,7 @@ export const objectGroupAnalysis = {
     return fetch(`${API_URL}/api/violations/batch_detect`, {
       method: 'POST',
       body: formData,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token') || ''}`
-      }
+      credentials: 'include' // Включаем cookies для сессионной авторизации
     }).then(response => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

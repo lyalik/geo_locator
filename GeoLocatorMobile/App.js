@@ -5,6 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NotificationService from './src/services/NotificationService';
 
 // Импорт экранов с поддержкой веб-платформы
 import {
@@ -48,7 +49,16 @@ export default function App() {
 
   useEffect(() => {
     checkAuthState();
+    initializeNotifications();
   }, []);
+
+  const initializeNotifications = async () => {
+    try {
+      await NotificationService.initialize();
+    } catch (error) {
+      console.error('Ошибка инициализации уведомлений:', error);
+    }
+  };
 
   const checkAuthState = async () => {
     try {
@@ -76,6 +86,7 @@ export default function App() {
     try {
       await AsyncStorage.removeItem('user');
       await AsyncStorage.removeItem('authToken');
+      NotificationService.cleanup();
       setUser(null);
     } catch (error) {
       console.error('Error removing user data:', error);

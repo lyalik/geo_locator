@@ -212,595 +212,88 @@ INFO:services.coordinate_detector:Coordinate Detector initialized
 INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
 WARNING:werkzeug: * Debugger is active!
 INFO:werkzeug: * Debugger PIN: 111-291-728
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:55:52] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:55:52] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:55:52] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:04] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:04] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:04] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:04] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:06] "OPTIONS /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:06] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:09] "OPTIONS /admin/analytics/detailed?period=30 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:09] "GET /admin/analytics/detailed?period=30 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:16] "OPTIONS /admin/analytics/detailed?period=30&category=traffic_violation HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:16] "GET /admin/analytics/detailed?period=30&category=traffic_violation HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:19] "OPTIONS /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:19] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:20] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:56:20] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 15:56:32] "[33mGET /uploads/violations/c0fe9893-4cbb-408e-bd3c-3e072ac407ac.png HTTP/1.1[0m" 404 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 15:56:39] "[33mGET /uploads/violations/1krasn_pl2-3797155958.jpg HTTP/1.1[0m" 404 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:59:39] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 15:59:47] "[33mHEAD /uploads/violations/ff58cc74-7f77-4eca-89d6-5d383de56a82.png HTTP/1.1[0m" 404 -
-INFO:app:📱 Mobile - Retrieved 92 history items for user all
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:09] "GET /api/violations/history HTTP/1.1" 200 -
-INFO:app:📱 Mobile - Retrieved 92 history items for user all
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:12] "GET /api/violations/history HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:15] "GET /api/violations/details/97 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:15] "GET /uploads/violations/b40d0c7f-46ea-4fe0-8cf4-56de7157f79a.jpg HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:34] "GET /api/violations/details/99 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:37] "GET /api/violations/details/98 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:49] "GET /api/violations/details/88 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:49] "[33mGET /uploads/violations/1krasn_pl2-3797155958.jpg HTTP/1.1[0m" 404 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:52] "GET /api/violations/details/79 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:52] "[33mGET /uploads/violations/i.webp HTTP/1.1[0m" 404 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:55] "GET /api/violations/details/91 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:55] "[33mGET /uploads/violations/1krasn_pl2-3797155958.jpg HTTP/1.1[0m" 404 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:01:58] "GET /api/violations/details/89 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:02:01] "[33mGET /uploads/violations/1krasn_pl2-3797155958.jpg HTTP/1.1[0m" 404 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:02:02] "GET /api/violations/details/97 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:02:08] "HEAD /uploads/violations/0637dec3-aec3-42c1-b8e8-da7ad4f9b9d4.jpg HTTP/1.1" 200 -
-INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/routes/violation_api.py', reloading
-✅ Maps API registered successfully
-✅ Violation API registered successfully
-✅ Geo API registered successfully
-✅ Cache API registered successfully
-✅ Rosreestr API registered successfully
-✅ OpenStreetMap API registered successfully
-✅ OSM API registered successfully
-✅ Coordinate API registered successfully
-❌ Sentinel API registration failed: attempted relative import beyond top-level package
-✅ Satellite API registered successfully
-✅ OCR API registered successfully
-✅ Notification API registered successfully
-✅ Object Group API registered successfully
-✅ Admin API registered successfully
-🚀 Starting Geo Locator Backend (Local Development)
-==================================================
-✅ PostgreSQL connection successful
-✅ Redis connection successful
-✅ Database tables created successfully
-
-🎉 All checks passed! Starting Flask development server...
-📍 Backend will be available at: http://localhost:5001
-📍 API endpoints at: http://localhost:5001/api/
-
-Press Ctrl+C to stop the server
-==================================================
-INFO:werkzeug: * Restarting with stat
-INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:routes.geo_api:Geo services initialized successfully
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:routes.osm_api:OSM service initialized successfully
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-WARNING:werkzeug: * Debugger is active!
-INFO:werkzeug: * Debugger PIN: 111-291-728
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:03:07] "GET /api/violations/details/98 HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:03:11] "GET /api/violations/details/97 HTTP/1.1" 200 -
-INFO:app:📱 Mobile - Retrieved 92 history items for user all
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:03:32] "GET /api/violations/history HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:03:43] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:03:55] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:03:55] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:03:55] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:03:55] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 16:04:21] "GET /uploads/violations/b40d0c7f-46ea-4fe0-8cf4-56de7157f79a.jpg HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 16:04:38] "[36mGET /uploads/violations/test_image.jpg HTTP/1.1[0m" 304 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 16:04:48] "GET /uploads/violations/6a3d4db6-1f69-4c28-84e7-731031adc629.jpg HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 16:04:57] "GET /uploads/violations/90249cfd-a55a-4668-abe2-7db06b6f1e1a.jpg HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:05:07] "HEAD /uploads/violations/6a3d4db6-1f69-4c28-84e7-731031adc629.jpg HTTP/1.1" 200 -
-INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/routes/violation_api.py', reloading
-✅ Maps API registered successfully
-✅ Violation API registered successfully
-✅ Geo API registered successfully
-✅ Cache API registered successfully
-✅ Rosreestr API registered successfully
-✅ OpenStreetMap API registered successfully
-✅ OSM API registered successfully
-✅ Coordinate API registered successfully
-❌ Sentinel API registration failed: attempted relative import beyond top-level package
-✅ Satellite API registered successfully
-✅ OCR API registered successfully
-✅ Notification API registered successfully
-✅ Object Group API registered successfully
-✅ Admin API registered successfully
-🚀 Starting Geo Locator Backend (Local Development)
-==================================================
-✅ PostgreSQL connection successful
-✅ Redis connection successful
-✅ Database tables created successfully
-
-🎉 All checks passed! Starting Flask development server...
-📍 Backend will be available at: http://localhost:5001
-📍 API endpoints at: http://localhost:5001/api/
-
-Press Ctrl+C to stop the server
-==================================================
-INFO:werkzeug: * Restarting with stat
-INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:routes.geo_api:Geo services initialized successfully
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:routes.osm_api:OSM service initialized successfully
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-WARNING:werkzeug: * Debugger is active!
-INFO:werkzeug: * Debugger PIN: 111-291-728
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:05:48] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:05:53] "[33mGET /logo192.png HTTP/1.1[0m" 404 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:05:53] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:05:53] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:05:53] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 92 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:05:53] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 16:06:00] "GET /uploads/violations/72fdc6ba-9048-4c42-9be6-ff6da6309a0b.jpg HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:06:26] "[33mOPTIONS /api/violations/31 HTTP/1.1[0m" 404 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:06:41] "[33mOPTIONS /api/violations/31 HTTP/1.1[0m" 404 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:06:53] "HEAD /uploads/violations/72fdc6ba-9048-4c42-9be6-ff6da6309a0b.jpg HTTP/1.1" 200 -
-INFO:werkzeug:192.168.1.36 - - [16/Sep/2025 16:07:05] "GET /api/violations/details/97 HTTP/1.1" 200 -
-INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/routes/violation_api.py', reloading
-✅ Maps API registered successfully
-✅ Violation API registered successfully
-✅ Geo API registered successfully
-✅ Cache API registered successfully
-✅ Rosreestr API registered successfully
-✅ OpenStreetMap API registered successfully
-✅ OSM API registered successfully
-✅ Coordinate API registered successfully
-❌ Sentinel API registration failed: attempted relative import beyond top-level package
-✅ Satellite API registered successfully
-✅ OCR API registered successfully
-✅ Notification API registered successfully
-✅ Object Group API registered successfully
-✅ Admin API registered successfully
-🚀 Starting Geo Locator Backend (Local Development)
-==================================================
-✅ PostgreSQL connection successful
-✅ Redis connection successful
-✅ Database tables created successfully
-
-🎉 All checks passed! Starting Flask development server...
-📍 Backend will be available at: http://localhost:5001
-📍 API endpoints at: http://localhost:5001/api/
-
-Press Ctrl+C to stop the server
-==================================================
-INFO:werkzeug: * Restarting with stat
-INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:routes.geo_api:Geo services initialized successfully
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:routes.osm_api:OSM service initialized successfully
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-WARNING:werkzeug: * Debugger is active!
-INFO:werkzeug: * Debugger PIN: 111-291-728
-INFO:werkzeug: * Detected change in '/home/denis/Documents/Hackathon_2025/geo_locator/backend/routes/violation_api.py', reloading
-✅ Maps API registered successfully
-✅ Violation API registered successfully
-✅ Geo API registered successfully
-✅ Cache API registered successfully
-✅ Rosreestr API registered successfully
-✅ OpenStreetMap API registered successfully
-✅ OSM API registered successfully
-✅ Coordinate API registered successfully
-❌ Sentinel API registration failed: attempted relative import beyond top-level package
-✅ Satellite API registered successfully
-✅ OCR API registered successfully
-✅ Notification API registered successfully
-✅ Object Group API registered successfully
-✅ Admin API registered successfully
-🚀 Starting Geo Locator Backend (Local Development)
-==================================================
-✅ PostgreSQL connection successful
-✅ Redis connection successful
-✅ Database tables created successfully
-
-🎉 All checks passed! Starting Flask development server...
-📍 Backend will be available at: http://localhost:5001
-📍 API endpoints at: http://localhost:5001/api/
-
-Press Ctrl+C to stop the server
-==================================================
-INFO:werkzeug: * Restarting with stat
-INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:routes.geo_api:Geo services initialized successfully
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:routes.osm_api:OSM service initialized successfully
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
-  return torch.load(file, map_location='cpu'), file  # load
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:✅ YOLO detector initialized
-INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
-INFO:services.coordinate_detector:✅ API services initialized (Yandex, 2GIS, Roscosmos)
-WARNING:services.google_vision_service:GOOGLE_API_KEY not found in environment variables
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.google_vision_service:🏛️ Archive service integrated into Google Vision
-WARNING:services.google_vision_service:Google Cloud Vision credentials not found
-INFO:services.coordinate_detector:✅ Google Vision service initialized
-INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
-INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
-INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
-INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
-INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
-INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
-INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
-INFO:services.coordinate_detector:Coordinate Detector initialized
-INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
-WARNING:werkzeug: * Debugger is active!
-INFO:werkzeug: * Debugger PIN: 111-291-728
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:32] "OPTIONS /api/violations/83 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:32] "DELETE /api/violations/83 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:32] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 91 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:32] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:35] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:35] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:35] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:35] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:35] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:35] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:38] "OPTIONS /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:38] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:44] "OPTIONS /api/violations/details/86 HTTP/1.1" 200 -
-ERROR:app:Error deleting violation: 415 Unsupported Media Type: Did not attempt to load JSON data because the request Content-Type was not 'application/json'.
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:44] "[35m[1mDELETE /api/violations/details/86 HTTP/1.1[0m" 500 -
-ERROR:app:Error deleting violation: 415 Unsupported Media Type: Did not attempt to load JSON data because the request Content-Type was not 'application/json'.
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:46] "[35m[1mDELETE /api/violations/details/86 HTTP/1.1[0m" 500 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:51] "OPTIONS /api/violations/details/84 HTTP/1.1" 200 -
-ERROR:app:Error deleting violation: 415 Unsupported Media Type: Did not attempt to load JSON data because the request Content-Type was not 'application/json'.
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:51] "[35m[1mDELETE /api/violations/details/84 HTTP/1.1[0m" 500 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:54] "[33mGET /logo192.png HTTP/1.1[0m" 404 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:54] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:54] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 91 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:54] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 91 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:54] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:59] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:59] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:59] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:11:59] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:02] "OPTIONS /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:02] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:14] "OPTIONS /api/violations/details/94 HTTP/1.1" 200 -
-ERROR:app:Error deleting violation: 415 Unsupported Media Type: Did not attempt to load JSON data because the request Content-Type was not 'application/json'.
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:14] "[35m[1mDELETE /api/violations/details/94 HTTP/1.1[0m" 500 -
-INFO:werkzeug:192.168.1.67 - - [16/Sep/2025 16:12:43] "[36mGET /uploads/violations/72fdc6ba-9048-4c42-9be6-ff6da6309a0b.jpg HTTP/1.1[0m" 304 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:46] "OPTIONS /api/violations/66 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:46] "DELETE /api/violations/66 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:46] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 90 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:12:46] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:06] "[33mGET /main.dd0a2a8204d4fde1ac45.hot-update.json HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:18] "OPTIONS /auth/logout HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:18] "POST /auth/logout HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "OPTIONS /auth/login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "POST /auth/login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:29] "OPTIONS /auth/logout HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:29] "POST /auth/logout HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:42] "OPTIONS /auth/login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:42] "[31m[1mPOST /auth/login HTTP/1.1[0m" 401 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "OPTIONS /auth/login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "POST /auth/login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "OPTIONS /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:56] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:56] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:29] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:29] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:51] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:51] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:00] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:00] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:10] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:10] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:31] "GET /health HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:09] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:09] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:11] "POST /auth/logout HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "OPTIONS /auth/login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "POST /auth/login HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:app:📊 Database - Retrieved 86 violations from database
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "GET /api/violations/list HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:16] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:16] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:19] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:24] "OPTIONS /admin/violations/90 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:24] "DELETE /admin/violations/90 HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:24] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -

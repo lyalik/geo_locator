@@ -202,6 +202,115 @@ def send_weekly_report():
         logger.error(f"Error sending weekly report: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
+@notification_api.route('/push-token', methods=['POST'])
+@login_required
+def save_push_token():
+    """Save user's push notification token"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'push_token' not in data:
+            return jsonify({'error': 'Push token is required'}), 400
+        
+        push_token = data['push_token']
+        platform = data.get('platform', 'unknown')
+        
+        # Save token to user model or separate table
+        from models import db, User
+        
+        user = User.query.get(current_user.id)
+        if user:
+            # Add push_token field to User model or create separate PushToken table
+            # For now, we'll store it in a simple way
+            setattr(user, 'push_token', push_token)
+            setattr(user, 'push_platform', platform)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Push token saved successfully'
+            })
+        else:
+            return jsonify({'error': 'User not found'}), 404
+        
+    except Exception as e:
+        logger.error(f"Error saving push token: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@notification_api.route('/send-push', methods=['POST'])
+@login_required
+def send_push_notification():
+    """Send push notification to user"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        title = data.get('title', 'Geo Locator')
+        message = data.get('message', '')
+        notification_data = data.get('data', {})
+        
+        # Send push notification using Expo
+        success = send_expo_push_notification(
+            user_id=current_user.id,
+            title=title,
+            message=message,
+            data=notification_data
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Push notification sent successfully'
+            })
+        else:
+            return jsonify({'error': 'Failed to send push notification'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error sending push notification: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+def send_expo_push_notification(user_id, title, message, data=None):
+    """Send push notification via Expo"""
+    try:
+        from models import User
+        import requests
+        
+        user = User.query.get(user_id)
+        if not user or not hasattr(user, 'push_token') or not user.push_token:
+            return False
+        
+        # Expo Push API
+        expo_url = 'https://exp.host/--/api/v2/push/send'
+        
+        payload = {
+            'to': user.push_token,
+            'title': title,
+            'body': message,
+            'data': data or {},
+            'sound': 'default',
+            'priority': 'high'
+        }
+        
+        headers = {
+            'Accept': 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+        }
+        
+        response = requests.post(expo_url, json=payload, headers=headers)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result.get('data', {}).get('status') == 'ok'
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error sending Expo push notification: {e}")
+        return False
+
 @notification_api.route('/stats', methods=['GET'])
 @login_required
 def get_notification_stats():

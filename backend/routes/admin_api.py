@@ -5,6 +5,7 @@ from models import db, User, Violation, Photo
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 from pathlib import Path
+import os
 
 bp = Blueprint('admin_api', __name__)
 
@@ -24,6 +25,8 @@ def admin_required(f):
     return decorated_function
 
 @bp.route('/users', methods=['GET'])
+@login_required
+@admin_required
 def get_all_users():
     """Получение списка всех пользователей"""
     try:
@@ -159,6 +162,8 @@ def delete_user(user_id):
         }), 500
 
 @bp.route('/violations', methods=['GET'])
+@login_required
+@admin_required
 def get_all_violations():
     """Получение всех нарушений для админ-панели"""
     try:
@@ -272,7 +277,47 @@ def moderate_violation(violation_id):
             'error': str(e)
         }), 500
 
+@bp.route('/violations/<int:violation_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_violation_admin(violation_id):
+    """Удаление нарушения через админ панель"""
+    try:
+        violation = db.session.query(Violation).filter(Violation.id == violation_id).first()
+        
+        if not violation:
+            return jsonify({
+                'success': False,
+                'error': 'Violation not found'
+            }), 404
+        
+        # Проверяем, является ли это единственным нарушением для фото
+        photo = violation.photo
+        if photo and len(photo.violations) == 1:
+            # Удаляем фото и файл, если это последнее нарушение
+            if photo.file_path and os.path.exists(photo.file_path):
+                os.remove(photo.file_path)
+            db.session.delete(photo)
+        
+        db.session.delete(violation)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Violation deleted successfully'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error deleting violation {violation_id}: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to delete violation: {str(e)}'
+        }), 500
+
 @bp.route('/analytics/detailed', methods=['GET'])
+@login_required
+@admin_required
 def get_detailed_analytics():
     """Расширенная аналитика для админ-панели"""
     try:
