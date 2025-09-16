@@ -202,7 +202,7 @@ export default function AdminPanel() {
         await loadUsers();
         showAlert('Пользователь удален', 'success');
       } else if (type === 'violation') {
-        await api.delete(`/api/violations/details/${id}`);
+        await api.delete(`/api/violations/${id}`);
         await loadViolations();
         showAlert('Нарушение удалено', 'success');
       }
