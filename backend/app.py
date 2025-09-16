@@ -18,7 +18,7 @@ app.config.from_object(Config)
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
-CORS(app, supports_credentials=True, origins=['http://localhost:3000'], 
+CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://localhost:19006', 'http://127.0.0.1:19006'], 
      allow_headers=['Content-Type', 'Authorization'], 
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
@@ -297,4 +297,4 @@ def health():
 
 # This endpoint is now handled by the violation_api blueprint
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, host='0.0.0.0', port=5001)
