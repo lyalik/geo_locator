@@ -79,8 +79,8 @@ npx expo start
 ### **Интеграция с backend:**
 ```javascript
 // Конфигурация API (src/services/ApiService.js)
-const API_BASE_URL = 'http://localhost:5000';  // Локальная разработка
-// const API_BASE_URL = 'http://192.168.1.100:5000';  // Тестирование на устройстве
+const API_BASE_URL = 'http://localhost:5001';  // Локальная разработка
+// const API_BASE_URL = 'http://192.168.1.100:5001';  // Тестирование на устройстве
 
 // Основные endpoints:
 POST /api/violations/detect        // Детекция нарушений

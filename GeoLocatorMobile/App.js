@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Импорт экранов с поддержкой веб-платформы
 import {
@@ -11,10 +12,57 @@ import {
   HistoryScreen,
   ProfileScreen
 } from './src/utils/PlatformComponents';
+import LoginScreen from './src/screens/LoginScreen';
 
 const Tab = createBottomTabNavigator();
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuthState();
+  }, []);
+
+  const checkAuthState = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    } catch (error) {
+      console.error('Error checking auth state:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (userData) => {
+    try {
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.error('Error saving user data:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('user');
+      setUser(null);
+    } catch (error) {
+      console.error('Error removing user data:', error);
+    }
+  };
+
+  if (loading) {
+    return null; // Или компонент загрузки
+  }
+
+  if (!user) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
@@ -72,12 +120,13 @@ export default function App() {
         />
         <Tab.Screen 
           name="Profile" 
-          component={ProfileScreen} 
           options={{ 
             title: 'Профиль',
             headerTitle: 'Мой профиль'
           }} 
-        />
+        >
+          {() => <ProfileScreen user={user} onLogout={handleLogout} />}
+        </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
   );

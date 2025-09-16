@@ -10,10 +10,10 @@ import {
   ActivityIndicator,
   Dimensions
 } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/ApiService';
+import YandexMapView from '../components/YandexMapView';
 
 const { width, height } = Dimensions.get('window');
 
@@ -70,14 +70,29 @@ export default function MapScreen() {
       const response = await ApiService.getAllViolations();
       
       if (response.success && response.data) {
-        // Фильтруем нарушения с корректными координатами
-        const validViolations = response.data.filter(violation => 
-          violation.latitude && 
-          violation.longitude && 
-          !isNaN(violation.latitude) && 
-          !isNaN(violation.longitude)
-        );
-        setViolations(validViolations);
+        // Извлекаем нарушения из структуры данных API
+        const allViolations = [];
+        
+        response.data.forEach(item => {
+          if (item.violations && Array.isArray(item.violations)) {
+            item.violations.forEach(violation => {
+              // Проверяем координаты из location или metadata
+              const coords = item.location?.coordinates;
+              if (coords && coords.latitude && coords.longitude) {
+                allViolations.push({
+                  ...violation,
+                  id: `${item.violation_id}-${violation.category}`,
+                  latitude: coords.latitude,
+                  longitude: coords.longitude,
+                  created_at: item.metadata?.timestamp,
+                  address: item.location?.address?.formatted_address
+                });
+              }
+            });
+          }
+        });
+        
+        setViolations(allViolations);
       }
     } catch (error) {
       console.error('Ошибка загрузки нарушений:', error);
@@ -155,38 +170,12 @@ export default function MapScreen() {
         </View>
       )}
 
-      <MapView
+      <YandexMapView
         style={styles.map}
         region={mapRegion}
-        onRegionChangeComplete={setMapRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-      >
-        {/* Маркеры нарушений */}
-        {violations.map((violation, index) => (
-          <Marker
-            key={`violation-${violation.id || index}`}
-            coordinate={{
-              latitude: parseFloat(violation.latitude),
-              longitude: parseFloat(violation.longitude),
-            }}
-            pinColor={getMarkerColor(violation.category)}
-            onPress={() => showViolationDetails(violation)}
-          >
-            <Callout>
-              <View style={styles.calloutContainer}>
-                <Text style={styles.calloutTitle}>
-                  {getCategoryName(violation.category)}
-                </Text>
-                <Text style={styles.calloutDate}>
-                  {formatDate(violation.created_at)}
-                </Text>
-                <Text style={styles.calloutTap}>Нажмите для деталей</Text>
-              </View>
-            </Callout>
-          </Marker>
-        ))}
-      </MapView>
+        violations={violations}
+        onMarkerPress={showViolationDetails}
+      />
 
       {/* Кнопки управления */}
       <View style={styles.controls}>

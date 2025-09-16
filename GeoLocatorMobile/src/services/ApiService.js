@@ -178,6 +178,68 @@ class ApiService {
   }
 
   /**
+   * Авторизация пользователя
+   * @param {string} email - Email пользователя
+   * @param {string} password - Пароль
+   * @returns {Promise} Результат авторизации
+   */
+  async login(email, password) {
+    try {
+      const response = await this.api.post('/auth/login', {
+        email,
+        password
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return {
+        success: true,
+        user: response.data.user,
+        token: response.data.token || `session_${response.data.user?.id}_${Date.now()}`
+      };
+    } catch (error) {
+      console.error('Login failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Ошибка авторизации'
+      };
+    }
+  }
+
+  /**
+   * Регистрация пользователя
+   * @param {string} username - Имя пользователя
+   * @param {string} email - Email
+   * @param {string} password - Пароль
+   * @returns {Promise} Результат регистрации
+   */
+  async register(username, email, password) {
+    try {
+      const response = await this.api.post('/auth/register', {
+        username,
+        email,
+        password
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return {
+        success: true,
+        user: response.data.user,
+        token: response.data.token || `session_${response.data.user?.id}_${Date.now()}`
+      };
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Ошибка регистрации'
+      };
+    }
+  }
+
+  /**
    * Пакетная загрузка изображений
    * @param {Array} files - Массив файлов для анализа
    * @param {Object} location - Координаты {latitude, longitude}

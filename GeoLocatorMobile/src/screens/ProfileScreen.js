@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/ApiService';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ user, onLogout }) {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [serverStatus, setServerStatus] = useState(null);
@@ -191,7 +191,6 @@ export default function ProfileScreen() {
                     analytics.services.yolo_detector,
                     'eye'
                   )}
-                  
                   {renderServiceStatus(
                     'Mistral AI',
                     analytics.services.mistral_ai,
@@ -252,6 +251,26 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Информация пользователя */}
+      {user && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👤 Профиль пользователя</Text>
+          
+          <View style={styles.userInfo}>
+            <View style={styles.userAvatar}>
+              <Ionicons name="person" size={40} color="#2196F3" />
+            </View>
+            <View style={styles.userDetails}>
+              <Text style={styles.userName}>{user.username}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
+              <Text style={styles.userStatus}>
+                {user.id.startsWith('guest_') ? 'Гостевой аккаунт' : 'Зарегистрированный пользователь'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Действия */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📱 Приложение</Text>
@@ -282,6 +301,26 @@ export default function ProfileScreen() {
           <Text style={styles.actionText}>Обратная связь</Text>
           <Ionicons name="chevron-forward" size={16} color="#ccc" />
         </TouchableOpacity>
+
+        {onLogout && (
+          <TouchableOpacity 
+            style={[styles.actionItem, styles.logoutButton]} 
+            onPress={() => {
+              Alert.alert(
+                'Выход',
+                'Вы уверены, что хотите выйти из аккаунта?',
+                [
+                  { text: 'Отмена', style: 'cancel' },
+                  { text: 'Выйти', style: 'destructive', onPress: onLogout }
+                ]
+              );
+            }}
+          >
+            <Ionicons name="log-out" size={20} color="#f44336" />
+            <Text style={[styles.actionText, styles.logoutText]}>Выйти из аккаунта</Text>
+            <Ionicons name="chevron-forward" size={16} color="#ccc" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Версия */}
@@ -458,5 +497,46 @@ const styles = StyleSheet.create({
   copyrightText: {
     fontSize: 12,
     color: '#ccc',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+  },
+  userAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f8ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  userStatus: {
+    fontSize: 12,
+    color: '#2196F3',
+    fontWeight: '500',
+  },
+  logoutButton: {
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    marginTop: 10,
+  },
+  logoutText: {
+    color: '#f44336',
   },
 });

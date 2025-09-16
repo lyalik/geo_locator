@@ -190,7 +190,7 @@ export default function HistoryScreen() {
 
       <FlatList
         data={history}
-        renderItem={renderHistoryItem}
+        renderItem={renderViolationItem}
         keyExtractor={(item, index) => `history-${item.id || index}`}
         refreshControl={
           <RefreshControl

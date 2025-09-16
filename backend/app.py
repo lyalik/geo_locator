@@ -283,9 +283,10 @@ def serve_satellite_image(filename):
 @app.route('/health', methods=['GET'])
 def health():
     try:
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        db_status = 'connected' if inspector.has_table('users') else 'no users table'
+        # Простая проверка подключения к БД
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
+        db_status = 'connected'
     except Exception as e:
         db_status = f'error: {str(e)}'
     
