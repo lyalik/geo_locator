@@ -1,12 +1,18 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
 // Конфигурация API
-const API_BASE_URL = 'http://192.168.1.67:5001'; // Backend работает на порту 5001
-// Для веб-версии используйте localhost:
-// const API_BASE_URL = 'http://localhost:5001';
+const API_BASE_URL = Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname === 'localhost'
+  ? 'http://localhost:5001'  // Веб-версия
+  : 'http://192.168.1.67:5001'; // Мобильная версия
 
 class ApiService {
   constructor() {
+    console.log('🔧 Инициализация ApiService...');
+    console.log('🌐 Platform.OS:', Platform.OS);
+    console.log('🔗 API_BASE_URL:', API_BASE_URL);
+    console.log('🌍 Window location:', typeof window !== 'undefined' ? window.location?.hostname : 'undefined');
+    
     this.api = axios.create({
       baseURL: API_BASE_URL,
       timeout: 30000, // 30 секунд для анализа изображений
@@ -14,6 +20,29 @@ class ApiService {
         'Content-Type': 'multipart/form-data',
       },
     });
+    
+    console.log('✅ ApiService инициализирован с baseURL:', this.api.defaults.baseURL);
+
+    // Интерцептор для добавления токена авторизации
+    this.api.interceptors.request.use(
+      async (config) => {
+        try {
+          const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+          const userData = await AsyncStorage.getItem('user');
+          if (userData) {
+            const user = JSON.parse(userData);
+            const token = await AsyncStorage.getItem('authToken') || `session_${user.id}_${Date.now()}`;
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        } catch (error) {
+          console.log('Error getting auth token:', error);
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
 
     // Интерцептор для обработки ошибок
     this.api.interceptors.response.use(
@@ -29,6 +58,9 @@ class ApiService {
         if (error.response?.status === 404) {
           throw new Error('Сервис недоступен. Проверьте настройки.');
         }
+        if (error.response?.status === 401) {
+          throw new Error('Ошибка авторизации. Войдите в систему заново.');
+        }
         throw error;
       }
     );
@@ -41,14 +73,35 @@ class ApiService {
    */
   async detectViolation(formData) {
     try {
+      console.log('🔄 Начинаем анализ нарушений...');
+      console.log('📡 API Base URL:', this.api.defaults.baseURL);
+      console.log('📝 FormData содержит:', Array.from(formData.keys()));
+      
       const response = await this.api.post('/api/violations/detect', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000, // 60 секунд
       });
+      
+      console.log('✅ Анализ успешно завершен:', response.status);
+      console.log('📊 Результат:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Ошибка детекции нарушений:', error);
+      console.error('❌ Ошибка детекции нарушений:');
+      console.error('🔗 URL:', error.config?.url);
+      console.error('📡 Base URL:', error.config?.baseURL);
+      console.error('🌐 Network Error:', error.message);
+      console.error('📱 Error Code:', error.code);
+      console.error('🔍 Full Error:', error);
+      
+      if (error.response) {
+        console.error('📤 Response Status:', error.response.status);
+        console.error('📥 Response Data:', error.response.data);
+      } else if (error.request) {
+        console.error('📡 No Response Received:', error.request);
+      }
+      
       throw error;
     }
   }
@@ -112,7 +165,7 @@ class ApiService {
   async getUserHistory(userId = null) {
     try {
       const params = userId ? { user_id: userId } : {};
-      const response = await this.api.get('/api/violations/list', { params });
+      const response = await this.api.get('/api/violations/history', { params });
       return response.data;
     } catch (error) {
       console.error('Ошибка получения истории:', error);
@@ -161,28 +214,85 @@ class ApiService {
    */
   async checkServerStatus() {
     try {
-      const response = await this.api.get('/health', { timeout: 5000 });
+      const response = await this.api.get('/health');
       return {
         online: true,
-        status: response.status,
-        message: 'Сервер доступен',
+        message: 'Сервер работает нормально',
+        ...response.data
       };
     } catch (error) {
-      console.log('Server status check failed:', error.message);
+      console.error('Ошибка проверки статуса сервера:', error);
       return {
         online: false,
-        status: error.response?.status || 0,
-        message: error.message || 'Сервер недоступен',
+        message: 'Сервер недоступен'
       };
     }
   }
 
   /**
-   * Авторизация пользователя
-   * @param {string} email - Email пользователя
-   * @param {string} password - Пароль
-   * @returns {Promise} Результат авторизации
+   * Получение детальной информации о нарушении
+   * @param {string} violationId - ID нарушения
+   * @returns {Promise} Детальная информация о нарушении
    */
+  async getViolationDetails(violationId) {
+    try {
+      const response = await this.api.get(`/api/violations/details/${violationId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка получения деталей нарушения:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Обновление нарушения
+   * @param {string} violationId - ID нарушения
+   * @param {Object} updateData - Данные для обновления (notes, status)
+   * @returns {Promise} Результат обновления
+   */
+  async updateViolation(violationId, updateData) {
+    try {
+      const response = await this.api.put(`/api/violations/details/${violationId}`, updateData);
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка обновления нарушения:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Удаление нарушения
+   * @param {string} violationId - ID нарушения
+   * @param {string} userId - ID пользователя
+   * @returns {Promise} Результат удаления
+   */
+  async deleteViolation(violationId, userId) {
+    try {
+      const response = await this.api.delete(`/api/violations/details/${violationId}`, {
+        data: { user_id: userId }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка удаления нарушения:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Получение персональной статистики пользователя
+   * @param {string} userId - ID пользователя
+   * @returns {Promise} Статистика пользователя
+   */
+  async getUserStats(userId) {
+    try {
+      const response = await this.api.get(`/api/violations/user/${userId}/stats`);
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка получения статистики пользователя:', error);
+      throw error;
+    }
+  }
+
   async login(email, password) {
     try {
       const response = await this.api.post('/auth/login', {
@@ -193,10 +303,17 @@ class ApiService {
           'Content-Type': 'application/json',
         },
       });
+      
+      const token = response.data.token || `session_${response.data.user?.id}_${Date.now()}`;
+      
+      // Сохраняем токен в AsyncStorage
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.setItem('authToken', token);
+      
       return {
         success: true,
         user: response.data.user,
-        token: response.data.token || `session_${response.data.user?.id}_${Date.now()}`
+        token: token
       };
     } catch (error) {
       console.error('Login failed:', error);
@@ -225,10 +342,17 @@ class ApiService {
           'Content-Type': 'application/json',
         },
       });
+      
+      const token = response.data.token || `session_${response.data.user?.id}_${Date.now()}`;
+      
+      // Сохраняем токен в AsyncStorage
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.setItem('authToken', token);
+      
       return {
         success: true,
         user: response.data.user,
-        token: response.data.token || `session_${response.data.user?.id}_${Date.now()}`
+        token: token
       };
     } catch (error) {
       console.error('Registration failed:', error);

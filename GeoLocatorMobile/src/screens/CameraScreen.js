@@ -1,14 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Dimensions,
   Image,
-  ScrollView,
   ActivityIndicator,
-  Dimensions
+  Platform,
+  ScrollView
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
@@ -73,7 +74,17 @@ export default function CameraScreen() {
   };
 
   const analyzeImage = async (photo) => {
-    if (!photo) return;
+    if (!photo) {
+      console.log('❌ Нет фото для анализа');
+      return;
+    }
+
+    console.log('📸 Начинаем анализ фото:', {
+      uri: photo.uri,
+      hasBase64: !!photo.base64,
+      width: photo.width,
+      height: photo.height
+    });
 
     setIsAnalyzing(true);
     setAnalysisResult(null);
@@ -81,13 +92,17 @@ export default function CameraScreen() {
     try {
       // Создаем FormData для отправки изображения
       const formData = new FormData();
+      console.log('📦 Создаем FormData...');
       
-      // Для React Native Web нужно создать blob из base64
-      if (photo.base64) {
+      // Проверяем платформу для выбора способа отправки
+      if (Platform.OS === 'web' && photo.base64) {
+        console.log('🌐 Используем base64 для веб-версии');
         const response = await fetch(`data:image/jpeg;base64,${photo.base64}`);
         const blob = await response.blob();
+        console.log('📄 Blob создан:', blob.size, 'bytes');
         formData.append('file', blob, 'violation.jpg');
       } else {
+        console.log('📱 Используем URI для мобильной версии:', photo.uri);
         formData.append('file', {
           uri: photo.uri,
           type: 'image/jpeg',
@@ -97,15 +112,21 @@ export default function CameraScreen() {
 
       // Добавляем координаты если доступны
       if (location) {
+        console.log('📍 Добавляем координаты:', location.latitude, location.longitude);
         formData.append('latitude', location.latitude.toString());
         formData.append('longitude', location.longitude.toString());
+      } else {
+        console.log('📍 Координаты недоступны');
       }
 
+      console.log('🚀 Отправляем запрос на анализ...');
       // Отправляем на анализ
       const result = await ApiService.detectViolation(formData);
+      console.log('✅ Получен результат анализа:', result);
       setAnalysisResult(result);
 
       if (result.success && result.data.violations.length > 0) {
+        console.log('🎯 Нарушения найдены:', result.data.violations.length);
         Alert.alert(
           'Нарушения обнаружены!', 
           `Найдено ${result.data.violations.length} нарушений`,
@@ -114,14 +135,22 @@ export default function CameraScreen() {
           ]
         );
       } else {
+        console.log('✅ Нарушений не обнаружено');
         Alert.alert('Результат', 'Нарушений не обнаружено');
       }
 
     } catch (error) {
-      console.error('Ошибка анализа:', error);
+      console.error('❌ Ошибка анализа:', error);
+      console.error('🔍 Error details:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        stack: error.stack
+      });
       Alert.alert('Ошибка', 'Не удалось проанализировать изображение');
     } finally {
       setIsAnalyzing(false);
+      console.log('🏁 Анализ завершен');
     }
   };
 

@@ -62,6 +62,12 @@ export default function LoginScreen({ onLogin }) {
           username: formData.username || formData.email.split('@')[0]
         };
         
+        // Сохраняем токен для гостевого входа
+        if (response.token) {
+          const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+          await AsyncStorage.setItem('authToken', response.token);
+        }
+        
         onLogin(user);
         Alert.alert('Успех', isLogin ? 'Вход выполнен успешно' : 'Регистрация завершена');
       } else {
@@ -75,12 +81,23 @@ export default function LoginScreen({ onLogin }) {
     }
   };
 
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
     const guestUser = {
       id: 'guest_' + Date.now(),
       email: 'guest@example.com',
       username: 'Гость'
     };
+    
+    // Создаем токен для гостевого пользователя
+    const guestToken = `guest_session_${guestUser.id}_${Date.now()}`;
+    
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.setItem('authToken', guestToken);
+    } catch (error) {
+      console.error('Error saving guest token:', error);
+    }
+    
     onLogin(guestUser);
   };
 
@@ -199,7 +216,7 @@ export default function LoginScreen({ onLogin }) {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © 2025 Hackathon 2025 Team AI_Python_Web
+            © 2025 Hackathon Team AI_Python_Web
           </Text>
         </View>
       </ScrollView>

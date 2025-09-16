@@ -67,32 +67,25 @@ export default function MapScreen() {
   const loadViolations = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.getAllViolations();
+      const response = await ApiService.getUserHistory();
       
       if (response.success && response.data) {
-        // Извлекаем нарушения из структуры данных API
-        const allViolations = [];
+        // Фильтруем только нарушения с координатами
+        const violationsWithCoords = response.data.filter(item => 
+          item.latitude && item.longitude
+        ).map(item => ({
+          id: item.id,
+          category: item.category,
+          confidence: item.confidence,
+          latitude: parseFloat(item.latitude),
+          longitude: parseFloat(item.longitude),
+          created_at: item.created_at,
+          address: item.address || '',
+          source: 'system'
+        }));
         
-        response.data.forEach(item => {
-          if (item.violations && Array.isArray(item.violations)) {
-            item.violations.forEach(violation => {
-              // Проверяем координаты из location или metadata
-              const coords = item.location?.coordinates;
-              if (coords && coords.latitude && coords.longitude) {
-                allViolations.push({
-                  ...violation,
-                  id: `${item.violation_id}-${violation.category}`,
-                  latitude: coords.latitude,
-                  longitude: coords.longitude,
-                  created_at: item.metadata?.timestamp,
-                  address: item.location?.address?.formatted_address
-                });
-              }
-            });
-          }
-        });
-        
-        setViolations(allViolations);
+        console.log(`📍 Загружено ${violationsWithCoords.length} нарушений с координатами`);
+        setViolations(violationsWithCoords);
       }
     } catch (error) {
       console.error('Ошибка загрузки нарушений:', error);

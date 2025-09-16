@@ -18,7 +18,7 @@ app.config.from_object(Config)
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
-CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://localhost:19006', 'http://127.0.0.1:19006'], 
+CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006', 'http://127.0.0.1:19006', 'http://192.168.1.67:8081'], 
      allow_headers=['Content-Type', 'Authorization'], 
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 

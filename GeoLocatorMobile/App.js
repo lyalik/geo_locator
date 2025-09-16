@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,8 +14,33 @@ import {
   ProfileScreen
 } from './src/utils/PlatformComponents';
 import LoginScreen from './src/screens/LoginScreen';
+import ViolationDetailScreen from './src/screens/ViolationDetailScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Stack Navigator для History с ViolationDetail
+function HistoryStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="HistoryMain" 
+        component={HistoryScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="ViolationDetail" 
+        component={ViolationDetailScreen}
+        options={{ 
+          title: 'Детали нарушения',
+          headerStyle: { backgroundColor: '#2196F3' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: 'bold' }
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -49,6 +75,7 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem('authToken');
       setUser(null);
     } catch (error) {
       console.error('Error removing user data:', error);
@@ -112,7 +139,7 @@ export default function App() {
         />
         <Tab.Screen 
           name="History" 
-          component={HistoryScreen} 
+          component={HistoryStack} 
           options={{ 
             title: 'История',
             headerTitle: 'Мои отчеты'

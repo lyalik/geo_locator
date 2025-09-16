@@ -14,6 +14,7 @@ import ApiService from '../services/ApiService';
 
 export default function ProfileScreen({ user, onLogout }) {
   const [analytics, setAnalytics] = useState(null);
+  const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [serverStatus, setServerStatus] = useState(null);
   const [notifications, setNotifications] = useState(true);
@@ -27,10 +28,23 @@ export default function ProfileScreen({ user, onLogout }) {
   const loadProfileData = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.getAnalytics();
       
-      if (response.success && response.data) {
-        setAnalytics(response.data);
+      // Загружаем общую аналитику системы
+      const analyticsResponse = await ApiService.getAnalytics();
+      if (analyticsResponse.success && analyticsResponse.data) {
+        setAnalytics(analyticsResponse.data);
+      }
+      
+      // Загружаем персональную статистику пользователя
+      if (user && user.id) {
+        try {
+          const userStatsResponse = await ApiService.getUserStats(user.id);
+          if (userStatsResponse.success && userStatsResponse.data) {
+            setUserStats(userStatsResponse.data);
+          }
+        } catch (statsError) {
+          console.error('Ошибка загрузки статистики пользователя:', statsError);
+        }
       }
     } catch (error) {
       console.error('Ошибка загрузки данных профиля:', error);
@@ -132,40 +146,98 @@ export default function ProfileScreen({ user, onLogout }) {
         <Text style={styles.userRole}>Участник программы мониторинга</Text>
       </View>
 
-      {/* Статистика */}
+      {/* Персональная статистика */}
+      {userStats && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📊 Моя статистика</Text>
+          
+          <View style={styles.statsGrid}>
+            {renderStatCard(
+              'Мои нарушения',
+              userStats.total_violations || 0,
+              'alert-circle',
+              '#f44336'
+            )}
+            
+            {renderStatCard(
+              'Активные',
+              userStats.active_violations || 0,
+              'warning',
+              '#ff9800'
+            )}
+            
+            {renderStatCard(
+              'Решенные',
+              userStats.resolved_violations || 0,
+              'checkmark-circle',
+              '#4caf50'
+            )}
+            
+            {renderStatCard(
+              'Средняя точность',
+              userStats.avg_confidence 
+                ? `${Math.round(userStats.avg_confidence * 100)}%`
+                : 'Н/Д',
+              'analytics',
+              '#2196F3'
+            )}
+          </View>
+          
+          {/* Последние нарушения пользователя */}
+          {userStats.recent_violations && userStats.recent_violations.length > 0 && (
+            <View style={styles.recentViolations}>
+              <Text style={styles.recentTitle}>Последние нарушения:</Text>
+              {userStats.recent_violations.slice(0, 3).map((violation, index) => (
+                <View key={index} style={styles.recentItem}>
+                  <Ionicons 
+                    name="alert-circle" 
+                    size={16} 
+                    color="#f44336" 
+                  />
+                  <Text style={styles.recentText}>
+                    {violation.category || 'Нарушение'} - {new Date(violation.created_at).toLocaleDateString('ru-RU')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+      
+      {/* Статистика системы */}
       {analytics && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📊 Статистика системы</Text>
+          <Text style={styles.sectionTitle}>📈 Статистика системы</Text>
           
           <View style={styles.statsGrid}>
             {renderStatCard(
               'Всего нарушений',
               analytics.summary?.total_violations || 0,
-              'alert-circle',
-              '#f44336'
+              'globe',
+              '#6c757d'
             )}
             
             {renderStatCard(
               'Всего фото',
               analytics.summary?.total_photos || 0,
               'camera',
-              '#2196F3'
+              '#6c757d'
             )}
             
             {renderStatCard(
               'За неделю',
               analytics.summary?.recent_violations || 0,
               'trending-up',
-              '#ff9800'
+              '#6c757d'
             )}
             
             {renderStatCard(
-              'Средняя точность',
+              'Общая точность',
               analytics.summary?.avg_confidence 
                 ? `${Math.round(analytics.summary.avg_confidence * 100)}%`
                 : 'Н/Д',
-              'checkmark-circle',
-              '#4caf50'
+              'stats-chart',
+              '#6c757d'
             )}
           </View>
         </View>
@@ -194,7 +266,7 @@ export default function ProfileScreen({ user, onLogout }) {
                   {renderServiceStatus(
                     'Mistral AI',
                     analytics.services.mistral_ai,
-                    'brain'
+                    'bulb'
                   )}
                   
                   {renderServiceStatus(
@@ -261,11 +333,16 @@ export default function ProfileScreen({ user, onLogout }) {
               <Ionicons name="person" size={40} color="#2196F3" />
             </View>
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user.username}</Text>
-              <Text style={styles.userEmail}>{user.email}</Text>
+              <Text style={styles.userNameProfile}>{user?.username || 'Пользователь'}</Text>
+              <Text style={styles.userEmail}>{user?.email || 'Не указан'}</Text>
               <Text style={styles.userStatus}>
-                {user.id.startsWith('guest_') ? 'Гостевой аккаунт' : 'Зарегистрированный пользователь'}
+                {user?.id && typeof user.id === 'string' && user.id.startsWith('guest_') ? 'Гостевой аккаунт' : 'Зарегистрированный пользователь'}
               </Text>
+              {userStats && (
+                <Text style={styles.userJoinDate}>
+                  Участник с {userStats.join_date ? new Date(userStats.join_date).toLocaleDateString('ru-RU') : 'недавнего времени'}
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -538,5 +615,39 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#f44336',
+  },
+  recentViolations: {
+    marginTop: 15,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+  },
+  recentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#495057',
+    marginBottom: 10,
+  },
+  recentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  recentText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginLeft: 8,
+    flex: 1,
+  },
+  userNameProfile: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  userJoinDate: {
+    fontSize: 11,
+    color: '#28a745',
+    marginTop: 2,
   },
 });

@@ -11,16 +11,30 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/ApiService';
 
-export default function HistoryScreen() {
+export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
+    loadUserData();
     loadHistory();
   }, []);
+
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки данных пользователя:', error);
+    }
+  };
 
   const loadHistory = async () => {
     try {
@@ -28,8 +42,16 @@ export default function HistoryScreen() {
       const response = await ApiService.getUserHistory();
       
       if (response.success && response.data) {
+        // Фильтруем только нарушения текущего пользователя
+        let filteredHistory = response.data;
+        if (user && user.id) {
+          filteredHistory = response.data.filter(item => 
+            item.user_id === user.id || item.user_id === String(user.id)
+          );
+        }
+        
         // Сортируем по дате создания (новые сначала)
-        const sortedHistory = response.data.sort((a, b) => 
+        const sortedHistory = filteredHistory.sort((a, b) => 
           new Date(b.created_at) - new Date(a.created_at)
         );
         setHistory(sortedHistory);
@@ -103,13 +125,17 @@ export default function HistoryScreen() {
     <TouchableOpacity 
       style={styles.historyItem}
       onPress={() => {
-        Alert.alert(
-          'Детали нарушения',
-          `Категория: ${getCategoryName(item.category)}\n` +
-          `Дата: ${formatDate(item.created_at)}\n` +
-          `Уверенность: ${item.confidence ? Math.round(item.confidence * 100) + '%' : 'Неизвестно'}\n` +
-          `Координаты: ${item.latitude?.toFixed(6) || 'Неизвестно'}, ${item.longitude?.toFixed(6) || 'Неизвестно'}`
-        );
+        if (item.id) {
+          navigation.navigate('ViolationDetail', { violationId: item.id });
+        } else {
+          Alert.alert(
+            'Детали нарушения',
+            `Категория: ${getCategoryName(item.category)}\n` +
+            `Дата: ${formatDate(item.created_at)}\n` +
+            `Уверенность: ${item.confidence ? Math.round(item.confidence * 100) + '%' : 'Неизвестно'}\n` +
+            `Координаты: ${item.latitude?.toFixed(6) || 'Неизвестно'}, ${item.longitude?.toFixed(6) || 'Неизвестно'}`
+          );
+        }
       }}
     >
       <View style={styles.itemHeader}>
@@ -165,7 +191,10 @@ export default function HistoryScreen() {
       <Ionicons name="document-text-outline" size={80} color="#ccc" />
       <Text style={styles.emptyTitle}>История пуста</Text>
       <Text style={styles.emptyText}>
-        Сделайте фото нарушения в разделе "Камера", чтобы увидеть историю здесь
+        {user ? 
+          'Сделайте фото нарушения в разделе "Камера", чтобы увидеть историю здесь' :
+          'Войдите в систему, чтобы видеть свою историю нарушений'
+        }
       </Text>
     </View>
   );
@@ -190,7 +219,7 @@ export default function HistoryScreen() {
 
       <FlatList
         data={history}
-        renderItem={renderViolationItem}
+        renderItem={renderHistoryItem}
         keyExtractor={(item, index) => `history-${item.id || index}`}
         refreshControl={
           <RefreshControl
