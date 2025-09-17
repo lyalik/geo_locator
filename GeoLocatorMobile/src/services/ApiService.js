@@ -6,6 +6,17 @@ const API_BASE_URL = Platform.OS === 'web' && typeof window !== 'undefined' && w
   ? 'http://localhost:5001'  // Веб-версия
   : 'http://192.168.1.67:5001'; // Мобильная версия
 
+// Проверяем доступность API
+const checkAPIConnection = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return response.ok;
+  } catch (error) {
+    console.error('❌ API недоступен:', error);
+    return false;
+  }
+};
+
 class ApiService {
   constructor() {
     console.log('🔧 Инициализация ApiService...');
@@ -17,11 +28,27 @@ class ApiService {
       baseURL: API_BASE_URL,
       timeout: 30000, // 30 секунд для анализа изображений
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
       },
     });
     
+    // Проверяем подключение к API при инициализации
+    this.checkConnection();
+    
     console.log('✅ ApiService инициализирован с baseURL:', this.api.defaults.baseURL);
+  }
+  
+  async checkConnection() {
+    try {
+      const isConnected = await checkAPIConnection();
+      if (isConnected) {
+        console.log('✅ Подключение к API успешно');
+      } else {
+        console.warn('⚠️ API недоступен, проверьте сервер');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка проверки подключения:', error);
+    }
 
     // Интерцептор для добавления токена авторизации
     this.api.interceptors.request.use(
@@ -76,6 +103,12 @@ class ApiService {
       console.log('🔄 Начинаем анализ нарушений...');
       console.log('📡 API Base URL:', this.api.defaults.baseURL);
       console.log('📝 FormData содержит:', Array.from(formData.keys()));
+      
+      // Проверяем подключение перед отправкой
+      const isConnected = await checkAPIConnection();
+      if (!isConnected) {
+        throw new Error('Сервер недоступен. Проверьте подключение к интернету.');
+      }
       
       const response = await this.api.post('/api/violations/detect', formData, {
         headers: {
@@ -159,11 +192,14 @@ class ApiService {
 
   /**
    * Получение истории загрузок пользователя
-   * @returns  // Получение истории пользователя
-  async getUserHistory() {
+   * @param {string} userId - ID пользователя (опционально)
+   * @returns {Promise} История пользователя
+   */
+  async getUserHistory(userId = null) {
     try {
       console.log('📊 Получение истории пользователя...');
-      const response = await this.api.get('/api/user/history');
+      const params = userId ? { user_id: userId } : {};
+      const response = await this.api.get('/api/violations/history', { params });
       console.log('✅ История получена:', response.data);
       return response.data;
     } catch (error) {
@@ -539,24 +575,6 @@ class ApiService {
     }
   }
 
-  // Получение истории пользователя
-  async getUserHistory(userId) {
-    try {
-      console.log('📚 Получение истории пользователя...');
-      const response = await this.api.get('/api/violations/history', {
-        params: { user_id: userId }
-      });
-      
-      if (response.data.success) {
-        console.log('✅ История получена:', response.data.data);
-        return response.data;
-      }
-      return { success: false, error: 'No history data available' };
-    } catch (error) {
-      console.error('❌ Ошибка получения истории:', error);
-      return { success: false, error: error.message };
-    }
-  }
 }
 
 // Экспортируем единственный экземпляр

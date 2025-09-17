@@ -372,26 +372,25 @@ def get_user_stats(user_id):
         
         for photo in photos:
             for violation in photo.violations:
-                if violation.status != 'deleted':
-                    total_violations += 1
-                    
-                    # Count by category
-                    category = violation.category
-                    violations_by_category[category] = violations_by_category.get(category, 0) + 1
-                    
-                    # Add to recent violations (last 10)
-                    if len(recent_violations) < 10:
-                        recent_violations.append({
-                            'id': str(violation.id),
-                            'category': violation.category,
-                            'confidence': violation.confidence,
-                            'created_at': photo.created_at.isoformat() + 'Z',
-                            'location': {
-                                'latitude': photo.lat,
-                                'longitude': photo.lon,
-                                'address': photo.address_data.get('formatted_address', '') if photo.address_data else ''
-                            }
-                        })
+                total_violations += 1
+                
+                # Count by category
+                category = violation.category
+                violations_by_category[category] = violations_by_category.get(category, 0) + 1
+                
+                # Add to recent violations (last 10)
+                if len(recent_violations) < 10:
+                    recent_violations.append({
+                        'id': str(violation.id),
+                        'category': violation.category,
+                        'confidence': violation.confidence,
+                        'created_at': photo.created_at.isoformat() + 'Z',
+                        'location': {
+                            'latitude': photo.lat,
+                            'longitude': photo.lon,
+                            'address': photo.address_data.get('formatted_address', '') if photo.address_data else ''
+                        }
+                    })
         
         # Sort recent violations by date
         recent_violations.sort(key=lambda x: x['created_at'], reverse=True)

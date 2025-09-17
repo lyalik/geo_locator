@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/ApiService';
 import OfflineStorageService from '../services/OfflineStorageService';
@@ -360,6 +361,54 @@ export default function CameraScreen() {
     }
   };
 
+  const pickImageFromGallery = async () => {
+    try {
+      // Запрашиваем разрешение на доступ к медиатеке
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Ошибка', 'Необходимо разрешение на доступ к галерее');
+        return;
+      }
+
+      // Открываем галерею
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImage = result.assets[0];
+        console.log('📷 Выбрано фото из галереи:', selectedImage.uri);
+        
+        // Устанавливаем выбранное изображение как захваченное
+        setCapturedImage({
+          uri: selectedImage.uri,
+          base64: selectedImage.base64,
+          width: selectedImage.width,
+          height: selectedImage.height
+        });
+        
+        // Получаем текущую геолокацию для анализа
+        await getCurrentLocation();
+        
+        // Анализируем выбранное изображение
+        await analyzeImage({
+          uri: selectedImage.uri,
+          base64: selectedImage.base64,
+          width: selectedImage.width,
+          height: selectedImage.height
+        });
+      }
+    } catch (error) {
+      console.error('❌ Ошибка выбора фото из галереи:', error);
+      Alert.alert('Ошибка', 'Не удалось выбрать фото из галереи');
+    }
+  };
+
   const retakePhoto = () => {
     setCapturedImage(null);
     setAnalysisResult(null);
@@ -549,20 +598,35 @@ export default function CameraScreen() {
                   </Text>
                 )}
                 
-                <TouchableOpacity
-                  style={[
-                    styles.captureButton,
-                    isAnalyzing && styles.captureButtonDisabled
-                  ]}
-                  onPress={takePicture}
-                  disabled={isAnalyzing || !isReady}
-                >
-                  {isAnalyzing ? (
-                    <ActivityIndicator size="large" color="#2196F3" />
-                  ) : (
-                    <View style={styles.captureButtonInner} />
-                  )}
-                </TouchableOpacity>
+                <View style={styles.captureContainer}>
+                  {/* Кнопка выбора из галереи */}
+                  <TouchableOpacity
+                    style={styles.galleryButton}
+                    onPress={pickImageFromGallery}
+                    disabled={isAnalyzing}
+                  >
+                    <Ionicons name="images" size={24} color="white" />
+                  </TouchableOpacity>
+                  
+                  {/* Основная кнопка съемки */}
+                  <TouchableOpacity
+                    style={[
+                      styles.captureButton,
+                      isAnalyzing && styles.captureButtonDisabled
+                    ]}
+                    onPress={takePicture}
+                    disabled={isAnalyzing || !isReady}
+                  >
+                    {isAnalyzing ? (
+                      <ActivityIndicator size="large" color="#2196F3" />
+                    ) : (
+                      <View style={styles.captureButtonInner} />
+                    )}
+                  </TouchableOpacity>
+                  
+                  {/* Пустой элемент для симметрии */}
+                  <View style={styles.galleryButton} />
+                </View>
                 
                 {location && (
                   <Text style={styles.locationText}>
@@ -928,5 +992,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  captureContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  galleryButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
