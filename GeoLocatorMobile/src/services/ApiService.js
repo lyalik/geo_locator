@@ -538,6 +538,25 @@ class ApiService {
         return `📍 Зафиксировано нарушение в данной области.`;
     }
   }
+
+  // Получение истории пользователя
+  async getUserHistory(userId) {
+    try {
+      console.log('📚 Получение истории пользователя...');
+      const response = await this.api.get('/api/violations/history', {
+        params: { user_id: userId }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ История получена:', response.data.data);
+        return response.data;
+      }
+      return { success: false, error: 'No history data available' };
+    } catch (error) {
+      console.error('❌ Ошибка получения истории:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 // Экспортируем единственный экземпляр

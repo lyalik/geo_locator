@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -62,13 +63,21 @@ export default function App() {
 
   const checkAuthState = async () => {
     try {
+      console.log('🔍 Проверка состояния авторизации...');
       const userData = await AsyncStorage.getItem('user');
+      console.log('👤 Данные пользователя из AsyncStorage:', userData);
+      
       if (userData) {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        console.log('✅ Пользователь найден:', parsedUser);
+        setUser(parsedUser);
+      } else {
+        console.log('❌ Пользователь не найден, показываем экран логина');
       }
     } catch (error) {
-      console.error('Error checking auth state:', error);
+      console.error('❌ Ошибка проверки состояния авторизации:', error);
     } finally {
+      console.log('🏁 Завершение проверки авторизации, loading = false');
       setLoading(false);
     }
   };
@@ -94,7 +103,14 @@ export default function App() {
   };
 
   if (loading) {
-    return null; // Или компонент загрузки
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>
+          Загрузка приложения...
+        </Text>
+      </View>
+    );
   }
 
   if (!user) {

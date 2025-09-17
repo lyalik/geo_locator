@@ -326,8 +326,7 @@ def get_violations_with_coordinates():
         violations_with_coords = []
         for photo in photos:
             for violation in photo.violations:
-                if violation.status != 'deleted':  # Исключаем удаленные нарушения
-                    violations_with_coords.append({
+                violations_with_coords.append({
                         'violation_id': str(violation.id),
                         'id': str(violation.id),
                         'category': violation.category,
