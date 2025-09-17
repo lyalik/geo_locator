@@ -29,8 +29,8 @@ export default function MapScreen() {
   const [osmBuildings, setOsmBuildings] = useState([]);
   const [loadingOSM, setLoadingOSM] = useState(false);
   const [mapRegion, setMapRegion] = useState({
-    latitude: 55.7558, // Москва по умолчанию
-    longitude: 37.6176,
+    latitude: 45.0355, // Краснодар по умолчанию
+    longitude: 38.9753,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
@@ -72,17 +72,37 @@ export default function MapScreen() {
 
   const centerOnUserLocation = async () => {
     try {
+      console.log('📍 Центрирование на пользователе...');
       setLoading(true);
-      await getCurrentLocation();
-      if (location) {
-        setMapRegion({
-          ...location,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        });
+      
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Ошибка', 'Необходимо разрешение на доступ к геолокации');
+        return;
       }
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      
+      const userLocation = {
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      };
+      
+      console.log('📍 Местоположение пользователя:', userLocation);
+      
+      setLocation(userLocation);
+      setMapRegion({
+        ...userLocation,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+      
+      Alert.alert('Успех', 'Карта центрирована на вашем местоположении');
     } catch (error) {
-      console.error('Ошибка центрирования на пользователе:', error);
+      console.error('❌ Ошибка центрирования на пользователе:', error);
+      Alert.alert('Ошибка', 'Не удалось определить ваше местоположение');
     } finally {
       setLoading(false);
     }

@@ -7,10 +7,14 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
-  Switch
+  Switch,
+  Dimensions,
+  LinearGradient
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/ApiService';
+
+const { width } = Dimensions.get('window');
 
 export default function ProfileScreen({ user, onLogout }) {
   const [analytics, setAnalytics] = useState(null);
@@ -136,25 +140,106 @@ export default function ProfileScreen({ user, onLogout }) {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Заголовок профиля */}
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <Ionicons name="person" size={40} color="#2196F3" />
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Градиентный заголовок */}
+      <View style={styles.gradientHeader}>
+        <View style={styles.headerContent}>
+          <Text style={styles.cityName}>Краснодар</Text>
+          <View style={styles.userInfo}>
+            <View style={styles.avatarContainer}>
+              <Ionicons name="person" size={32} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.userName}>Активный гражданин</Text>
+              <Text style={styles.userRole}>Участник мониторинга</Text>
+            </View>
+          </View>
         </View>
-        <Text style={styles.userName}>Активный гражданин</Text>
-        <Text style={styles.userRole}>Участник программы мониторинга</Text>
       </View>
 
-      {/* Персональная статистика */}
-      {userStats && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📊 Моя статистика</Text>
+      {/* Карточки статистики в стиле погоды */}
+      <View style={styles.weatherGrid}>
+        {/* Основная статистика */}
+        <View style={styles.weatherRow}>
+          <View style={[styles.weatherCard, styles.primaryCard]}>
+            <Text style={styles.cardLabel}>Всего нарушений</Text>
+            <Text style={styles.cardValue}>{analytics?.total_violations || 0}</Text>
+            <View style={styles.cardIcon}>
+              <Ionicons name="alert-circle" size={40} color="#FF6B6B" />
+            </View>
+          </View>
           
-          <View style={styles.statsGrid}>
-            {renderStatCard(
-              'Мои нарушения',
-              userStats.total_violations || 0,
+          <View style={[styles.weatherCard, styles.secondaryCard]}>
+            <Text style={styles.cardLabel}>Точность ИИ</Text>
+            <Text style={styles.cardValue}>
+              {analytics?.ai_accuracy ? `${Math.round(analytics.ai_accuracy * 100)}%` : '95%'}
+            </Text>
+            <View style={styles.progressRing}>
+              <Ionicons name="analytics" size={24} color="#4ECDC4" />
+            </View>
+          </View>
+        </View>
+
+        {/* Вторая строка */}
+        <View style={styles.weatherRow}>
+          <View style={[styles.weatherCard, styles.secondaryCard]}>
+            <Text style={styles.cardLabel}>Активные</Text>
+            <Text style={styles.cardValue}>{analytics?.active_violations || 0}</Text>
+            <View style={styles.cardIcon}>
+              <Ionicons name="warning" size={32} color="#FFE66D" />
+            </View>
+          </View>
+          
+          <View style={[styles.weatherCard, styles.secondaryCard]}>
+            <Text style={styles.cardLabel}>Решенные</Text>
+            <Text style={styles.cardValue}>{analytics?.resolved_violations || 0}</Text>
+            <View style={styles.cardIcon}>
+              <Ionicons name="checkmark-circle" size={32} color="#95E1D3" />
+            </View>
+          </View>
+        </View>
+
+        {/* Третья строка */}
+        <View style={styles.weatherRow}>
+          <View style={[styles.weatherCard, styles.secondaryCard]}>
+            <Text style={styles.cardLabel}>YOLO детекции</Text>
+            <Text style={styles.cardValue}>{analytics?.yolo_detections || 0}</Text>
+            <View style={styles.cardIcon}>
+              <Ionicons name="eye" size={32} color="#A8E6CF" />
+            </View>
+          </View>
+          
+          <View style={[styles.weatherCard, styles.secondaryCard]}>
+            <Text style={styles.cardLabel}>Mistral AI</Text>
+            <Text style={styles.cardValue}>{analytics?.mistral_analyses || 0}</Text>
+            <View style={styles.cardIcon}>
+              <Ionicons name="brain" size={32} color="#DCEDC1" />
+            </View>
+          </View>
+        </View>
+
+        {/* Статус сервисов */}
+        <View style={[styles.weatherCard, styles.fullWidthCard]}>
+          <Text style={styles.cardLabel}>🔧 Статус сервисов</Text>
+          <View style={styles.servicesGrid}>
+            <View style={styles.serviceItem}>
+              <Ionicons name="server" size={20} color={serverStatus?.api ? '#4CAF50' : '#F44336'} />
+              <Text style={styles.serviceName}>API</Text>
+              <View style={[styles.statusDot, { backgroundColor: serverStatus?.api ? '#4CAF50' : '#F44336' }]} />
+            </View>
+            <View style={styles.serviceItem}>
+              <Ionicons name="eye" size={20} color={serverStatus?.yolo ? '#4CAF50' : '#F44336'} />
+              <Text style={styles.serviceName}>YOLO</Text>
+              <View style={[styles.statusDot, { backgroundColor: serverStatus?.yolo ? '#4CAF50' : '#F44336' }]} />
+            </View>
+            <View style={styles.serviceItem}>
+              <Ionicons name="brain" size={20} color={serverStatus?.mistral ? '#4CAF50' : '#F44336'} />
+              <Text style={styles.serviceName}>Mistral AI</Text>
+              <View style={[styles.statusDot, { backgroundColor: serverStatus?.mistral ? '#4CAF50' : '#F44336' }]} />
+            </View>
+          </View>
+        </View>
+      </View>
               'alert-circle',
               '#f44336'
             )}

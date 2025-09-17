@@ -170,35 +170,6 @@ const ViolationDetailScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Детали нарушения</Text>
-        <View style={styles.headerActions}>
-          {!editing && user && violation.user_id === user.id && (
-            <>
-              <TouchableOpacity onPress={() => setEditing(true)} style={styles.actionButton}>
-                <Ionicons name="create" size={20} color="#007AFF" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleDelete} style={styles.actionButton}>
-                <Ionicons name="trash" size={20} color="#ff6b6b" />
-              </TouchableOpacity>
-            </>
-          )}
-          {editing && (
-            <>
-              <TouchableOpacity onPress={handleSave} style={styles.actionButton}>
-                <Ionicons name="checkmark" size={20} color="#51cf66" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEditing(false)} style={styles.actionButton}>
-                <Ionicons name="close" size={20} color="#ff6b6b" />
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      </View>
 
       {/* Violation Image */}
       {violation.image_path && (

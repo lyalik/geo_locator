@@ -135,25 +135,34 @@ export default function HistoryScreen({ navigation }) {
           
           // Добавляем координаты если есть
           if (item.latitude && item.longitude) {
-            details += `Координаты: ${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)}\n`;
+            details += `📍 Координаты: ${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)}\n`;
+          } else if (item.location && item.location.coordinates) {
+            details += `📍 Координаты: ${item.location.coordinates.latitude.toFixed(6)}, ${item.location.coordinates.longitude.toFixed(6)}\n`;
           } else {
-            details += `Координаты: Не определены\n`;
+            details += `📍 Координаты: Не определены\n`;
           }
           
           // Добавляем адрес если есть
           if (item.address) {
-            details += `Местоположение: ${item.address}\n`;
+            details += `🏠 Местоположение: ${item.address}\n`;
+          } else if (item.location && item.location.address) {
+            details += `🏠 Местоположение: ${item.location.address}\n`;
           } else {
-            details += `Местоположение: Не определено\n`;
+            details += `🏠 Местоположение: Не определено\n`;
           }
           
           // Добавляем источник если есть
           if (item.source) {
-            details += `Источник: ${item.source}`;
+            details += `🔍 Источник: ${item.source === 'yolo' ? '🎯 YOLO' : item.source === 'mistral' ? '🤖 Mistral AI' : item.source}\n`;
+          }
+          
+          // Добавляем описание если есть
+          if (item.description) {
+            details += `📝 Описание: ${item.description}`;
           }
           
           Alert.alert(
-            getCategoryName(item.category), // Используем название категории как заголовок
+            `📋 ${getCategoryName(item.category)}`, // Добавляем иконку к заголовку
             details
           );
         }

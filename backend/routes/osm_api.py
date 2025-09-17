@@ -109,6 +109,61 @@ def get_urban_context():
         logger.error(f"Error in get_urban_context: {e}")
         return jsonify({'error': str(e)}), 500
 
+@osm_bp.route('/buildings', methods=['GET'])
+def get_buildings():
+    """
+    Получение зданий через OSM Overpass API
+    """
+    try:
+        if osm_service is None:
+            return jsonify({'success': False, 'error': 'OSM service not available'}), 503
+        
+        lat = request.args.get('lat', type=float)
+        lon = request.args.get('lon', type=float)
+        radius = request.args.get('radius', 1000, type=int)
+        
+        if lat is None or lon is None:
+            return jsonify({'success': False, 'error': 'Latitude and longitude are required'}), 400
+        
+        # Получаем здания
+        buildings_query = f"""
+        [out:json][timeout:25];
+        (
+          way["building"](around:{radius},{lat},{lon});
+          relation["building"](around:{radius},{lat},{lon});
+        );
+        out geom;
+        """
+        
+        buildings_result = osm_service._execute_query(buildings_query)
+        buildings = []
+        
+        if buildings_result.get('success'):
+            for element in buildings_result.get('data', {}).get('elements', []):
+                building = {
+                    'id': element.get('id'),
+                    'name': element.get('tags', {}).get('name'),
+                    'building_type': element.get('tags', {}).get('building', 'yes'),
+                    'address': osm_service._format_address(element.get('tags', {})),
+                    'levels': element.get('tags', {}).get('building:levels'),
+                    'height': element.get('tags', {}).get('height'),
+                    'amenity': element.get('tags', {}).get('amenity'),
+                    'coordinates': osm_service._extract_center_coordinates(element)
+                }
+                buildings.append(building)
+        
+        return jsonify({
+            'success': True,
+            'buildings': buildings,
+            'center_coordinates': {'lat': lat, 'lon': lon},
+            'radius': radius,
+            'count': len(buildings)
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error in get_buildings: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @osm_bp.route('/health', methods=['GET'])
 def health():
     """Проверка состояния OSM сервиса"""
