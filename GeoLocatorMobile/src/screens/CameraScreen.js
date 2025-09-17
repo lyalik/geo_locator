@@ -326,9 +326,9 @@ export default function CameraScreen() {
         console.log('📍 Координаты недоступны');
       }
 
-      console.log('🚀 Отправляем запрос на анализ...');
-      // Отправляем на анализ
-      const result = await ApiService.detectViolation(formData);
+      console.log('🚀 Отправляем запрос на ИИ анализ с OSM контекстом...');
+      // Отправляем на ИИ анализ с OSM контекстом
+      const result = await ApiService.detectViolationWithAI(formData, location);
       console.log('📊 Результат анализа:', result.data);
       setAnalysisResult(result.data);
 
@@ -371,6 +371,9 @@ export default function CameraScreen() {
         return;
       }
 
+      // Показываем прелоадер
+      setIsAnalyzing(true);
+
       // Открываем галерею
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -402,10 +405,14 @@ export default function CameraScreen() {
           width: selectedImage.width,
           height: selectedImage.height
         });
+      } else {
+        // Если пользователь отменил выбор, убираем прелоадер
+        setIsAnalyzing(false);
       }
     } catch (error) {
       console.error('❌ Ошибка выбора фото из галереи:', error);
       Alert.alert('Ошибка', 'Не удалось выбрать фото из галереи');
+      setIsAnalyzing(false);
     }
   };
 
@@ -450,15 +457,46 @@ export default function CameraScreen() {
 
           {analysisResult && (
             <View style={styles.resultCard}>
-              <Text style={styles.resultTitle}>Результат анализа</Text>
+              <Text style={styles.resultTitle}>🤖 Результат ИИ анализа</Text>
               
-              {analysisResult.success && analysisResult.data.violations.length > 0 ? (
+              {/* Контекстный алерт */}
+              {analysisResult.contextAlert && (
+                <View style={styles.contextAlert}>
+                  <Text style={styles.contextAlertTitle}>🚨 {analysisResult.contextAlert.title}</Text>
+                  <Text style={styles.contextAlertMessage}>{analysisResult.contextAlert.message}</Text>
+                  <Text style={styles.contextAlertZone}>🏢 Зона: {analysisResult.contextAlert.zoneType}</Text>
+                </View>
+              )}
+              
+              {/* OSM контекст */}
+              {analysisResult.osmContext && (
+                <View style={styles.osmContextCard}>
+                  <Text style={styles.osmContextTitle}>🗺️ Контекст местоположения</Text>
+                  {analysisResult.osmContext.zone_type && (
+                    <Text style={styles.osmContextItem}>
+                      🏢 Тип зоны: {analysisResult.osmContext.zone_type}
+                    </Text>
+                  )}
+                  {analysisResult.osmContext.nearby_amenities && analysisResult.osmContext.nearby_amenities.length > 0 && (
+                    <Text style={styles.osmContextItem}>
+                      🏪 Объекты рядом: {analysisResult.osmContext.nearby_amenities.slice(0, 3).join(', ')}
+                    </Text>
+                  )}
+                  {analysisResult.osmContext.buildings && analysisResult.osmContext.buildings.length > 0 && (
+                    <Text style={styles.osmContextItem}>
+                      🏢 Зданий поблизости: {analysisResult.osmContext.buildings.length}
+                    </Text>
+                  )}
+                </View>
+              )}
+              
+              {analysisResult.success && analysisResult.violations && analysisResult.violations.length > 0 ? (
                 <View>
                   <Text style={styles.violationsFound}>
-                    Найдено нарушений: {analysisResult.data.violations.length}
+                    Найдено нарушений: {analysisResult.violations.length}
                   </Text>
                   
-                  {analysisResult.data.violations.map((violation, index) => (
+                  {analysisResult.violations.map((violation, index) => (
                     <View key={index} style={styles.violationItem}>
                       <Text style={styles.violationType}>
                         📍 {violation.category || 'Нарушение'}
@@ -468,7 +506,7 @@ export default function CameraScreen() {
                       </Text>
                       {violation.source && (
                         <Text style={styles.violationSource}>
-                          Источник: {violation.source}
+                          Источник: {violation.source === 'yolo' ? '🎯 YOLO' : violation.source === 'mistral' ? '🤖 Mistral AI' : violation.source}
                         </Text>
                       )}
                     </View>
@@ -1012,5 +1050,48 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
+  },
+  contextAlert: {
+    backgroundColor: '#fff3cd',
+    borderColor: '#ffeaa7',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+  },
+  contextAlertTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#856404',
+    marginBottom: 5,
+  },
+  contextAlertMessage: {
+    fontSize: 14,
+    color: '#856404',
+    marginBottom: 5,
+  },
+  contextAlertZone: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontStyle: 'italic',
+  },
+  osmContextCard: {
+    backgroundColor: '#e8f5e8',
+    borderColor: '#4caf50',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+  },
+  osmContextTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+    marginBottom: 8,
+  },
+  osmContextItem: {
+    fontSize: 14,
+    color: '#388e3c',
+    marginBottom: 4,
   },
 });

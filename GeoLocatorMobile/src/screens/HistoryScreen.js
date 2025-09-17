@@ -128,12 +128,33 @@ export default function HistoryScreen({ navigation }) {
         if (item.id) {
           navigation.navigate('ViolationDetail', { violationId: item.id });
         } else {
+          // Формируем детальную информацию
+          let details = `Категория: ${getCategoryName(item.category)}\n`;
+          details += `Дата: ${formatDate(item.created_at)}\n`;
+          details += `Уверенность: ${item.confidence ? Math.round(item.confidence * 100) + '%' : 'Неизвестно'}\n`;
+          
+          // Добавляем координаты если есть
+          if (item.latitude && item.longitude) {
+            details += `Координаты: ${item.latitude.toFixed(6)}, ${item.longitude.toFixed(6)}\n`;
+          } else {
+            details += `Координаты: Не определены\n`;
+          }
+          
+          // Добавляем адрес если есть
+          if (item.address) {
+            details += `Местоположение: ${item.address}\n`;
+          } else {
+            details += `Местоположение: Не определено\n`;
+          }
+          
+          // Добавляем источник если есть
+          if (item.source) {
+            details += `Источник: ${item.source}`;
+          }
+          
           Alert.alert(
-            'Детали нарушения',
-            `Категория: ${getCategoryName(item.category)}\n` +
-            `Дата: ${formatDate(item.created_at)}\n` +
-            `Уверенность: ${item.confidence ? Math.round(item.confidence * 100) + '%' : 'Неизвестно'}\n` +
-            `Координаты: ${item.latitude?.toFixed(6) || 'Неизвестно'}, ${item.longitude?.toFixed(6) || 'Неизвестно'}`
+            getCategoryName(item.category), // Используем название категории как заголовок
+            details
           );
         }
       }}

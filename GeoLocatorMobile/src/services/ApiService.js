@@ -94,7 +94,88 @@ class ApiService {
   }
 
   /**
-   * Детекция нарушений на изображении
+   * Детекция нарушений на изображении с OSM контекстом и ИИ анализом
+   * @param {FormData} formData - Данные формы с изображением и координатами
+   * @param {Object} location - Координаты для получения OSM контекста
+   * @returns {Promise} Результат анализа с OSM контекстом
+   */
+  async detectViolationWithAI(formData, location = null) {
+    try {
+      console.log('🤖 Начинаем ИИ анализ с OSM контекстом...');
+      console.log('📡 API Base URL:', this.api.defaults.baseURL);
+      console.log('📝 FormData содержит:', Array.from(formData.keys()));
+      
+      // Проверяем подключение перед отправкой
+      const isConnected = await checkAPIConnection();
+      if (!isConnected) {
+        throw new Error('Сервер недоступен. Проверьте подключение к интернету.');
+      }
+      
+      // Получаем OSM контекст если есть координаты
+      let osmContext = null;
+      if (location && location.latitude && location.longitude) {
+        console.log('🗺️ Получаем OSM контекст для координат:', location);
+        try {
+          osmContext = await this.getOSMUrbanContext(location.latitude, location.longitude);
+          console.log('✅ OSM контекст получен:', osmContext);
+        } catch (error) {
+          console.warn('⚠️ Не удалось получить OSM контекст:', error.message);
+        }
+      }
+      
+      // Добавляем OSM контекст в FormData если доступен
+      if (osmContext && osmContext.success) {
+        formData.append('osm_context', JSON.stringify(osmContext.data));
+        console.log('📍 OSM контекст добавлен в запрос');
+      }
+      
+      const response = await this.api.post('/api/violations/detect', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000, // 60 секунд
+      });
+      
+      console.log('✅ ИИ анализ успешно завершен:', response.status);
+      
+      // Обогащаем результат OSM данными
+      const result = response.data;
+      if (result.success && osmContext && osmContext.success) {
+        result.data.osmContext = osmContext.data;
+        
+        // Генерируем контекстный алерт
+        try {
+          const contextAlert = await this.generateContextualAlert(
+            result.data.violations || [],
+            osmContext.data
+          );
+          result.data.contextAlert = contextAlert;
+          console.log('🚨 Контекстный алерт сгенерирован:', contextAlert);
+        } catch (error) {
+          console.warn('⚠️ Не удалось сгенерировать контекстный алерт:', error.message);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Ошибка ИИ анализа с OSM:');
+      console.error('🔗 URL:', error.config?.url);
+      console.error('📡 Base URL:', error.config?.baseURL);
+      console.error('🌐 Network Error:', error.message);
+      console.error('📱 Error Code:', error.code);
+      console.error('🔍 Full Error:', error);
+      
+      if (error.response) {
+        console.error('📤 Response Status:', error.response.status);
+        console.error('📥 Response Data:', error.response.data);
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Детекция нарушений на изображении (базовая версия)
    * @param {FormData} formData - Данные формы с изображением и координатами
    * @returns {Promise} Результат анализа
    */
@@ -457,6 +538,25 @@ class ApiService {
     }
   }
 
+  // Получение OSM зданий для карты
+  async getOSMBuildings(latitude, longitude, radius = 1000) {
+    try {
+      console.log('🏢 Получение OSM зданий...');
+      const response = await this.api.get('/api/osm/buildings', {
+        params: { lat: latitude, lon: longitude, radius }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ OSM здания получены:', response.data.buildings?.length || 0);
+        return response.data;
+      }
+      return { success: false, error: 'No OSM buildings available' };
+    } catch (error) {
+      console.error('❌ Ошибка получения OSM зданий:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Получение OSM городского контекста
   async getOSMUrbanContext(latitude, longitude, radius = 500) {
     try {
@@ -558,20 +658,50 @@ class ApiService {
   }
 
   // Генерация контекстных уведомлений
-  generateContextualAlert(violation, osmContext) {
+  async generateContextualAlert(violations, osmContext) {
+    if (!violations || violations.length === 0) {
+      return null;
+    }
+    
     const zoneType = this.categorizeByOSMContext(osmContext);
+    const violationCount = violations.length;
     
     switch (zoneType) {
       case 'education_zone':
-        return `⚠️ Нарушение в школьной зоне! Повышенная опасность для детей.`;
+        return {
+          type: 'warning',
+          title: '⚠️ Школьная зона',
+          message: `Обнаружено ${violationCount} нарушений в школьной зоне! Повышенная опасность для детей.`,
+          priority: 'high'
+        };
       case 'healthcare_zone':
-        return `🚨 Нарушение у медучреждения! Может препятствовать скорой помощи.`;
+        return {
+          type: 'critical',
+          title: '🚨 Медицинская зона',
+          message: `Обнаружено ${violationCount} нарушений у медучреждения! Может препятствовать скорой помощи.`,
+          priority: 'critical'
+        };
       case 'residential_zone':
-        return `🏠 Нарушение в жилой зоне. Влияет на комфорт жителей.`;
+        return {
+          type: 'info',
+          title: '🏠 Жилая зона',
+          message: `Обнаружено ${violationCount} нарушений в жилой зоне. Влияет на комфорт жителей.`,
+          priority: 'medium'
+        };
       case 'commercial_zone':
-        return `🏪 Нарушение в торговой зоне. Может затруднить доступ покупателей.`;
+        return {
+          type: 'warning',
+          title: '🏪 Торговая зона',
+          message: `Обнаружено ${violationCount} нарушений в торговой зоне. Может затруднить доступ покупателей.`,
+          priority: 'medium'
+        };
       default:
-        return `📍 Зафиксировано нарушение в данной области.`;
+        return {
+          type: 'info',
+          title: '📍 Общая зона',
+          message: `Зафиксировано ${violationCount} нарушений в данной области.`,
+          priority: 'low'
+        };
     }
   }
 
