@@ -192,10 +192,19 @@ export default function MapScreen() {
       setLoadingOSM(true);
       console.log('🏢 Загружаем OSM здания...');
       
-      // Получаем OSM здания в текущей области карты
-      const bbox = `${mapRegion.longitude - mapRegion.longitudeDelta},${mapRegion.latitude - mapRegion.latitudeDelta},${mapRegion.longitude + mapRegion.longitudeDelta},${mapRegion.latitude + mapRegion.latitudeDelta}`;
+      // Проверяем, что mapRegion инициализирован
+      if (!mapRegion || !mapRegion.latitude || !mapRegion.longitude) {
+        console.error('❌ mapRegion не инициализирован:', mapRegion);
+        return;
+      }
       
-      const response = await ApiService.getOSMBuildings(bbox, 50);
+      // Получаем OSM здания в центре текущей области карты
+      const centerLat = mapRegion.latitude;
+      const centerLon = mapRegion.longitude;
+      const radius = Math.max(mapRegion.latitudeDelta, mapRegion.longitudeDelta) * 111000; // Примерное расстояние в метрах
+      
+      console.log('🏢 Запрос OSM зданий:', { centerLat, centerLon, radius });
+      const response = await ApiService.getOSMBuildings(centerLat, centerLon, Math.min(radius, 2000));
       
       if (response.success && response.data) {
         const buildings = response.data.map(building => ({

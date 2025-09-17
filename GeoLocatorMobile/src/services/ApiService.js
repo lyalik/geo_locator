@@ -541,9 +541,19 @@ class ApiService {
   // Получение OSM зданий для карты
   async getOSMBuildings(latitude, longitude, radius = 1000) {
     try {
-      console.log('🏢 Получение OSM зданий...');
+      // Проверяем валидность координат
+      if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
+        console.error('❌ Невалидные координаты для OSM:', { latitude, longitude });
+        return { success: false, error: 'Invalid coordinates' };
+      }
+
+      console.log('🏢 Получение OSM зданий...', { latitude, longitude, radius });
       const response = await this.api.get('/api/osm/buildings', {
-        params: { lat: latitude, lon: longitude, radius }
+        params: { 
+          lat: parseFloat(latitude), 
+          lon: parseFloat(longitude), 
+          radius: parseInt(radius) 
+        }
       });
       
       if (response.data.success) {
@@ -553,6 +563,10 @@ class ApiService {
       return { success: false, error: 'No OSM buildings available' };
     } catch (error) {
       console.error('❌ Ошибка получения OSM зданий:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
       return { success: false, error: error.message };
     }
   }

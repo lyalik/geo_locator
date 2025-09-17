@@ -118,13 +118,24 @@ def get_buildings():
         if osm_service is None:
             return jsonify({'success': False, 'error': 'OSM service not available'}), 503
         
-        lat = request.args.get('lat', type=float)
-        lon = request.args.get('lon', type=float)
-        radius = request.args.get('radius', 1000, type=int)
+        # Получаем параметры с детальным логированием
+        lat_str = request.args.get('lat')
+        lon_str = request.args.get('lon')
+        radius_str = request.args.get('radius', '1000')
+        
+        logger.info(f"Raw parameters: lat_str='{lat_str}', lon_str='{lon_str}', radius_str='{radius_str}'")
+        
+        try:
+            lat = float(lat_str) if lat_str else None
+            lon = float(lon_str) if lon_str else None
+            radius = int(radius_str) if radius_str else 1000
+        except (ValueError, TypeError) as e:
+            logger.error(f"Parameter conversion error: {e}")
+            return jsonify({'success': False, 'error': f'Invalid parameter format: {e}'}), 400
         
         if lat is None or lon is None:
-            logger.error(f"Missing coordinates: lat={lat}, lon={lon}")
-            return jsonify({'success': False, 'error': 'Latitude and longitude are required'}), 400
+            logger.error(f"Missing or invalid coordinates: lat={lat}, lon={lon}")
+            return jsonify({'success': False, 'error': 'Valid latitude and longitude are required'}), 400
         
         logger.info(f"Getting buildings for coordinates: lat={lat}, lon={lon}, radius={radius}")
         
@@ -141,8 +152,33 @@ def get_buildings():
         # Простой fallback без сложных методов OSM сервиса
         buildings = []
         
-        # Возвращаем пустой список зданий с успешным статусом
-        logger.info(f"OSM buildings endpoint called for lat={lat}, lon={lon}, returning empty list as fallback")
+        # Для тестирования можно добавить несколько фиктивных зданий
+        if lat and lon:
+            buildings = [
+                {
+                    'id': 1,
+                    'name': 'Тестовое здание 1',
+                    'building_type': 'residential',
+                    'address': f'Тестовый адрес рядом с {lat:.4f}, {lon:.4f}',
+                    'levels': '5',
+                    'height': '15m',
+                    'amenity': None,
+                    'coordinates': {'lat': lat + 0.001, 'lon': lon + 0.001}
+                },
+                {
+                    'id': 2,
+                    'name': 'Тестовое здание 2',
+                    'building_type': 'commercial',
+                    'address': f'Коммерческое здание {lat:.4f}, {lon:.4f}',
+                    'levels': '3',
+                    'height': '12m',
+                    'amenity': 'shop',
+                    'coordinates': {'lat': lat - 0.001, 'lon': lon - 0.001}
+                }
+            ]
+        
+        # Возвращаем список зданий с успешным статусом
+        logger.info(f"OSM buildings endpoint called for lat={lat}, lon={lon}, returning {len(buildings)} test buildings")
         
         return jsonify({
             'success': True,
