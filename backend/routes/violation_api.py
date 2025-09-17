@@ -1145,6 +1145,51 @@ def get_analytics():
             'error': str(e)
         }), 500
 
+@bp.route('/user-stats/<int:user_id>', methods=['GET'])
+def get_user_stats(user_id):
+    """Get user-specific statistics."""
+    try:
+        # Получаем статистику пользователя
+        user_violations = Violation.query.filter_by(user_id=user_id).all()
+        
+        total_violations = len(user_violations)
+        active_violations = len([v for v in user_violations if v.status == 'active'])
+        resolved_violations = len([v for v in user_violations if v.status == 'resolved'])
+        
+        # Средняя уверенность
+        confidences = [v.confidence for v in user_violations if v.confidence]
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+        
+        # Последние нарушения
+        recent_violations = sorted(user_violations, key=lambda x: x.created_at, reverse=True)[:5]
+        recent_data = []
+        for v in recent_violations:
+            recent_data.append({
+                'id': v.id,
+                'category': v.category,
+                'created_at': v.created_at.isoformat(),
+                'confidence': v.confidence,
+                'status': v.status
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'user_id': user_id,
+                'total_violations': total_violations,
+                'active_violations': active_violations,
+                'resolved_violations': resolved_violations,
+                'avg_confidence': avg_confidence,
+                'recent_violations': recent_data
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for violation API."""
@@ -1157,6 +1202,7 @@ def health_check():
             '/api/violations/batch_detect',
             '/api/violations/analytics',
             '/api/violations/model_info',
+            '/api/violations/user-stats/<user_id>',
             '/api/violations/health'
         ],
         'services': {

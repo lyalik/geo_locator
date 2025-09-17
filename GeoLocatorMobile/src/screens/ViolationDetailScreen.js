@@ -241,25 +241,39 @@ const ViolationDetailScreen = ({ route, navigation }) => {
       </View>
 
       {/* Location Info */}
-      {violation.location && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Местоположение</Text>
-          
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>📍 Местоположение</Text>
+        
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Координаты:</Text>
+          <Text style={styles.infoValue}>
+            {violation.location?.latitude && violation.location?.longitude 
+              ? `${violation.location.latitude.toFixed(6)}, ${violation.location.longitude.toFixed(6)}`
+              : violation.latitude && violation.longitude
+              ? `${violation.latitude.toFixed(6)}, ${violation.longitude.toFixed(6)}`
+              : 'Не определены'
+            }
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Адрес:</Text>
+          <Text style={styles.infoValue}>
+            {violation.location?.address || violation.address || 'Не определен'}
+          </Text>
+        </View>
+
+        {violation.source && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Координаты:</Text>
+            <Text style={styles.infoLabel}>Источник:</Text>
             <Text style={styles.infoValue}>
-              {violation.location.latitude?.toFixed(6)}, {violation.location.longitude?.toFixed(6)}
+              {violation.source === 'yolo' ? '🎯 YOLO' : 
+               violation.source === 'mistral' ? '🤖 Mistral AI' : 
+               violation.source}
             </Text>
           </View>
-
-          {violation.location.address && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Адрес:</Text>
-              <Text style={styles.infoValue}>{violation.location.address}</Text>
-            </View>
-          )}
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Notes Section */}
       <View style={styles.section}>

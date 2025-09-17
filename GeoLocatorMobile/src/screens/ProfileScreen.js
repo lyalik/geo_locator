@@ -17,6 +17,7 @@ const { width } = Dimensions.get('window');
 
 export default function ProfileScreen({ user, onLogout }) {
   const [analytics, setAnalytics] = useState(null);
+  const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [autoLocation, setAutoLocation] = useState(true);
@@ -28,9 +29,19 @@ export default function ProfileScreen({ user, onLogout }) {
   const loadProfileData = async () => {
     try {
       setLoading(true);
+      
+      // Загружаем общую аналитику системы
       const analyticsResponse = await ApiService.getAnalytics();
       if (analyticsResponse.success && analyticsResponse.data) {
         setAnalytics(analyticsResponse.data);
+      }
+      
+      // Загружаем персональную статистику пользователя
+      if (user && user.id) {
+        const userStatsResponse = await ApiService.getUserStats(user.id);
+        if (userStatsResponse.success && userStatsResponse.data) {
+          setUserStats(userStatsResponse.data);
+        }
       }
     } catch (error) {
       console.error('Ошибка загрузки данных профиля:', error);
@@ -78,33 +89,74 @@ export default function ProfileScreen({ user, onLogout }) {
         <Text style={styles.userRole}>Участник программы мониторинга</Text>
       </View>
 
-      {/* Статистика в стиле погоды */}
-      <View style={styles.weatherGrid}>
-        <View style={styles.weatherRow}>
-          <View style={[styles.weatherCard, styles.primaryCard]}>
-            <Text style={styles.cardLabel}>Всего нарушений</Text>
-            <Text style={styles.cardValue}>{analytics?.total_violations || 59}</Text>
-            <Ionicons name="alert-circle" size={30} color="#FF6B6B" />
-          </View>
-          
-          <View style={[styles.weatherCard, styles.secondaryCard]}>
-            <Text style={styles.cardLabel}>Точность ИИ</Text>
-            <Text style={styles.cardValue}>95%</Text>
-            <Ionicons name="analytics" size={24} color="#4ECDC4" />
+      {/* Личная статистика пользователя */}
+      {userStats && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👤 Моя статистика</Text>
+          <View style={styles.weatherGrid}>
+            <View style={styles.weatherRow}>
+              <View style={[styles.weatherCard, styles.primaryCard]}>
+                <Text style={styles.cardLabel}>Мои нарушения</Text>
+                <Text style={styles.cardValue}>{userStats.total_violations || 0}</Text>
+                <Ionicons name="person" size={30} color="#2196F3" />
+              </View>
+              
+              <View style={[styles.weatherCard, styles.secondaryCard]}>
+                <Text style={styles.cardLabel}>Моя точность</Text>
+                <Text style={styles.cardValue}>
+                  {userStats.avg_confidence ? `${Math.round(userStats.avg_confidence * 100)}%` : 'N/A'}
+                </Text>
+                <Ionicons name="target" size={24} color="#4ECDC4" />
+              </View>
+            </View>
+
+            <View style={styles.weatherRow}>
+              <View style={[styles.weatherCard, styles.secondaryCard]}>
+                <Text style={styles.cardLabel}>Активные</Text>
+                <Text style={styles.cardValue}>{userStats.active_violations || 0}</Text>
+                <Ionicons name="warning" size={24} color="#FFE66D" />
+              </View>
+              
+              <View style={[styles.weatherCard, styles.secondaryCard]}>
+                <Text style={styles.cardLabel}>Решенные</Text>
+                <Text style={styles.cardValue}>{userStats.resolved_violations || 0}</Text>
+                <Ionicons name="checkmark-circle" size={24} color="#95E1D3" />
+              </View>
+            </View>
           </View>
         </View>
+      )}
 
-        <View style={styles.weatherRow}>
-          <View style={[styles.weatherCard, styles.secondaryCard]}>
-            <Text style={styles.cardLabel}>Активные</Text>
-            <Text style={styles.cardValue}>{analytics?.active_violations || 42}</Text>
-            <Ionicons name="warning" size={24} color="#FFE66D" />
+      {/* Статистика системы */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🌍 Статистика системы</Text>
+        <View style={styles.weatherGrid}>
+          <View style={styles.weatherRow}>
+            <View style={[styles.weatherCard, styles.primaryCard]}>
+              <Text style={styles.cardLabel}>Всего нарушений</Text>
+              <Text style={styles.cardValue}>{analytics?.total_violations || 59}</Text>
+              <Ionicons name="globe" size={30} color="#FF6B6B" />
+            </View>
+            
+            <View style={[styles.weatherCard, styles.secondaryCard]}>
+              <Text style={styles.cardLabel}>Точность ИИ</Text>
+              <Text style={styles.cardValue}>95%</Text>
+              <Ionicons name="analytics" size={24} color="#4ECDC4" />
+            </View>
           </View>
-          
-          <View style={[styles.weatherCard, styles.secondaryCard]}>
-            <Text style={styles.cardLabel}>Решенные</Text>
-            <Text style={styles.cardValue}>{analytics?.resolved_violations || 17}</Text>
-            <Ionicons name="checkmark-circle" size={24} color="#95E1D3" />
+
+          <View style={styles.weatherRow}>
+            <View style={[styles.weatherCard, styles.secondaryCard]}>
+              <Text style={styles.cardLabel}>Активные</Text>
+              <Text style={styles.cardValue}>{analytics?.active_violations || 42}</Text>
+              <Ionicons name="warning" size={24} color="#FFE66D" />
+            </View>
+            
+            <View style={[styles.weatherCard, styles.secondaryCard]}>
+              <Text style={styles.cardLabel}>Решенные</Text>
+              <Text style={styles.cardValue}>{analytics?.resolved_violations || 17}</Text>
+              <Ionicons name="checkmark-circle" size={24} color="#95E1D3" />
+            </View>
           </View>
         </View>
       </View>

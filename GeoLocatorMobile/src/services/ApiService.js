@@ -705,6 +705,19 @@ class ApiService {
     }
   }
 
+  // Получение статистики пользователя
+  async getUserStats(userId) {
+    try {
+      console.log('📊 Получение статистики пользователя...');
+      const response = await this.api.get(`/api/violations/user-stats/${userId}`);
+      console.log('✅ Статистика пользователя получена:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Ошибка получения статистики пользователя:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
 }
 
 // Экспортируем единственный экземпляр

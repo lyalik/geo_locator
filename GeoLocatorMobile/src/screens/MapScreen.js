@@ -312,6 +312,26 @@ export default function MapScreen() {
     setModalVisible(true);
   };
 
+  const getStatusText = (status) => {
+    const statusMap = {
+      'active': 'Активное',
+      'resolved': 'Решено',
+      'pending': 'В ожидании',
+      'in_progress': 'В работе'
+    };
+    return statusMap[status] || status || 'Неизвестно';
+  };
+
+  const getStatusColor = (status) => {
+    const colorMap = {
+      'active': '#F44336',
+      'resolved': '#4CAF50',
+      'pending': '#FF9800',
+      'in_progress': '#2196F3'
+    };
+    return colorMap[status] || '#666';
+  };
+
   return (
     <View style={styles.container}>
       {loading ? (
@@ -502,10 +522,27 @@ export default function MapScreen() {
                     </Text>
                   </View>
 
+                  {selectedViolation.address && (
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>🏠 Адрес:</Text>
+                      <Text style={styles.detailValue}>{selectedViolation.address}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>📊 Статус:</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedViolation.status) }]}>
+                      <Text style={styles.statusText}>{getStatusText(selectedViolation.status)}</Text>
+                    </View>
+                  </View>
+
                   {selectedViolation.confidence && (
                     <View style={styles.detailItem}>
                       <Text style={styles.detailLabel}>🎯 Уверенность:</Text>
-                      <Text style={styles.detailValue}>
+                      <Text style={[styles.detailValue, { 
+                        color: selectedViolation.confidence > 0.8 ? '#4CAF50' : 
+                               selectedViolation.confidence > 0.6 ? '#FF9800' : '#F44336' 
+                      }]}>
                         {Math.round(selectedViolation.confidence * 100)}%
                       </Text>
                     </View>
@@ -799,5 +836,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
