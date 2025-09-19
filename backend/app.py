@@ -261,7 +261,15 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
-# OpenStreetMap API already registered above
+# Register Dataset API
+try:
+    from routes.dataset_api import dataset_bp
+    app.register_blueprint(dataset_bp, url_prefix='/api/dataset')
+    print("✅ Dataset API registered successfully")
+except Exception as e:
+    print(f"❌ Dataset API registration failed: {e}")
+    import traceback
+    traceback.print_exc()
 
 @app.route('/')
 def index():

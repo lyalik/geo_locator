@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from PIL import Image
 import io
+from .dataset_search_service import DatasetSearchService
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class MistralAIService:
         self.base_url = "https://api.mistral.ai/v1"
         # Используем лучшую модель Mistral для анализа изображений
         self.model = os.getenv('MISTRAL_MODEL', "pixtral-12b-2409")  # Mistral's vision model
+        self.dataset_search = DatasetSearchService()
         
         if not self.api_key:
             logger.warning("MISTRAL_API_KEY not found in environment variables")

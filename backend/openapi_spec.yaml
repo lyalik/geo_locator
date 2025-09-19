@@ -1,0 +1,279 @@
+openapi: 3.0.3
+info:
+  title: Geo Locator API - ЛЦТ 2025
+  description: |
+    Система геолокации и анализа нарушений с интеграцией датасета заказчика.
+    
+    **Основные возможности:**
+    - Двойная ИИ система детекции (YOLO + Mistral AI)
+    - Интеграция с эталонной базой датасета (11,239 изображений)
+    - Российские геосервисы (Яндекс, 2GIS, Роскосмос, OSM)
+    - Производительность: 1000 фото за 3 часа
+    - Экспорт в XLSX согласно требованиям ТЗ
+    
+  version: 1.0.0
+  contact:
+    name: Geo Locator Team
+    email: support@geolocator.ru
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5001
+    description: Development server
+  - url: https://api.geolocator.ru
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: Авторизация пользователей
+  - name: Violations
+    description: Управление нарушениями
+  - name: Dataset
+    description: Работа с датасетом заказчика
+  - name: Geolocation
+    description: Определение координат
+  - name: Analytics
+    description: Аналитика и статистика
+  - name: Export
+    description: Экспорт данных
+
+paths:
+  /health:
+    get:
+      summary: Проверка здоровья API
+      tags: [System]
+      responses:
+        '200':
+          description: API работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+
+  /api/auth/login:
+    post:
+      summary: Авторизация пользователя
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "admin"
+                password:
+                  type: string
+                  example: "password"
+              required: [username, password]
+      responses:
+        '200':
+          description: Успешная авторизация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+
+  /api/violations/detect:
+    post:
+      summary: Детекция нарушений с интеграцией датасета
+      tags: [Violations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Изображение для анализа
+                location_hint:
+                  type: string
+                  description: Подсказка о местоположении
+      responses:
+        '200':
+          description: Результаты детекции
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  yolo_violations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Violation'
+                  mistral_violations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Violation'
+                  dataset_matches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DatasetMatch'
+
+  /api/dataset/stats:
+    get:
+      summary: Статистика датасета
+      tags: [Dataset]
+      responses:
+        '200':
+          description: Статистика загруженного датасета
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_photos:
+                        type: integer
+                        description: Всего фотографий в системе
+                      building_violations:
+                        type: integer
+                        description: Нарушения зданий (18-001)
+                      garbage_violations:
+                        type: integer
+                        description: Мусорные нарушения (19-001)
+                      dataset_photos:
+                        type: integer
+                        description: Фото из датасета заказчика
+
+  /api/dataset/export:
+    get:
+      summary: Экспорт данных в XLSX
+      tags: [Export]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Файл успешно создан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  file_path:
+                    type: string
+                    description: Путь к созданному XLSX файлу
+
+  /api/batch/process:
+    post:
+      summary: Пакетная обработка изображений (1000 фото/3 часа)
+      tags: [Violations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image_paths:
+                  type: array
+                  items:
+                    type: string
+                  description: Пути к изображениям для обработки
+      responses:
+        '200':
+          description: Результаты пакетной обработки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  processed:
+                    type: integer
+                  total_time_hours:
+                    type: number
+                  avg_time_per_image:
+                    type: number
+                  performance_requirement_met:
+                    type: boolean
+                    description: Выполнено ли требование 1000 фото/3 часа
+
+components:
+  schemas:
+    Violation:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+          enum: [building_violations, garbage_violations, traffic_violations]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        source:
+          type: string
+          enum: [yolo, mistral, dataset]
+        bbox:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            width:
+              type: number
+            height:
+              type: number
+        dataset_enhanced:
+          type: boolean
+          description: Улучшено ли с помощью датасета
+
+    DatasetMatch:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: Имя файла в датасете
+        latitude:
+          type: number
+        longitude:
+          type: number
+        type:
+          type: string
+          enum: [building, garbage]
+        distance_km:
+          type: number
+          description: Расстояние до найденной точки
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

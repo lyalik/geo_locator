@@ -22,6 +22,7 @@ import BatchAnalyzer from './BatchAnalyzer';
 import MultiPhotoAnalyzer from './MultiPhotoAnalyzer';
 import ViolationEditDialog from './ViolationEditDialog';
 import AdminPanel from './AdminPanel';
+import DatasetManager from './DatasetManager';
 import { violations } from '../services/api';
 
 const Dashboard = () => {
