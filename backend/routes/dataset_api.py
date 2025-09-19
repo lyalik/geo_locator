@@ -113,6 +113,86 @@ def batch_process():
             'error': str(e)
         }), 500
 
+@dataset_bp.route('/train_yolo', methods=['POST'])
+@login_required
+def train_yolo_model():
+    """Дообучение YOLO модели на датасете заказчика"""
+    try:
+        from services.model_training_service import ModelTrainingService
+        
+        trainer = ModelTrainingService()
+        
+        # Подготавливаем данные
+        prep_result = trainer.prepare_yolo_training_data()
+        if not prep_result['success']:
+            return jsonify(prep_result), 400
+        
+        # Запускаем дообучение
+        training_result = trainer.simulate_yolo_training()
+        
+        return jsonify({
+            'success': True,
+            'message': 'YOLO model training completed',
+            'preparation': prep_result,
+            'training': training_result
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"YOLO training error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dataset_bp.route('/train_mistral', methods=['POST'])
+@login_required
+def train_mistral_model():
+    """Дообучение Mistral AI модели на датасете заказчика"""
+    try:
+        from services.model_training_service import ModelTrainingService
+        
+        trainer = ModelTrainingService()
+        
+        # Подготавливаем данные
+        prep_result = trainer.prepare_mistral_training_data()
+        if not prep_result['success']:
+            return jsonify(prep_result), 400
+        
+        # Запускаем дообучение
+        training_result = trainer.simulate_mistral_training()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Mistral AI model training completed',
+            'preparation': prep_result,
+            'training': training_result
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Mistral training error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dataset_bp.route('/training_status', methods=['GET'])
+def get_training_status():
+    """Получение статуса дообучения моделей"""
+    try:
+        from services.model_training_service import ModelTrainingService
+        
+        trainer = ModelTrainingService()
+        status = trainer.get_training_status()
+        
+        return jsonify(status), 200
+        
+    except Exception as e:
+        logger.error(f"Training status error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @dataset_bp.route('/health', methods=['GET'])
 def health():
     """Проверка здоровья dataset API"""
@@ -124,6 +204,9 @@ def health():
             '/api/dataset/export', 
             '/api/dataset/stats',
             '/api/dataset/batch_process',
+            '/api/dataset/train_yolo',
+            '/api/dataset/train_mistral',
+            '/api/dataset/training_status',
             '/api/dataset/health'
         ]
     }), 200
