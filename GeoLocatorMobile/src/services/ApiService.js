@@ -414,7 +414,9 @@ class ApiService {
    */
   async getUserStats(userId) {
     try {
-      const response = await this.api.get(`/api/violations/user/${userId}/stats`);
+      console.log('📊 Получение статистики пользователя для ID:', userId);
+      const response = await this.api.get(`/api/violations/user-stats/${userId}`);
+      console.log('📊 Ответ статистики пользователя:', response.data);
       return response.data;
     } catch (error) {
       console.error('Ошибка получения статистики пользователя:', error);
@@ -719,18 +721,7 @@ class ApiService {
     }
   }
 
-  // Получение статистики пользователя
-  async getUserStats(userId) {
-    try {
-      console.log('📊 Получение статистики пользователя...');
-      const response = await this.api.get(`/api/violations/user-stats/${userId}`);
-      console.log('✅ Статистика пользователя получена:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Ошибка получения статистики пользователя:', error);
-      return { success: false, error: error.message };
-    }
-  }
+  // Получение статистики пользователя (дубликат удален)
 
 }
 

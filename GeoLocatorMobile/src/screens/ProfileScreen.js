@@ -38,9 +38,22 @@ export default function ProfileScreen({ user, onLogout }) {
       
       // Загружаем персональную статистику пользователя
       if (user && user.id) {
+        console.log('👤 Загружаем статистику для пользователя:', user.id);
         const userStatsResponse = await ApiService.getUserStats(user.id);
+        console.log('📊 Ответ статистики пользователя:', userStatsResponse);
+        
         if (userStatsResponse.success && userStatsResponse.data) {
           setUserStats(userStatsResponse.data);
+        } else {
+          console.log('⚠️ Нет данных статистики пользователя, используем fallback');
+          // Fallback данные для пользователя без нарушений
+          setUserStats({
+            total_violations: 0,
+            active_violations: 0,
+            resolved_violations: 0,
+            total_photos: 0,
+            violations_by_category: {}
+          });
         }
       }
     } catch (error) {
