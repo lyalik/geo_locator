@@ -12,15 +12,15 @@ const getApiUrl = () => {
   
   console.log(`🌐 Detected hostname: ${hostname}`);
   
-  // Если localhost или 127.0.0.1 - используем localhost
+  // Если localhost или 127.0.0.1 - используем localhost через nginx
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log('🏠 Using localhost API');
-    return 'http://localhost:5001';
+    console.log('🏠 Using localhost API through nginx');
+    return 'http://localhost';  // Используем nginx на порту 80
   }
   
-  // Для любого другого IP - используем тот же IP с портом 5001
-  const apiUrl = `http://${hostname}:5001`;
-  console.log(`🌍 Using network API: ${apiUrl}`);
+  // Для любого другого IP - используем nginx на порту 80
+  const apiUrl = `http://${hostname}`;  // nginx слушает на порту 80
+  console.log(`🌍 Using network API through nginx: ${apiUrl}`);
   return apiUrl;
 };
 

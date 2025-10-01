@@ -111,7 +111,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
           formData.append('manual_lon', manualCoordinates.lon);
         }
 
-        const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname + ':5001'}/api/violations/detect`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname}/api/violations/detect`, {
           method: 'POST',
           body: formData,
         });
@@ -287,7 +287,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname + ':5001'}/api/coordinates/detect`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname}/api/coordinates/detect`, {
         method: 'POST',
         body: formData,
       });
@@ -510,7 +510,7 @@ const ViolationUploader = ({ onUploadComplete }) => {
                     
                     try {
                       // Используем backend геокодинг через наш API
-                      const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname + ':5001'}/api/geo/geocode?address=${encodeURIComponent(locationHint)}`);
+                      const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname}/api/geo/geocode?address=${encodeURIComponent(locationHint)}`);
                       const data = await response.json();
                       
                       if (data.success && data.data?.coordinates) {
