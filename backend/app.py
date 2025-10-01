@@ -18,9 +18,11 @@ app.config.from_object(Config)
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
-CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://localhost:8081', 'http://localhost:19006', 'http://127.0.0.1:19006', 'http://192.168.1.67:8081'], 
-     allow_headers=['Content-Type', 'Authorization'], 
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+# CORS настройки для разработки - разрешаем доступ из любой сети
+CORS(app, supports_credentials=True, 
+     origins='*',  # Разрешаем все origins для разработки
+     allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'], 
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
 
 login_manager = LoginManager()
 login_manager.init_app(app)

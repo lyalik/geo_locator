@@ -10,13 +10,18 @@ const getApiUrl = () => {
   // Автоматически используем текущий хост с портом 5001
   const hostname = window.location.hostname;
   
+  console.log(`🌐 Detected hostname: ${hostname}`);
+  
   // Если localhost или 127.0.0.1 - используем localhost
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    console.log('🏠 Using localhost API');
     return 'http://localhost:5001';
   }
   
   // Для любого другого IP - используем тот же IP с портом 5001
-  return `http://${hostname}:5001`;
+  const apiUrl = `http://${hostname}:5001`;
+  console.log(`🌍 Using network API: ${apiUrl}`);
+  return apiUrl;
 };
 
 const API_URL = getApiUrl();

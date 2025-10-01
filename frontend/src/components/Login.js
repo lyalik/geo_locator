@@ -9,7 +9,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://localhost:5001/auth/login', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname + ':5001'}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

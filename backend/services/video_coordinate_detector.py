@@ -30,6 +30,64 @@ class VideoCoordinateDetector:
         
         logger.info("Video Coordinate Detector initialized")
     
+    def estimate_processing_time(self, video_path: str, frame_interval: int = 30, max_frames: int = 10) -> Dict[str, Any]:
+        """
+        Estimate processing time for video analysis.
+        
+        Args:
+            video_path: Path to video file
+            frame_interval: Interval between frames to process
+            max_frames: Maximum number of frames to process
+            
+        Returns:
+            Dictionary with estimation data
+        """
+        try:
+            # Get video info
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                return {
+                    'success': False,
+                    'error': 'Could not open video file',
+                    'estimated_time': 0,
+                    'frame_count': 0
+                }
+            
+            # Get video properties
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            duration = total_frames / fps if fps > 0 else 0
+            
+            # Calculate frames to process
+            frames_to_process = min(max_frames, max(1, total_frames // frame_interval))
+            
+            # Estimate processing time (rough calculation)
+            # Assume ~2-3 seconds per frame for coordinate detection
+            estimated_time_per_frame = 2.5
+            estimated_total_time = frames_to_process * estimated_time_per_frame
+            
+            cap.release()
+            
+            return {
+                'success': True,
+                'estimated_time': round(estimated_total_time, 1),
+                'frames_to_process': frames_to_process,
+                'total_frames': total_frames,
+                'duration_seconds': round(duration, 1),
+                'fps': round(fps, 1),
+                'frame_interval': frame_interval,
+                'max_frames': max_frames
+            }
+            
+        except Exception as e:
+            logger.error(f"Error estimating video processing time: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'estimated_time': 0,
+                'frame_count': 0
+            }
+    
     def _is_frame_quality_acceptable(self, frame: np.ndarray, min_brightness: float = 30.0, 
                                    blur_threshold: float = 100.0) -> Tuple[bool, Dict[str, float]]:
         """
