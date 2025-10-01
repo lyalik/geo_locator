@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from functools import wraps
-from models import db, User, Violation, Photo
+from models import db, User, Violation, Photo, Notification, UserNotificationPreferences, ProcessingTask
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -126,8 +126,11 @@ def update_user(user_id):
 def delete_user(user_id):
     """Удаление пользователя (только для суперадмина)"""
     try:
+        current_app.logger.info(f"Delete user request for user_id: {user_id} by user: {current_user.id}")
+        
         # Проверяем, что текущий пользователь - суперадмин
         if getattr(current_user, 'role', 'user') != 'admin':
+            current_app.logger.warning(f"Non-admin user {current_user.id} tried to delete user {user_id}")
             return jsonify({
                 'success': False,
                 'error': 'Superadmin access required'
@@ -142,9 +145,36 @@ def delete_user(user_id):
                 'error': 'Cannot delete yourself'
             }), 400
         
-        # Удаляем связанные данные (каскадное удаление должно работать через модели)
-        db.session.delete(user)
-        db.session.commit()
+        # Удаляем связанные данные вручную для избежания ошибок
+        try:
+            # Удаляем уведомления пользователя
+            Notification.query.filter_by(user_id=user_id).delete()
+            
+            # Удаляем предпочтения уведомлений
+            UserNotificationPreferences.query.filter_by(user_id=user_id).delete()
+            
+            # Удаляем задачи обработки
+            ProcessingTask.query.filter_by(user_id=user_id).delete()
+            
+            # Удаляем фотографии пользователя (это также удалит связанные нарушения)
+            photos = Photo.query.filter_by(user_id=user_id).all()
+            for photo in photos:
+                # Удаляем связанные нарушения
+                Violation.query.filter_by(photo_id=photo.id).delete()
+                # Удаляем саму фотографию
+                db.session.delete(photo)
+            
+            # Теперь удаляем пользователя
+            db.session.delete(user)
+            db.session.commit()
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error deleting user {user_id}: {str(e)}")
+            current_app.logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            current_app.logger.error(f"Traceback: {traceback.format_exc()}")
+            raise e
         
         current_app.logger.info(f"Admin {current_user.id} deleted user {user_id}")
         
