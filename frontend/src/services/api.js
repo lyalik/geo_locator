@@ -1,8 +1,25 @@
 import axios from 'axios';
 
-// Base URL for API calls - поддержка локального IP
-const API_URL = process.env.REACT_APP_API_URL || 
-  (window.location.hostname === '192.168.1.67' ? 'http://192.168.1.67:5001' : 'http://localhost:5001');
+// Base URL for API calls - автоматическое определение хоста
+const getApiUrl = () => {
+  // Если задана переменная окружения - используем её
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // Автоматически используем текущий хост с портом 5001
+  const hostname = window.location.hostname;
+  
+  // Если localhost или 127.0.0.1 - используем localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5001';
+  }
+  
+  // Для любого другого IP - используем тот же IP с портом 5001
+  return `http://${hostname}:5001`;
+};
+
+const API_URL = getApiUrl();
 
 // Create axios instance
 const api = axios.create({

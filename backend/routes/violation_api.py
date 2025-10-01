@@ -34,6 +34,13 @@ except ImportError as e:
     print(f"Warning: MistralAIService not available: {e}")
     mistral_ai_service = None
 
+try:
+    from services.image_database_service import ImageDatabaseService
+    image_db_service = ImageDatabaseService()
+except ImportError as e:
+    print(f"Warning: ImageDatabaseService not available: {e}")
+    image_db_service = None
+
 # Create blueprint
 bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
 
@@ -573,6 +580,22 @@ def detect_violations():
         filepath = os.path.join(upload_dir, filename)
         file.save(filepath)
         
+        # Add to Image Database for future similarity matching
+        image_db_result = None
+        if image_db_service:
+            try:
+                current_app.logger.info(f"📸 Adding image to database: {filename}")
+                image_db_result = image_db_service.add_image(
+                    filepath, 
+                    user_notes=f"Violation detection upload - {request.form.get('location_notes', 'No notes')}"
+                )
+                if image_db_result.get('success'):
+                    current_app.logger.info(f"✅ Image added to database: {image_db_result.get('image_id')}")
+                else:
+                    current_app.logger.warning(f"⚠️ Failed to add image to database: {image_db_result.get('error')}")
+            except Exception as e:
+                current_app.logger.error(f"❌ Error adding image to database: {e}")
+        
         # Get additional form data
         user_id = request.form.get('user_id', 'anonymous')
         location_notes = request.form.get('location_notes', '')
@@ -874,6 +897,19 @@ def batch_detect_violations():
                 os.makedirs(upload_folder, exist_ok=True)
                 file_path = os.path.join(upload_folder, unique_filename)
                 file.save(file_path)
+                
+                # Add to Image Database for future similarity matching
+                if image_db_service:
+                    try:
+                        current_app.logger.info(f"📸 Batch: Adding image to database: {filename}")
+                        image_db_result = image_db_service.add_image(
+                            file_path, 
+                            user_notes=f"Batch violation detection - {location_hint or 'No location hint'}"
+                        )
+                        if image_db_result.get('success'):
+                            current_app.logger.info(f"✅ Batch: Image added to database: {image_db_result.get('image_id')}")
+                    except Exception as e:
+                        current_app.logger.error(f"❌ Batch: Error adding image to database: {e}")
                 
                 processed_files.append({
                     'original_name': filename,

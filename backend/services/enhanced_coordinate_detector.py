@@ -78,26 +78,14 @@ class EnhancedCoordinateDetector:
             if gps_coords:
                 coordinate_candidates.append({
                     'coordinates': gps_coords,
-                    'source': 'gps_exif',
                     'confidence': 0.95,
                     'weight': self.source_weights['gps_exif']
                 })
                 logger.info(f"✅ GPS from EXIF: {gps_coords}")
             
-            # 2. Обработка подсказки местоположения
+            # 4. Анализ с панорамами (если есть подсказка местоположения)
             if location_hint:
-                hint_coords = self._geocode_location_hint(location_hint)
-                if hint_coords:
-                    coordinate_candidates.append({
-                        'coordinates': hint_coords,
-                        'source': 'location_hint',
-                        'confidence': 0.8,
-                        'weight': self.source_weights['location_hint']
-                    })
-                    logger.info(f"✅ Location hint geocoded: {hint_coords}")
-            
-            # 3. Анализ изображения для извлечения текстовых подсказок с Mistral AI
-            mistral_coords = self._extract_coordinates_with_mistral(image_path)
+                panorama_coords = self._analyze_with_panoramas(image_path, location_hint)
             if mistral_coords:
                 coordinate_candidates.append({
                     'coordinates': mistral_coords,

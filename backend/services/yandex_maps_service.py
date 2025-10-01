@@ -107,6 +107,16 @@ class YandexMapsService:
                         'longitude': coordinates[0]   # lon - первый элемент
                     }
                 
+                # ДОПОЛНИТЕЛЬНАЯ ФИЛЬТРАЦИЯ: Проверяем координаты на принадлежность к Москве и МО
+                if coords_dict:
+                    lat = coords_dict['latitude']
+                    lon = coords_dict['longitude']
+                    
+                    # Границы Москвы и Московской области
+                    if not (54.0 <= lat <= 57.0 and 35.0 <= lon <= 40.5):
+                        logger.warning(f"🚫 Filtered out place outside Moscow region: {geo_object.get('name', '')} ({lat}, {lon})")
+                        continue
+                
                 place = {
                     'name': geo_object.get('name', ''),
                     'description': geo_object.get('description', ''),

@@ -7,6 +7,14 @@ from services.coordinate_detector import CoordinateDetector
 from services.video_coordinate_detector import VideoCoordinateDetector
 from models import db, Photo, Violation, DetectedObject
 
+# Import Image Database Service
+try:
+    from services.image_database_service import ImageDatabaseService
+    image_db_service = ImageDatabaseService()
+except ImportError as e:
+    logger.warning(f"ImageDatabaseService not available: {e}")
+    image_db_service = None
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -81,9 +89,24 @@ def detect_coordinates():
         file_path = os.path.join(upload_dir, filename)
         file.save(file_path)
         
+        # Add to Image Database for future similarity matching
+        if image_db_service:
+            try:
+                logger.info(f"📸 Coordinates: Adding image to database: {filename}")
+                image_db_result = image_db_service.add_image(
+                    file_path, 
+                    user_notes=f"Coordinate analysis - {location_hint or 'No location hint'}"
+                )
+                if image_db_result.get('success'):
+                    logger.info(f"✅ Coordinates: Image added to database: {image_db_result.get('image_id')}")
+                else:
+                    logger.warning(f"⚠️ Coordinates: Failed to add image to database: {image_db_result.get('error')}")
+            except Exception as e:
+                logger.error(f"❌ Coordinates: Error adding image to database: {e}")
+        
         # Process the image with coordinate detector
         start_time = time.time()
-        result = coordinate_detector.detect_coordinates_and_objects(file_path, location_hint)
+        result = coordinate_detector.detect_coordinates_from_image(file_path, location_hint)
         processing_time = time.time() - start_time
         logger.info(f"Coordinate detection result: success={result.get('success')}, coordinates={result.get('coordinates') is not None}, processing_time={processing_time:.2f} seconds")
         
@@ -99,8 +122,8 @@ def detect_coordinates():
                         lat=coordinates['latitude'],
                         lon=coordinates['longitude'],
                         address_data={
-                            'coordinate_source': coordinates['source'],
-                            'confidence': coordinates['confidence'],
+                            'coordinate_source': coordinates.get('source', 'coordinate_detector'),
+                            'confidence': coordinates.get('confidence', 0.7),
                             'location_hint': location_hint
                         }
                     )
@@ -201,6 +224,19 @@ def batch_detect_coordinates():
                 file_path = os.path.join(upload_dir, filename)
                 file.save(file_path)
                 file_paths.append(file_path)
+                
+                # Add to Image Database for future similarity matching
+                if image_db_service:
+                    try:
+                        logger.info(f"📸 Batch Coordinates: Adding image to database: {filename}")
+                        image_db_result = image_db_service.add_image(
+                            file_path, 
+                            user_notes=f"Batch coordinate analysis - {location_hint or 'No location hint'}"
+                        )
+                        if image_db_result.get('success'):
+                            logger.info(f"✅ Batch Coordinates: Image added to database: {image_db_result.get('image_id')}")
+                    except Exception as e:
+                        logger.error(f"❌ Batch Coordinates: Error adding image to database: {e}")
         
         if not file_paths:
             return jsonify({

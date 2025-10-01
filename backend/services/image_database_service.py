@@ -272,18 +272,6 @@ class ImageDatabaseService:
                 })
             
             return results
-            
-        except Exception as e:
-            logger.error(f"Error searching images: {e}")
-            return []
-    
-    def update_location(self, image_id: str, lat: float, lon: float, 
-                       source: str = 'manual') -> Dict[str, Any]:
-        """
-        Обновление геолокации изображения
-        """
-        try:
-            image = self.session.query(GeoImage).filter_by(id=image_id).first()
             if not image:
                 return {'success': False, 'error': 'Image not found'}
             
