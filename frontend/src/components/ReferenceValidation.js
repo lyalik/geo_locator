@@ -45,7 +45,7 @@ const ReferenceValidation = ({ coordinates, violations, onValidationComplete }) 
     setError(null);
 
     try {
-      // Поиск в готовой базе данных заказчика
+      // Поиск в готовой базе данных 
       const searchResponse = await api.post('/dataset/reference_db/search', {
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
@@ -111,11 +111,11 @@ const ReferenceValidation = ({ coordinates, violations, onValidationComplete }) 
     if (!validationResult) return 'Выполняется валидация...';
     
     if (validationResult.validated) {
-      return '✅ Результат подтвержден готовой базой заказчика';
+      return '✅ Результат подтвержден готовой базой ';
     } else if (validationResult.location_match) {
       return '⚠️ Найдено совпадение по местоположению, но тип нарушения отличается';
     } else {
-      return '❌ Совпадений в готовой базе заказчика не найдено';
+      return '❌ Совпадений в готовой базе  не найдено';
     }
   };
 
@@ -126,7 +126,7 @@ const ReferenceValidation = ({ coordinates, violations, onValidationComplete }) 
           <Box display="flex" alignItems="center" mb={2}>
             <InfoIcon color="info" sx={{ mr: 1 }} />
             <Typography variant="h6">
-              Валидация против готовой базы данных заказчика
+              Валидация против готовой базы данных 
             </Typography>
           </Box>
           <LinearProgress />
@@ -152,7 +152,7 @@ const ReferenceValidation = ({ coordinates, violations, onValidationComplete }) 
         <Box display="flex" alignItems="center" mb={2}>
           {getValidationIcon()}
           <Typography variant="h6" sx={{ ml: 1 }}>
-            Валидация готовой базой заказчика
+            Валидация готовой базой 
           </Typography>
           <Chip 
             label={`71,895 записей`} 
@@ -231,7 +231,7 @@ const ReferenceValidation = ({ coordinates, violations, onValidationComplete }) 
                       }
                     />
                     {match.image_url && (
-                      <Tooltip title="Посмотреть изображение в системе заказчика">
+                      <Tooltip title="Посмотреть изображение в системе ">
                         <IconButton
                           size="small"
                           onClick={() => window.open(match.image_url, '_blank')}
@@ -255,7 +255,7 @@ const ReferenceValidation = ({ coordinates, violations, onValidationComplete }) 
 
         <Box mt={2}>
           <Typography variant="caption" color="text.secondary">
-            💡 Валидация выполняется против готовой базы данных заказчика (система fivegen)
+            💡 Валидация выполняется против готовой базы данных  (система fivegen)
           </Typography>
         </Box>
       </CardContent>

@@ -298,11 +298,11 @@ export const objectGroupAnalysis = {
 // Reference Database API methods
 export const referenceDbApi = {
   // Получение статистики готовой базы данных
-  getStats: () => api.get('/dataset/reference_db/stats'),
+  getStats: () => api.get('/api/dataset/reference_db/stats'),
   
   // Поиск в готовой базе по координатам
   searchByCoordinates: (latitude, longitude, radiusKm = 0.1) => 
-    api.post('/dataset/reference_db/search', {
+    api.post('/api/dataset/reference_db/search', {
       latitude,
       longitude,
       radius_km: radiusKm
@@ -310,11 +310,11 @@ export const referenceDbApi = {
   
   // Валидация результата против готовой базы
   validateDetection: (data) => 
-    api.post('/dataset/reference_db/validate', data),
+    api.post('/api/dataset/reference_db/validate', data),
   
   // Получение примеров записей
   getSamples: (violationType = null, limit = 10) => 
-    api.get('/dataset/reference_db/samples', {
+    api.get('/api/dataset/reference_db/samples', {
       params: { violation_type: violationType, limit }
     })
 };
@@ -322,17 +322,17 @@ export const referenceDbApi = {
 // Model Training API methods
 export const trainingApi = {
   // Дообучение YOLO модели
-  trainYolo: () => api.post('/dataset/train_yolo'),
+  trainYolo: () => api.post('/api/dataset/train_yolo'),
   
   // Дообучение Mistral AI модели
-  trainMistral: () => api.post('/dataset/train_mistral'),
+  trainMistral: () => api.post('/api/dataset/train_mistral'),
   
   // Получение статуса обучения
-  getTrainingStatus: () => api.get('/dataset/training_status'),
+  getTrainingStatus: () => api.get('/api/dataset/training_status'),
   
   // Пакетная обработка для тестирования производительности
   batchProcess: (imagePaths) => 
-    api.post('/dataset/batch_process', { image_paths: imagePaths })
+    api.post('/api/dataset/batch_process', { image_paths: imagePaths })
 };
 
 export { api };

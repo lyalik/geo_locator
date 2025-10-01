@@ -317,7 +317,7 @@ const Dashboard = () => {
     {
       label: 'Обучение моделей',
       icon: <SchoolIcon />,
-      description: 'Дообучение YOLO и Mistral AI на готовой базе данных заказчика (71,895 записей)',
+      description: 'Дообучение YOLO и Mistral AI на готовой базе данных  (71,895 записей)',
       component: <ModelTraining />
     },
     { 
