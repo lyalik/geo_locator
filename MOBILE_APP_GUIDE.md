@@ -7,6 +7,8 @@
 ```bash
 cd GeoLocatorMobile
 npx expo start
+npx expo start --web
+npx expo start --lan
 # Сканируйте QR-код в Expo Go
 ```
 
