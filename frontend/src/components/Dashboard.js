@@ -7,7 +7,7 @@ import {
 import {
   Map as MapIcon, Upload as UploadIcon, Analytics as AnalyticsIcon,
   Schedule as ScheduleIcon, GetApp as DownloadIcon, Refresh as RefreshIcon,
-  Home as PropertyIcon, LocationCity as UrbanIcon, BatchPrediction as BatchPredictionIcon,
+  Home as PropertyIcon, LocationCity as UrbanIcon,
   AdminPanelSettings as AdminIcon,
   School as SchoolIcon,
   TextFields as OCRIcon, PhotoLibrary as MultiPhotoIcon,
@@ -307,12 +307,6 @@ const Dashboard = () => {
       icon: <UploadIcon />, 
       description: 'Загрузка и анализ нескольких файлов одновременно с отображением результатов на интерактивной карте',
       component: <BatchAnalyzer /> 
-    },
-    {
-      label: 'Пакетная обработка',
-      icon: <BatchPredictionIcon />,
-      description: 'Массовая обработка изображений для повышения производительности',
-      component: <BatchAnalyzer />
     },
     {
       label: 'Обучение моделей',

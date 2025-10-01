@@ -8,6 +8,7 @@ import requests
 import json
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
+from .moscow_region_validator import MoscowRegionValidator
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +55,22 @@ class YandexMapsService:
                 'lang': 'ru_RU'
             }
             
-            # Добавляем ограничение по области поиска если есть координаты
+            # ОГРАНИЧЕНИЕ ДЛЯ ЛЦТ 2025: Только Москва и Московская область
+            # Координаты bbox для Москвы и МО: 35.0,54.0~40.5,57.0
+            moscow_bbox = "35.0,54.0~40.5,57.0"
+            params['bbox'] = moscow_bbox
+            
+            # Добавляем дополнительное ограничение если есть координаты
             if lat and lon:
-                # Создаем bbox для ограничения области поиска
-                delta = radius / 111000  # Примерное преобразование метров в градусы
-                bbox = f"{lon-delta},{lat-delta}~{lon+delta},{lat+delta}"
-                params['bbox'] = bbox
+                # Проверяем, что координаты в пределах Москвы и МО
+                if 54.0 <= lat <= 57.0 and 35.0 <= lon <= 40.5:
+                    # Создаем более узкий bbox для точного поиска
+                    delta = radius / 111000  # Примерное преобразование метров в градусы
+                    bbox = f"{max(35.0, lon-delta)},{max(54.0, lat-delta)}~{min(40.5, lon+delta)},{min(57.0, lat+delta)}"
+                    params['bbox'] = bbox
+                else:
+                    logger.warning(f"Coordinates {lat}, {lon} outside Moscow region, using Moscow bbox")
+                    params['bbox'] = moscow_bbox
             
             response = requests.get(self.geocoder_url, params=params, timeout=10)
             response.raise_for_status()
@@ -129,7 +140,9 @@ class YandexMapsService:
                 'geocode': address,
                 'format': 'json',
                 'results': 1,
-                'lang': 'ru_RU'
+                'lang': 'ru_RU',
+                # ОГРАНИЧЕНИЕ ДЛЯ ЛЦТ 2025: Только Москва и Московская область
+                'bbox': '35.0,54.0~40.5,57.0'
             }
             
             response = requests.get(self.geocoder_url, params=params, timeout=10)
@@ -145,6 +158,12 @@ class YandexMapsService:
             geo_object = geo_objects[0]['GeoObject']
             coordinates = geo_object['Point']['pos'].split()
             
+            # ВАЛИДАЦИЯ ДЛЯ ЛЦТ 2025: Проверяем, что координаты в Москве и МО
+            lat, lon = float(coordinates[1]), float(coordinates[0])
+            if not MoscowRegionValidator.is_in_moscow_region(lat, lon):
+                logger.warning(f"Yandex geocoding result outside Moscow region: {lat}, {lon}")
+                return {'success': False, 'error': 'Address outside Moscow region', 'source': 'yandex_geocoder'}
+            
             # Формируем результат в ожидаемом формате
             formatted_address = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('text', address)
             kind = geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('kind', 'place')
@@ -154,8 +173,8 @@ class YandexMapsService:
                 'source': 'yandex_geocoder',
                 'results': [{
                     'formatted_address': formatted_address,
-                    'latitude': float(coordinates[1]),
-                    'longitude': float(coordinates[0]),
+                    'latitude': lat,
+                    'longitude': lon,
                     'type': kind,
                     'confidence': 0.9,
                     'precision': geo_object.get('metaDataProperty', {}).get('GeocoderMetaData', {}).get('precision', ''),

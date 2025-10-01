@@ -52,18 +52,17 @@ class DGISService:
                 params['point'] = f"{lon},{lat}"
                 params['radius'] = radius
             
+            # ОГРАНИЧЕНИЕ ДЛЯ ЛЦТ 2025: Принудительно ограничиваем поиск Москвой и МО
             if region_id:
+                # Проверяем, что region_id соответствует Москве или МО
+                if region_id not in [1, 2]:  # 1 - Москва, 2 - Московская область
+                    logger.warning(f"Region ID {region_id} outside Moscow region, forcing Moscow")
+                    region_id = 1
                 params['region_id'] = region_id
             else:
-                # Определяем регион по запросу
-                if any(word in query.lower() for word in ['москва', 'красная площадь', 'кремль', 'мавзолей']):
-                    params['region_id'] = 1  # Москва
-                elif any(word in query.lower() for word in ['спб', 'санкт-петербург', 'петербург', 'питер']):
-                    params['region_id'] = 2  # СПб
-                elif any(word in query.lower() for word in ['екатеринбург', 'свердловская']):
-                    params['region_id'] = 54  # Екатеринбург
-                else:
-                    params['region_id'] = 1  # По умолчанию Москва
+                # Принудительно устанавливаем Москву как регион по умолчанию
+                params['region_id'] = 1  # Москва
+                logger.info("Forcing search region to Moscow for LCT 2025 requirements")
             
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()

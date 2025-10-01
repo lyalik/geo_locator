@@ -203,11 +203,13 @@ class EnhancedCoordinateDetector:
     def _geocode_location_hint(self, location_hint: str) -> Optional[Dict[str, float]]:
         """Геокодирование подсказки местоположения"""
         try:
-            # Добавляем "Россия" если не указана страна
-            if location_hint and 'россия' not in location_hint.lower() and 'russia' not in location_hint.lower():
+            # ОГРАНИЧЕНИЕ ДЛЯ ЛЦТ 2025: Принудительно добавляем "Москва" или "Московская область"
+            enhanced_hint = location_hint
+            if not any(region in location_hint.lower() for region in ['москва', 'московская область', 'мо']):
+                enhanced_hint = f"{location_hint}, Москва"
+                logger.info(f"Enhanced location hint for Moscow region: {enhanced_hint}")
+            elif 'россия' not in location_hint.lower() and 'russia' not in location_hint.lower():
                 enhanced_hint = f"{location_hint}, Россия"
-            else:
-                enhanced_hint = location_hint
             
             location = self.geocoder.geocode(enhanced_hint, timeout=10)
             if location:
