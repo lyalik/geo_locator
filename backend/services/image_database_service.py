@@ -46,39 +46,39 @@ if SQLALCHEMY_AVAILABLE:
         longitude = Column(Float)
         altitude = Column(Float)
         accuracy = Column(Float)
-    
-    # Метаданные изображения
-    width = Column(Integer)
-    height = Column(Integer)
-    format = Column(String(10))
-    camera_make = Column(String(100))
-    camera_model = Column(String(100))
-    
-    # Временные метки
-    date_taken = Column(DateTime)
-    date_uploaded = Column(DateTime, default=datetime.utcnow)
-    date_modified = Column(DateTime, default=datetime.utcnow)
-    
-    # Адресная информация
-    address = Column(Text)
-    city = Column(String(100))
-    region = Column(String(100))
-    country = Column(String(100))
-    
-    # Теги и описание
-    tags = Column(Text)  # JSON array
-    description = Column(Text)
-    user_notes = Column(Text)
-    
-    # Статус обработки
-    processed = Column(Boolean, default=False)
-    has_gps = Column(Boolean, default=False)
-    geo_source = Column(String(50))  # 'exif', 'manual', 'api_match'
-    
-    # Связанные данные
-    yandex_place_id = Column(String(100))
-    dgis_place_id = Column(String(100))
-    satellite_match_score = Column(Float)
+        
+        # Метаданные изображения
+        width = Column(Integer)
+        height = Column(Integer)
+        format = Column(String(10))
+        camera_make = Column(String(100))
+        camera_model = Column(String(100))
+        
+        # Временные метки
+        date_taken = Column(DateTime)
+        date_uploaded = Column(DateTime, default=datetime.utcnow)
+        date_modified = Column(DateTime, default=datetime.utcnow)
+        
+        # Адресная информация
+        address = Column(Text)
+        city = Column(String(100))
+        region = Column(String(100))
+        country = Column(String(100))
+        
+        # Теги и описание
+        tags = Column(Text)  # JSON array
+        description = Column(Text)
+        user_notes = Column(Text)
+        
+        # Статус обработки
+        processed = Column(Boolean, default=False)
+        has_gps = Column(Boolean, default=False)
+        geo_source = Column(String(50))  # 'exif', 'manual', 'api_match'
+        
+        # Связанные данные
+        yandex_place_id = Column(String(100))
+        dgis_place_id = Column(String(100))
+        satellite_match_score = Column(Float)
 
 class ImageDatabaseService:
     """Сервис для работы с базой данных изображений"""

@@ -516,15 +516,16 @@ const Dashboard = () => {
                 <Typography variant="body1" paragraph>
                   <strong>Дата:</strong> {new Date(selectedViolation.created_at).toLocaleString('ru-RU')}
                 </Typography>
-                <Typography variant="body1" paragraph>
-                  <strong>Статус:</strong> 
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <Typography variant="body1">
+                    <strong>Статус:</strong>
+                  </Typography>
                   <Chip
                     label={selectedViolation.status}
                     color={getStatusColor(selectedViolation.status)}
                     size="small"
-                    sx={{ ml: 1 }}
                   />
-                </Typography>
+                </Box>
               </Grid>
             </Grid>
           )}

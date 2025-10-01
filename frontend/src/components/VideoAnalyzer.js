@@ -198,9 +198,11 @@ const VideoAnalyzer = () => {
             // Добавляем спутниковые данные
             satellite_data: apiData.satellite_data ? {
               source: apiData.satellite_data.primary_source,
+              source_name: apiData.satellite_data.primary_source_name,
               image_data: apiData.satellite_data.image_data,
               coordinates: apiData.satellite_data.coordinates,
-              available_sources: apiData.satellite_data.available_sources
+              available_sources: apiData.satellite_data.available_sources,
+              all_sources: apiData.satellite_data.all_sources
             } : null,
             // Добавляем информацию о местоположении
             location_info: apiData.location_info ? {
@@ -539,6 +541,40 @@ const VideoAnalyzer = () => {
             Результаты анализа
           </Typography>
 
+          {/* Uploaded Photo Display */}
+          {selectedFile && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  📷 Загруженная фотография
+                </Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center',
+                  mb: 2,
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 1,
+                  p: 1,
+                  backgroundColor: '#fafafa'
+                }}>
+                  <img 
+                    src={URL.createObjectURL(selectedFile)}
+                    alt="Загруженная фотография"
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '400px', 
+                      objectFit: 'contain',
+                      borderRadius: '4px'
+                    }}
+                  />
+                </Box>
+                <Typography variant="body2" color="textSecondary" align="center">
+                  Файл: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} МБ)
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Coordinates Results Card */}
           {analysisResults.coordinates && (
             <Card sx={{ mb: 3 }}>
@@ -789,7 +825,7 @@ const VideoAnalyzer = () => {
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}>
                     <Typography variant="body2" color="textSecondary" gutterBottom>
-                      Источник: {analysisResults.satellite_data.primary_source === 'roscosmos' ? 'Роскосмос' : 'Яндекс Спутник'}
+                      Источник: {analysisResults.satellite_data.source_name || analysisResults.satellite_data.source}
                     </Typography>
                     
                     {analysisResults.satellite_data.image_data && (
@@ -867,11 +903,21 @@ const VideoAnalyzer = () => {
                   <Grid item xs={12} md={6}>
                     <Typography variant="subtitle2" gutterBottom>Доступные источники:</Typography>
                     <Box sx={{ mb: 2 }}>
-                      <Chip 
-                        label={`Роскосмос (${analysisResults.satellite_data.primary_source})`}
-                        color="primary"
-                        sx={{ mr: 1, mb: 1 }}
-                      />
+                      {analysisResults.satellite_data.all_sources ? 
+                        analysisResults.satellite_data.all_sources.map((source, index) => (
+                          <Chip 
+                            key={index}
+                            label={source}
+                            color={index === 0 ? "primary" : "default"}
+                            sx={{ mr: 1, mb: 1 }}
+                          />
+                        )) : (
+                          <Chip 
+                            label={analysisResults.satellite_data.source_name || analysisResults.satellite_data.source}
+                            color="primary"
+                            sx={{ mr: 1, mb: 1 }}
+                          />
+                        )}
                       <Chip 
                         label="Яндекс Карты"
                         variant="outlined"

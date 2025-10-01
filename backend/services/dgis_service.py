@@ -60,9 +60,9 @@ class DGISService:
                     region_id = 1
                 params['region_id'] = region_id
             else:
-                # Принудительно устанавливаем Москву как регион по умолчанию
+                # ОБЯЗАТЕЛЬНОЕ ОГРАНИЧЕНИЕ: Принудительно устанавливаем Москву
                 params['region_id'] = 1  # Москва
-                logger.info("Forcing search region to Moscow for LCT 2025 requirements")
+                logger.info("Forcing search region to Moscow for project requirements")
             
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()

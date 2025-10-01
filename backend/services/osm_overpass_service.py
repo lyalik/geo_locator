@@ -9,7 +9,6 @@ import time
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 class OSMOverpassService:
     """
     Сервис для работы с OpenStreetMap Overpass API
@@ -17,16 +16,14 @@ class OSMOverpassService:
     """
     
     def __init__(self):
-        self.base_url = "https://overpass-api.de/api/interpreter"
-        self.backup_urls = [
-            "https://overpass.kumi.systems/api/interpreter",
-            "https://overpass.openstreetmap.ru/api/interpreter"
+        # Список серверов Overpass API для попытки подключения
+        self.overpass_urls = [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+            'https://overpass.openstreetmap.ru/api/interpreter'
         ]
-        
-        # Кэш для запросов
-        self.cache = {}
-        self.cache_ttl = 3600  # 1 час
-        
+        # Увеличиваем timeout для медленных серверов
+        self.timeout = 10  # было 5 секунд
         # Ограничения запросов
         self.last_request_time = 0
         self.min_request_interval = 1.0  # 1 секунда между запросами

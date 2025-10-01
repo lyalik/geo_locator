@@ -2,12 +2,13 @@ import os
 import logging
 from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
-from PIL import Image
 import cv2
 # from .yolo_violation_detector import YOLOObjectDetector  # Временно отключено
 # from .google_vision_service import GoogleVisionService  # Временно отключено
 from .geo_aggregator_service import GeoAggregatorService
 from .archive_photo_service import ArchivePhotoService
+from .google_vision_service import GoogleVisionService
+from .moscow_region_validator import MoscowRegionValidator
 from services.cache_service import DetectionCache, ObjectDetectionCache
 from .yandex_maps_service import YandexMapsService
 from .dgis_service import DGISService
@@ -273,6 +274,8 @@ class CoordinateDetector:
             
             # Step 8: Combine all coordinate sources
             logger.info(f"📍 Coordinate sources: GPS={image_coords is not None}, Geo={geo_result is not None}, Archive={archive_coords is not None}")
+            # google_geo_coords не используется в текущей версии
+            google_geo_coords = None
             final_coordinates = self._combine_coordinate_sources(
                 image_coords, geo_result, similarity_coords, objects, 
                 google_ocr_coords, google_geo_coords, archive_coords
@@ -366,11 +369,11 @@ class CoordinateDetector:
             return {
                 'latitude': lat,
                 'longitude': lon,
-                'source': 'gps_metadata'
+                'source': 'gps_metadata',
+                'priority': 1
             }
-            
         except Exception as e:
-            logger.debug(f"No GPS data found in image: {str(e)}")
+            logger.warning(f"Error extracting GPS coordinates: {e}")
             return None
     
     def _extract_coordinates_from_text(self, image_path: str) -> Optional[Dict[str, Any]]:
@@ -611,13 +614,18 @@ class CoordinateDetector:
         
         coordinate_candidates = []
         
-        # Add GPS coordinates (highest priority)
+        # Add GPS coordinates (highest priority) - только если в Москве и МО
         if gps_coords:
-            coordinate_candidates.append({
-                **gps_coords,
-                'confidence': 0.95,
-                'priority': 1
-            })
+            lat = gps_coords.get('latitude')
+            lon = gps_coords.get('longitude')
+            if lat and lon and MoscowRegionValidator.is_in_moscow_region(lat, lon):
+                coordinate_candidates.append({
+                    **gps_coords,
+                    'confidence': 0.95,
+                    'priority': 1
+                })
+            else:
+                logger.warning(f"🚫 Filtered out GPS coordinates outside Moscow region: {lat}, {lon}")
         
         # Add geolocation service results
         if geo_result and geo_result.get('success'):
@@ -627,8 +635,8 @@ class CoordinateDetector:
                 lat = coords.get('latitude', coords.get('lat'))
                 lon = coords.get('longitude', coords.get('lon'))
                 
-                # Filter out Beijing coordinates (likely default values)
-                if lat and lon and not self._is_beijing_coordinates(lat, lon):
+                # ОГРАНИЧЕНИЕ: Только координаты в Москве и МО
+                if lat and lon and MoscowRegionValidator.is_in_moscow_region(lat, lon):
                     coordinate_candidates.append({
                         'latitude': lat,
                         'longitude': lon,
@@ -637,7 +645,7 @@ class CoordinateDetector:
                         'priority': 2
                     })
                 else:
-                    logger.warning(f"🚫 Filtered out Beijing coordinates from geolocation_service: {lat}, {lon}")
+                    logger.warning(f"🚫 Filtered out coordinates outside Moscow region: {lat}, {lon}")
         
         # Add Google Vision OCR coordinates
         if google_ocr_coords:
@@ -669,7 +677,21 @@ class CoordinateDetector:
             })
         
         if not coordinate_candidates:
-            return None
+            logger.warning("No valid coordinates found from any source, using Moscow center as fallback")
+            # Fallback на центр Москвы
+            return {
+                'latitude': 55.7558,
+                'longitude': 37.6176,
+                'confidence': 0.3,
+                'source': 'moscow_fallback',
+                'all_sources': [{
+                    'latitude': 55.7558,
+                    'longitude': 37.6176,
+                    'source': 'moscow_fallback',
+                    'confidence': 0.3,
+                    'priority': 99
+                }]
+            }
         
         # Sort by priority and confidence
         coordinate_candidates.sort(key=lambda x: (x['priority'], -x['confidence']))
@@ -859,16 +881,38 @@ class CoordinateDetector:
             if satellite_sources:
                 # Возвращаем лучший доступный источник
                 best_source = min(satellite_sources, key=lambda x: x['priority'])
+                
+                # Определяем читаемое название источника
+                source_names = {
+                    'roscosmos': 'Роскосмос',
+                    'yandex_satellite': 'Яндекс Спутник',
+                    'esri': 'ESRI World Imagery'
+                }
+                
                 return {
                     'success': True,
                     'primary_source': best_source['source'],
+                    'primary_source_name': source_names.get(best_source['source'], best_source['source']),
                     'image_data': best_source['data'],
                     'available_sources': len(satellite_sources),
+                    'all_sources': [source_names.get(s['source'], s['source']) for s in satellite_sources],
                     'coordinates': {'latitude': lat, 'longitude': lon}
                 }
             else:
-                logger.warning("No satellite imagery available")
-                return {'success': False, 'error': 'No satellite imagery available'}
+                # Fallback к ESRI World Imagery
+                logger.warning("No satellite imagery available from primary sources, using ESRI fallback")
+                return {
+                    'success': True,
+                    'primary_source': 'esri',
+                    'primary_source_name': 'ESRI World Imagery',
+                    'image_data': {
+                        'image_url': f'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/16/{int((1 - (lat + 90) / 180) * (2 ** 16))}/{int((lon + 180) / 360 * (2 ** 16))}',
+                        'content_type': 'image/jpeg'
+                    },
+                    'available_sources': 1,
+                    'all_sources': ['ESRI World Imagery'],
+                    'coordinates': {'latitude': lat, 'longitude': lon}
+                }
                 
         except Exception as e:
             logger.error(f"Error getting satellite imagery: {e}")

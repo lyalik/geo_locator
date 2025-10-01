@@ -74,7 +74,6 @@ def detect_coordinates():
         # Get location hint if provided
         location_hint = request.form.get('location_hint')
         
-        # Save uploaded file
         filename = secure_filename(file.filename)
         upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), 'coordinates')
         os.makedirs(upload_dir, exist_ok=True)
@@ -82,10 +81,11 @@ def detect_coordinates():
         file_path = os.path.join(upload_dir, filename)
         file.save(file_path)
         
-        # Detect coordinates
-        result = coordinate_detector.detect_coordinates_from_image(file_path, location_hint)
-        
-        logger.info(f"Coordinate detection result: success={result.get('success')}, coordinates={result.get('coordinates') is not None}")
+        # Process the image with coordinate detector
+        start_time = time.time()
+        result = coordinate_detector.detect_coordinates_and_objects(file_path, location_hint)
+        processing_time = time.time() - start_time
+        logger.info(f"Coordinate detection result: success={result.get('success')}, coordinates={result.get('coordinates') is not None}, processing_time={processing_time:.2f} seconds")
         
         if result['success']:
             # Save to database if coordinates were found
