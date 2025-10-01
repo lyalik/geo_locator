@@ -1,9 +1,24 @@
+#!/bin/bash
+
+echo "🏗️ Создание production build для сетевого доступа..."
+
+# Переходим в папку frontend
+cd frontend
+
+# Создаем production build
+echo "📦 Building React app..."
+npm run build
+
+# Создаем nginx конфигурацию для production
+echo "⚙️ Creating nginx config for production..."
+cat > ../nginx-production.conf << 'EOF'
 server {
     listen 80;
     server_name 192.168.1.67 45.130.189.36 localhost _;
     
     # Разрешаем доступ с любого IP в локальной сети
-    # _ означает "любой server_name"
+    root /home/denis/Documents/Hackathon_2025/geo_locator/frontend/build;
+    index index.html;
     
     # Увеличиваем лимиты для загрузки файлов
     client_max_body_size 100M;
@@ -18,21 +33,10 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     
-    # Основное приложение (React frontend)
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        
-        # Для WebSocket соединений (hot reload)
-        proxy_set_header Connection "upgrade";
-        proxy_read_timeout 86400;
+    # Статические файлы React
+    location /static/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
     
     # API endpoints (Flask backend)
@@ -95,60 +99,22 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
     
-    # Статические файлы React (проксируем к dev серверу)
-    location /static/ {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Кэширование для статических файлов
-        expires 1h;
-        add_header Cache-Control "public";
-    }
-    
-    # Hot Module Replacement файлы
-    location ~* \.(hot-update\.json|hot-update\.js)$ {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Отключаем кэширование для hot-update файлов
-        expires -1;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-    
-    # WebSocket для hot reload
-    location /sockjs-node/ {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    
-    # Дополнительные статические ресурсы React
-    location /manifest.json {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-    }
-    
-    location /favicon.ico {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
+    # React Router - все остальные запросы направляем на index.html
+    location / {
+        try_files $uri $uri/ /index.html;
     }
     
     # Логирование
     access_log /var/log/nginx/geo-locator-access.log;
     error_log /var/log/nginx/geo-locator-error.log;
 }
+EOF
+
+echo "✅ Production build готов!"
+echo "📋 Для использования production версии:"
+echo "   sudo cp nginx-production.conf /etc/nginx/sites-available/geo-locator"
+echo "   sudo systemctl reload nginx"
+echo ""
+echo "📋 Для возврата к development версии:"
+echo "   sudo cp nginx-geo-locator.conf /etc/nginx/sites-available/geo-locator"
+echo "   sudo systemctl reload nginx"
