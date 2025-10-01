@@ -7,6 +7,7 @@ const { width, height } = Dimensions.get('window');
 export default function YandexMapView({ 
   region, 
   violations = [], 
+  userLocation = null,
   onMarkerPress, 
   style 
 }) {
@@ -14,7 +15,7 @@ export default function YandexMapView({
 
   useEffect(() => {
     generateMapHtml();
-  }, [region, violations]);
+  }, [region, violations, userLocation]);
 
   const generateMapHtml = () => {
     const markers = violations.map((violation, index) => {
@@ -80,6 +81,18 @@ export default function YandexMapView({
 
             // Добавляем маркеры нарушений
             ${markers}
+
+            // Добавляем маркер пользователя
+            ${userLocation && userLocation.latitude && userLocation.longitude ? `
+            var userMarker = new ymaps.Placemark([${userLocation.latitude}, ${userLocation.longitude}], {
+                balloonContent: '<div style="padding: 10px;"><strong>📍 Ваше местоположение</strong><br/>Координаты: ${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}</div>',
+                hintContent: 'Ваше местоположение'
+            }, {
+                preset: 'islands#blueDotIcon',
+                iconColor: '#2196F3'
+            });
+            myMap.geoObjects.add(userMarker);
+            ` : ''}
 
             // Обработка изменения центра карты
             myMap.events.add('boundschange', function(e) {

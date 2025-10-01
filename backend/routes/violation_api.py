@@ -220,10 +220,9 @@ def get_violation_details(violation_id):
 @bp.route('/details/<violation_id>', methods=['PUT'])
 def update_violation(violation_id):
     """
-    Update violation details (notes, status, etc.).
+    Update violation details (category, confidence).
     """
     try:
-        # Find violation by ID
         violation = db.session.query(Violation).filter(Violation.id == violation_id).first()
         
         if not violation:
@@ -232,33 +231,26 @@ def update_violation(violation_id):
                 'error': 'Violation not found'
             }), 404
         
-        # Check if user owns this violation
-        user_id = request.json.get('user_id')
-        if user_id and str(violation.photo.user_id) != str(user_id):
-            return jsonify({
-                'success': False,
-                'error': 'Access denied'
-            }), 403
+        data = request.get_json()
         
-        # Update fields
-        if 'notes' in request.json:
-            violation.notes = request.json['notes']
-        if 'status' in request.json:
-            violation.status = request.json['status']
+        # Update allowed fields (только те что есть в модели)
+        if 'category' in data:
+            violation.category = data['category']
+        if 'confidence' in data:
+            violation.confidence = float(data['confidence'])
+        if 'category_id' in data:
+            violation.category_id = data['category_id']
         
-        violation.updated_at = datetime.utcnow()
         db.session.commit()
-        
-        current_app.logger.info(f"📝 Violation {violation_id} updated by user {user_id}")
         
         return jsonify({
             'success': True,
-            'message': 'Violation updated successfully',
             'data': {
                 'id': str(violation.id),
-                'notes': violation.notes,
-                'status': violation.status,
-                'updated_at': violation.updated_at.isoformat() + 'Z'
+                'category': violation.category,
+                'confidence': violation.confidence,
+                'category_id': violation.category_id,
+                'updated_at': violation.created_at.isoformat() + 'Z'
             }
         })
         
@@ -292,9 +284,8 @@ def delete_violation(violation_id):
                 'error': 'Access denied'
             }), 403
         
-        # Soft delete - change status instead of actual deletion
-        violation.status = 'deleted'
-        violation.updated_at = datetime.utcnow()
+        # Hard delete - удаляем нарушение из базы
+        db.session.delete(violation)
         db.session.commit()
         
         current_app.logger.info(f"🗑️ Violation {violation_id} deleted by user {user_id}")
@@ -693,11 +684,11 @@ def detect_violations():
                 }
                 current_app.logger.info(f"🌍 Geolocation - Mock result: {geo_result}")
             
-            # Check for manual coordinates from form
-            manual_lat = request.form.get('manual_lat')
-            manual_lon = request.form.get('manual_lon')
+            # Check for coordinates from form (mobile app sends latitude/longitude)
+            manual_lat = request.form.get('manual_lat') or request.form.get('latitude')
+            manual_lon = request.form.get('manual_lon') or request.form.get('longitude')
             
-            # Use manual coordinates if provided, otherwise use geo_result
+            # Use coordinates if provided, otherwise use geo_result
             if manual_lat and manual_lon:
                 location_data = {
                     'coordinates': {

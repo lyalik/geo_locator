@@ -190,11 +190,11 @@ export default function CameraScreen() {
       await checkNetworkStatus();
       
       if (isOnline) {
-        // Если онлайн - анализируем сразу
-        await analyzeImage(photo);
+        // Если онлайн - анализируем сразу с GPS координатами
+        await analyzeImage(photoWithGPS);
       } else {
-        // Если офлайн - сохраняем локально
-        await savePhotoOffline(photo);
+        // Если офлайн - сохраняем локально с GPS координатами
+        await savePhotoOffline(photoWithGPS);
       }
     } catch (error) {
       Alert.alert('Ошибка', 'Не удалось сделать фото');
