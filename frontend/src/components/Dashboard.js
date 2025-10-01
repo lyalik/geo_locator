@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Tab, Tabs,
-  Chip, CircularProgress, Paper, Dialog, DialogTitle, DialogContent, DialogActions,
-  Alert, Snackbar
 } from '@mui/material';
 import {
   Map as MapIcon, Upload as UploadIcon, Analytics as AnalyticsIcon,
   Schedule as ScheduleIcon, GetApp as DownloadIcon, Refresh as RefreshIcon,
-  Home as PropertyIcon, LocationCity as UrbanIcon, Satellite as SatelliteIcon,
+  Home as PropertyIcon, LocationCity as UrbanIcon,  BatchPrediction as BatchPredictionIcon,
+  Analytics as AnalyticsIcon,
+  AdminPanelSettings as AdminIcon,
+  School as SchoolIcon,
   TextFields as OCRIcon, PhotoLibrary as MultiPhotoIcon
 } from '@mui/icons-material';
 import InteractiveMap from './InteractiveMap';
@@ -19,6 +20,7 @@ import SatelliteAnalyzer from './SatelliteAnalyzer';
 import OCRAnalyzer from './OCRAnalyzer';
 import VideoAnalyzer from './VideoAnalyzer';
 import BatchAnalyzer from './BatchAnalyzer';
+import ModelTraining from './ModelTraining';
 import MultiPhotoAnalyzer from './MultiPhotoAnalyzer';
 import ViolationEditDialog from './ViolationEditDialog';
 import AdminPanel from './AdminPanel';
@@ -305,17 +307,23 @@ const Dashboard = () => {
       description: 'Загрузка и анализ нескольких файлов одновременно с отображением результатов на интерактивной карте',
       component: <BatchAnalyzer /> 
     },
-    { 
-      label: 'Мульти-фото анализ', 
-      icon: <MultiPhotoIcon />, 
-      description: 'Группировка нескольких фотографий одного объекта для повышения точности определения координат',
-      component: <MultiPhotoAnalyzer /> 
+    {
+      label: 'Пакетная обработка',
+      icon: <BatchPredictionIcon />,
+      description: 'Массовая обработка изображений для повышения производительности',
+      component: <BatchAnalyzer />
+    },
+    {
+      label: 'Обучение моделей',
+      icon: <SchoolIcon />,
+      description: 'Дообучение YOLO и Mistral AI на готовой базе данных заказчика (71,895 записей)',
+      component: <ModelTraining />
     },
     { 
       label: 'Админ-панель', 
       icon: <AnalyticsIcon />, 
       description: 'Управление всеми пользователями, нарушениями и модерация контента. Доступно только администраторам',
-      component: <AdminPanel /> 
+      component: <AdminPanel />
     }
   ];
 

@@ -64,7 +64,7 @@ class ModelTrainingService:
                 yolo_annotations.append(annotation)
             
             # Сохраняем аннотации
-            training_data_path = Path("backend/uploads/training_data")
+            training_data_path = Path("uploads/training_data")
             training_data_path.mkdir(exist_ok=True)
             
             annotations_file = training_data_path / "yolo_annotations.json"
@@ -189,7 +189,7 @@ class ModelTrainingService:
                 training_examples.append(example)
             
             # Сохраняем обучающие данные
-            training_data_path = Path("backend/uploads/training_data")
+            training_data_path = Path("uploads/training_data")
             training_data_path.mkdir(exist_ok=True)
             
             mistral_file = training_data_path / "mistral_training_data.jsonl"

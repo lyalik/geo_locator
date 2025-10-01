@@ -27,12 +27,14 @@ import {
   Info as InfoIcon
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
-import api from '../services/api';
+import { violationApi } from '../services/api';
+import ReferenceValidation from './ReferenceValidation';
 
 const AIAnalyzer = () => {
   const [files, setFiles] = useState([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState([]);
+  const [referenceValidationResults, setReferenceValidationResults] = useState([]);
   const [error, setError] = useState(null);
 
   const onDrop = (acceptedFiles) => {
@@ -286,6 +288,17 @@ const AIAnalyzer = () => {
                                         ))}
                                       </List>
                                     </Box>
+                                  )}
+                                  
+                                  {/* Валидация против готовой базы данных заказчика */}
+                                  {analysis.endpoint === 'violations' && analysis.data.coordinates && (
+                                    <ReferenceValidation
+                                      coordinates={analysis.data.coordinates}
+                                      violations={JSON.parse(analysis.data.analysis).violations || []}
+                                      onValidationComplete={(validationResult) => {
+                                        console.log('🎯 Валидация завершена:', validationResult);
+                                      }}
+                                    />
                                   )}
                                 </Box>
                               )}

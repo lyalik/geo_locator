@@ -241,9 +241,6 @@ export const coordinateAnalysis = {
   }
 };
 
-// Legacy video analysis API (for backward compatibility)
-export const videoAnalysis = coordinateAnalysis;
-
 // Image analysis API (alias for coordinate analysis)
 export const imageAnalysis = coordinateAnalysis;
 
@@ -251,7 +248,6 @@ export const imageAnalysis = coordinateAnalysis;
 export const objectGroupAnalysis = {
   analyzeGroups: (objects, locationHint = '') => {
     console.log('📤 analyzeGroups called with:', {
-      objectsCount: objects.length,
       locationHint: locationHint,
       objects: objects.map(obj => ({
         id: obj.id,
@@ -295,6 +291,46 @@ export const objectGroupAnalysis = {
       return response.json();
     }).then(data => ({ data }));
   }
+};
+
+// Reference Database API methods
+export const referenceDbApi = {
+  // Получение статистики готовой базы данных
+  getStats: () => api.get('/dataset/reference_db/stats'),
+  
+  // Поиск в готовой базе по координатам
+  searchByCoordinates: (latitude, longitude, radiusKm = 0.1) => 
+    api.post('/dataset/reference_db/search', {
+      latitude,
+      longitude,
+      radius_km: radiusKm
+    }),
+  
+  // Валидация результата против готовой базы
+  validateDetection: (data) => 
+    api.post('/dataset/reference_db/validate', data),
+  
+  // Получение примеров записей
+  getSamples: (violationType = null, limit = 10) => 
+    api.get('/dataset/reference_db/samples', {
+      params: { violation_type: violationType, limit }
+    })
+};
+
+// Model Training API methods
+export const trainingApi = {
+  // Дообучение YOLO модели
+  trainYolo: () => api.post('/dataset/train_yolo'),
+  
+  // Дообучение Mistral AI модели
+  trainMistral: () => api.post('/dataset/train_mistral'),
+  
+  // Получение статуса обучения
+  getTrainingStatus: () => api.get('/dataset/training_status'),
+  
+  // Пакетная обработка для тестирования производительности
+  batchProcess: (imagePaths) => 
+    api.post('/dataset/batch_process', { image_paths: imagePaths })
 };
 
 export { api };
