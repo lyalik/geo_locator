@@ -193,6 +193,116 @@ def get_training_status():
             'error': str(e)
         }), 500
 
+@dataset_bp.route('/reference_db/stats', methods=['GET'])
+def get_reference_db_stats():
+    """Получение статистики готовой базы данных заказчика"""
+    try:
+        from services.reference_database_service import ReferenceDatabaseService
+        
+        ref_db = ReferenceDatabaseService()
+        stats = ref_db.get_statistics()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Reference database statistics',
+            'data': stats
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Reference DB stats error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dataset_bp.route('/reference_db/search', methods=['POST'])
+def search_reference_db():
+    """Поиск в готовой базе данных по координатам"""
+    try:
+        data = request.get_json()
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        radius_km = data.get('radius_km', 0.1)
+        
+        if not latitude or not longitude:
+            return jsonify({
+                'success': False,
+                'error': 'Latitude and longitude are required'
+            }), 400
+        
+        from services.reference_database_service import ReferenceDatabaseService
+        
+        ref_db = ReferenceDatabaseService()
+        results = ref_db.search_by_coordinates(latitude, longitude, radius_km)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Found {len(results)} records in reference database',
+            'data': results
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Reference DB search error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dataset_bp.route('/reference_db/validate', methods=['POST'])
+def validate_against_reference_db():
+    """Валидация результата против готовой базы данных заказчика"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Request data is required'
+            }), 400
+        
+        from services.reference_database_service import ReferenceDatabaseService
+        
+        ref_db = ReferenceDatabaseService()
+        validation = ref_db.validate_detection(data)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Validation completed',
+            'data': validation
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Reference DB validation error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dataset_bp.route('/reference_db/samples', methods=['GET'])
+def get_reference_db_samples():
+    """Получение примеров записей из готовой базы данных"""
+    try:
+        violation_type = request.args.get('violation_type')
+        limit = int(request.args.get('limit', 10))
+        
+        from services.reference_database_service import ReferenceDatabaseService
+        
+        ref_db = ReferenceDatabaseService()
+        samples = ref_db.get_sample_records(violation_type, limit)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Retrieved {len(samples)} sample records',
+            'data': samples
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Reference DB samples error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @dataset_bp.route('/health', methods=['GET'])
 def health():
     """Проверка здоровья dataset API"""
@@ -207,6 +317,10 @@ def health():
             '/api/dataset/train_yolo',
             '/api/dataset/train_mistral',
             '/api/dataset/training_status',
+            '/api/dataset/reference_db/stats',
+            '/api/dataset/reference_db/search',
+            '/api/dataset/reference_db/validate',
+            '/api/dataset/reference_db/samples',
             '/api/dataset/health'
         ]
     }), 200

@@ -16,6 +16,7 @@ from .cache_service import GeolocationCache, MapCache
 from .yandex_maps_service import YandexMapsService
 from .dgis_service import DGISService
 from .dataset_search_service import DatasetSearchService
+from .reference_database_service import ReferenceDatabaseService
 try:
     from .roscosmos_satellite_service import RoscosmosService
     from .yandex_satellite_service import YandexSatelliteService
@@ -38,6 +39,7 @@ class GeoLocationService:
     def __init__(self):
         self.geolocator = Nominatim(user_agent="geo_locator_app")
         self.dataset_search = DatasetSearchService()
+        self.reference_db = ReferenceDatabaseService()
     
     def get_exif_data(self, image_path: str) -> Optional[Dict]:
         """Extract EXIF data from an image."""
@@ -138,7 +140,6 @@ class GeoLocationService:
                 result['error'] = "No EXIF data found in image"
                 return result
 
-            # Get GPS coordinates
             coordinates = self.get_gps_coordinates(exif_data)
             if coordinates:
                 # Get address from coordinates
@@ -147,7 +148,26 @@ class GeoLocationService:
                 dataset_matches = self.dataset_search.search_by_coordinates(
                     coordinates[0], coordinates[1], radius=0.01
                 )
-                
+
+                # Поиск в готовой базе данных заказчика
+                reference_matches = []
+                reference_validation = None
+                if hasattr(self, 'reference_db') and self.reference_db:
+                    reference_matches = self.reference_db.search_by_coordinates(
+                        coordinates[0], coordinates[1], radius_km=0.1
+                    )
+                    
+                    # Валидация если есть нарушения для проверки
+                    if 'violations' in result:
+                        validation_input = {
+                            'violations': result['violations'],
+                            'coordinates': {
+                                'latitude': coordinates[0],
+                                'longitude': coordinates[1]
+                            }
+                        }
+                        reference_validation = self.reference_db.validate_detection(validation_input)
+
                 result.update({
                     'success': True,
                     'coordinates': {
@@ -156,15 +176,14 @@ class GeoLocationService:
                     },
                     'address': address,
                     'has_gps': True,
-                    'dataset_matches': dataset_matches
+                    'dataset_matches': dataset_matches,
+                    'reference_matches': reference_matches,
+                    'reference_validation': reference_validation
                 })
-                return result
-
             # If no GPS in EXIF, try alternative methods
             if location_hint:
                 result = self._process_with_location_hint(image_path, location_hint)
-                if result['success']:
-                    return result
+                return result
 
             # If still no location, suggest manual input
             result.update({

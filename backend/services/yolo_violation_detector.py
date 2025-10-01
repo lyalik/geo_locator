@@ -8,6 +8,7 @@ from ultralytics import YOLO
 import torch
 from .cache_service import DetectionCache
 from .dataset_search_service import DatasetSearchService
+from .reference_database_service import ReferenceDatabaseService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -56,6 +57,7 @@ class YOLOObjectDetector:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = self._load_model(model_path)
         self.dataset_search = DatasetSearchService()
+        self.reference_db = ReferenceDatabaseService()
         logger.info(f"YOLOv8 Object Detector initialized on {self.device}")
     
     def _load_model(self, model_path: Optional[str] = None):
@@ -130,16 +132,29 @@ class YOLOObjectDetector:
                 
                 enhanced_objects.append(obj)
             
+            # Валидация через готовую базу данных заказчика
+            validation_result = None
+            if hasattr(self, 'reference_db') and self.reference_db:
+                # Создаем структуру для валидации
+                validation_input = {
+                    'violations': [{'category': obj['category']} for obj in enhanced_objects],
+                    'coordinates': None  # Координаты будут добавлены позже в геолокации
+                }
+                # Пока сохраняем для последующей валидации
+                validation_result = {'pending': True, 'message': 'Валидация будет выполнена после определения координат'}
+
             result = {
                 'success': True,
-                'objects': objects,
-                'total_objects': len(objects),
+                'objects': enhanced_objects,
+                'total_objects': len(enhanced_objects),
                 'annotated_image_path': annotated_image_path,
                 'dataset_matches': dataset_matches,
+                'reference_validation': validation_result,
                 'model_info': {
-                    'model_type': 'YOLOv8 + Dataset',
+                    'model_type': 'YOLOv8 + Dataset + Reference DB',
                     'confidence_threshold': self.CONFIDENCE_THRESHOLD,
-                    'device': self.device
+                    'device': self.device,
+                    'reference_db_records': getattr(self.reference_db, 'total_records', 0)
                 }
             }
             
