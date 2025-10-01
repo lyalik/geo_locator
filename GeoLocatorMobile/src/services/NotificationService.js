@@ -21,7 +21,7 @@ class NotificationService {
 
   async initialize() {
     try {
-      // Регистрируем для push уведомлений
+      // Регистрируем для push уведомлений (с обработкой ошибок)
       this.expoPushToken = await this.registerForPushNotificationsAsync();
       
       if (this.expoPushToken) {
@@ -78,9 +78,15 @@ class NotificationService {
     }
     
     try {
+      // Пропускаем получение push токена в офлайн режиме
+      if (Platform.OS === 'web') {
+        console.log('🌐 Веб-версия: Push токены не поддерживаются');
+        return null;
+      }
+      
       token = (await Notifications.getExpoPushTokenAsync()).data;
     } catch (error) {
-      console.log('⚠️ Ошибка получения push токена:', error.message);
+      console.log('⚠️ Ошибка получения push токена (это нормально для офлайн режима):', error.message);
       return null;
     }
 
