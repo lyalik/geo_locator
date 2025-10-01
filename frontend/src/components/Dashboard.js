@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Tab, Tabs,
+  CircularProgress, Paper, Alert, Dialog, DialogTitle, DialogContent, 
+  DialogActions, Chip, Snackbar
 } from '@mui/material';
 import {
   Map as MapIcon, Upload as UploadIcon, Analytics as AnalyticsIcon,
   Schedule as ScheduleIcon, GetApp as DownloadIcon, Refresh as RefreshIcon,
-  Home as PropertyIcon, LocationCity as UrbanIcon,  BatchPrediction as BatchPredictionIcon,
-  Analytics as AnalyticsIcon,
+  Home as PropertyIcon, LocationCity as UrbanIcon, BatchPrediction as BatchPredictionIcon,
   AdminPanelSettings as AdminIcon,
   School as SchoolIcon,
-  TextFields as OCRIcon, PhotoLibrary as MultiPhotoIcon
+  TextFields as OCRIcon, PhotoLibrary as MultiPhotoIcon,
+  Satellite as SatelliteIcon
 } from '@mui/icons-material';
 import InteractiveMap from './InteractiveMap';
 import ViolationUploader from './ViolationUploader';
@@ -24,7 +26,6 @@ import ModelTraining from './ModelTraining';
 import MultiPhotoAnalyzer from './MultiPhotoAnalyzer';
 import ViolationEditDialog from './ViolationEditDialog';
 import AdminPanel from './AdminPanel';
-import DatasetManager from './DatasetManager';
 import { violations } from '../services/api';
 
 const Dashboard = () => {

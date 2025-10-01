@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { MAP_CONFIG, DEFAULT_MAP_CENTER, DEFAULT_ZOOM } from '../config/maps';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+// Base URL for API calls - поддержка локального IP
+const API_URL = process.env.REACT_APP_API_URL || 
+  (window.location.hostname === '192.168.1.67' ? 'http://192.168.1.67:5001' : 'http://localhost:5001');
 
 // Create axios instance
 const api = axios.create({
@@ -101,23 +102,21 @@ export const violations = {
 
 // Maps API
 export const maps = {
-  getYandexMap: (center = DEFAULT_MAP_CENTER, zoom = DEFAULT_ZOOM) => {
+  getYandexMap: (center = [55.7558, 37.6176], zoom = 10) => {
     const [lat, lon] = center;
-    const { apiKey } = MAP_CONFIG.yandex;
-    return `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU&ll=${lon},${lat}&z=${zoom}&l=map`;
+    return `https://api-maps.yandex.ru/2.1/?lang=ru_RU&ll=${lon},${lat}&z=${zoom}&l=map`;
   },
   
-  get2GISMap: (center = DEFAULT_MAP_CENTER, zoom = DEFAULT_ZOOM) => {
+  get2GISMap: (center = [55.7558, 37.6176], zoom = 10) => {
     const [lat, lon] = center;
-    const { apiKey } = MAP_CONFIG.dgis;
-    return `https://maps.2gis.com/?l=map&pt=${lon},${lat}&z=${zoom}&key=${apiKey}`;
+    return `https://maps.2gis.com/?l=map&pt=${lon},${lat}&z=${zoom}`;
   },
   
   // Geocoding service
   geocode: async (address) => {
     try {
       const response = await fetch(
-        `https://geocode-maps.yandex.ru/1.x/?apikey=${MAP_CONFIG.yandex.apiKey}&format=json&geocode=${encodeURIComponent(address)}`
+        `https://geocode-maps.yandex.ru/1.x/?format=json&geocode=${encodeURIComponent(address)}`
       );
       const data = await response.json();
       return data;
@@ -131,7 +130,7 @@ export const maps = {
   reverseGeocode: async (lat, lon) => {
     try {
       const response = await fetch(
-        `https://geocode-maps.yandex.ru/1.x/?apikey=${MAP_CONFIG.yandex.apiKey}&format=json&geocode=${lon},${lat}`
+        `https://geocode-maps.yandex.ru/1.x/?format=json&geocode=${lon},${lat}`
       );
       const data = await response.json();
       return data;
@@ -243,6 +242,9 @@ export const coordinateAnalysis = {
 
 // Image analysis API (alias for coordinate analysis)
 export const imageAnalysis = coordinateAnalysis;
+
+// Video analysis API (alias for coordinate analysis)
+export const videoAnalysis = coordinateAnalysis;
 
 // Object Group Analysis API
 export const objectGroupAnalysis = {

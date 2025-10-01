@@ -1,10 +1,38 @@
 INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 /home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:routes.geo_api:Geo services initialized successfully
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -12,6 +40,18 @@ INFO:routes.osm_api:OSM service initialized successfully
 /home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -23,13 +63,43 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -41,9 +111,25 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
@@ -51,6 +137,18 @@ INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
 /home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -62,13 +160,43 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -80,15 +208,31 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
 INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
 ✅ Maps API registered successfully
-✅ Violation API registered successfully
+❌ Violation API registration failed: View function mapping is overwriting an existing endpoint function: violation_api.get_user_stats
 ✅ Geo API registered successfully
 ✅ Cache API registered successfully
 ✅ Rosreestr API registered successfully
@@ -101,6 +245,7 @@ INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
 ✅ Notification API registered successfully
 ✅ Object Group API registered successfully
 ✅ Admin API registered successfully
+✅ Dataset API registered successfully
 🚀 Starting Geo Locator Backend (Local Development)
 ==================================================
 ✅ PostgreSQL connection successful
@@ -122,12 +267,40 @@ INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a
 INFO:werkzeug:[33mPress CTRL+C to quit[0m
 INFO:werkzeug: * Restarting with stat
 INFO:services.cache_service:Connected to Redis at redis://localhost:6379/0
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 /home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:routes.geo_api:Geo services initialized successfully
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -135,6 +308,18 @@ INFO:routes.osm_api:OSM service initialized successfully
 /home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -146,13 +331,43 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -164,9 +379,25 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
@@ -174,6 +405,18 @@ INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
 /home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
   return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -185,13 +428,43 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:✅ YOLO detector initialized
 INFO:services.osm_overpass_service:🗺️ OSM Overpass Service initialized
@@ -203,97 +476,55 @@ WARNING:services.google_vision_service:Google Cloud Vision credentials not found
 INFO:services.coordinate_detector:✅ Google Vision service initialized
 INFO:services.archive_photo_service:🏛️ Archive Photo Service initialized with 3 photos
 INFO:services.coordinate_detector:🏛️ Archive Photo service initialized
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
 INFO:services.mistral_ai_service:🤖 AI initialized with API key: OE9txswT...
 INFO:services.dgis_panorama_service:🗺️ 2GIS Panorama service initialized
+/home/denis/Documents/Hackathon_2025/geo_locator/backend/venv/lib/python3.12/site-packages/ultralytics/nn/tasks.py:567: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  return torch.load(file, map_location='cpu'), file  # load
 INFO:services.yolo_violation_detector:Loaded pretrained YOLOv8n model
+INFO:services.dataset_search_service:✅ Loaded 7707 buildings
+INFO:services.dataset_search_service:✅ Loaded 3532 garbage records
+INFO:services.reference_database_service:📊 Загружаем готовую базу данных заказчика...
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Август.json
+INFO:services.reference_database_service:✅ Загружено 11898 записей типа 00-022 за Август
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Июль.json
+INFO:services.reference_database_service:✅ Загружено 23943 записей типа 18-001 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Объекты недвижимости, не соответствующие градостроительным нормам_00-022_Июль.json
+INFO:services.reference_database_service:✅ Загружено 8635 записей типа 00-022 за Июль
+INFO:services.reference_database_service:🔍 Загружаем Строительная площадка_18-001_Август.json
+INFO:services.reference_database_service:✅ Загружено 27419 записей типа 18-001 за Август
+INFO:services.reference_database_service:🎯 Всего загружено 71895 записей из готовой базы заказчика
 INFO:services.yolo_violation_detector:YOLOv8 Object Detector initialized on cpu
 INFO:services.coordinate_detector:🎯 Enhanced Coordinate Detector initialized
 INFO:services.coordinate_detector:Coordinate Detector initialized
 INFO:services.video_coordinate_detector:Video Coordinate Detector initialized
 WARNING:werkzeug: * Debugger is active!
 INFO:werkzeug: * Debugger PIN: 111-291-728
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:06] "[33mGET /main.dd0a2a8204d4fde1ac45.hot-update.json HTTP/1.1[0m" 404 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:07] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:17] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:18] "OPTIONS /auth/logout HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:18] "POST /auth/logout HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "OPTIONS /auth/login HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "POST /auth/login HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:22] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:24] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:29] "OPTIONS /auth/logout HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:29] "POST /auth/logout HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:42] "OPTIONS /auth/login HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:42] "[31m[1mPOST /auth/login HTTP/1.1[0m" 401 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "OPTIONS /auth/login HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "POST /auth/login HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "OPTIONS /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:51] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "OPTIONS /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:55] "[31m[1mGET /admin/users?page=1&per_page=20 HTTP/1.1[0m" 401 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:56] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:29:56] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:29] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:29] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:51] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:32:51] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:00] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:00] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:10] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:10] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:33:31] "GET /health HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:09] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:09] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:11] "POST /auth/logout HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "OPTIONS /auth/login HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "POST /auth/login HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:app:📊 Database - Retrieved 86 violations from database
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:15] "GET /api/violations/list HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:16] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:16] "GET /admin/users?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:19] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:24] "OPTIONS /admin/violations/90 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:24] "DELETE /admin/violations/90 HTTP/1.1" 200 -
-INFO:werkzeug:127.0.0.1 - - [16/Sep/2025 16:34:24] "GET /admin/violations?page=1&per_page=20 HTTP/1.1" 200 -
+✅ Maps API registered successfully
+❌ Violation API registration failed: View function mapping is overwriting an existing endpoint function: violation_api.get_user_stats
+✅ Geo API registered successfully
+✅ Cache API registered successfully
+✅ Rosreestr API registered successfully
+✅ OpenStreetMap API registered successfully
+✅ OSM API registered successfully
+✅ Coordinate API registered successfully
+❌ Sentinel API registration failed: attempted relative import beyond top-level package
+✅ Satellite API registered successfully
+✅ OCR API registered successfully
+✅ Notification API registered successfully
+✅ Object Group API registered successfully
+✅ Admin API registered successfully
+✅ Dataset API registered successfully
+🚀 Starting Geo Locator Backend (Local Development)
+==================================================
+✅ PostgreSQL connection successful
+✅ Redis connection successful
+✅ Database tables created successfully
+
+🎉 All checks passed! Starting Flask development server...
+📍 Backend will be available at: http://localhost:5001
+📍 API endpoints at: http://localhost:5001/api/
+
+Press Ctrl+C to stop the server
+==================================================

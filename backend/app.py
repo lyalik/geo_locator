@@ -326,4 +326,5 @@ def health():
 
 # This endpoint is now handled by the violation_api blueprint
 if __name__ == '__main__':
+    # Для доступа извне сети - host='0.0.0.0'
     app.run(debug=True, host='0.0.0.0', port=5001)
