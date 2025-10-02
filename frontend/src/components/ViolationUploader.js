@@ -260,10 +260,24 @@ const ViolationUploader = ({ onUploadComplete }) => {
         console.log('Processing successful response for file:', file.name);
 
         // Создаем объект результата для отображения
+        // Формируем правильные URL для изображений
+        const baseUrl = 'http://192.168.1.67:5001';
+        const annotatedImagePath = data.data?.annotated_image_path 
+          ? (data.data.annotated_image_path.startsWith('http') 
+              ? data.data.annotated_image_path 
+              : `${baseUrl}${data.data.annotated_image_path}`)
+          : null;
+        const originalImagePath = data.data?.image_path
+          ? (data.data.image_path.startsWith('http')
+              ? data.data.image_path
+              : `${baseUrl}${data.data.image_path}`)
+          : URL.createObjectURL(actualFile);
+        
         const processedResult = {
           violation_id: data.data?.violation_id || `temp_${Date.now()}`,
           fileName: actualFile.name,
-          image: data.data?.annotated_image_path || data.data?.image_path || URL.createObjectURL(actualFile),
+          image: originalImagePath,
+          annotated_image_path: annotatedImagePath,
           violations: data.data?.violations || [],
           location: data.data?.location || (manualCoordinates.lat && manualCoordinates.lon ? {
             coordinates: {
@@ -785,19 +799,21 @@ const ViolationUploader = ({ onUploadComplete }) => {
                               }
                             }}
                             onClick={() => {
-                              setSelectedImage(result.image || result.annotated_image_path || result.image_path);
+                              // Приоритет: аннотированное изображение с bbox > оригинал
+                              const imageUrl = result.annotated_image_path || result.image || result.image_path;
+                              setSelectedImage(imageUrl);
                               setImageModalOpen(true);
                             }}
                           >
                             <img 
-                              src={result.image || result.annotated_image_path || result.image_path}
+                              src={result.annotated_image_path || result.image || result.image_path}
                               alt={`Результат ${index + 1}`}
                               style={{
                                 width: 150,
                                 height: 150,
                                 objectFit: 'cover',
                                 borderRadius: 8,
-                                border: '2px solid #ddd'
+                                border: result.annotated_image_path ? '3px solid #4caf50' : '2px solid #ddd'
                               }}
                               onError={(e) => {
                                 console.log('Image load error:', e.target.src);
@@ -805,6 +821,21 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                 e.target.alt = 'Изображение недоступно';
                               }}
                             />
+                            {/* Индикатор аннотированного изображения */}
+                            {result.annotated_image_path && (
+                              <Chip
+                                label="С разметкой"
+                                size="small"
+                                color="success"
+                                sx={{
+                                  position: 'absolute',
+                                  bottom: 5,
+                                  left: 5,
+                                  fontSize: '0.65rem',
+                                  height: 20
+                                }}
+                              />
+                            )}
                             <Box
                               sx={{
                                 position: 'absolute',
@@ -998,10 +1029,75 @@ const ViolationUploader = ({ onUploadComplete }) => {
                             
                             {/* Местоположение */}
                             {hasLocation && (
-                              <Typography variant="body2" color="text.secondary">
-                                📍 {result.location.address?.formatted || result.location.address || 
-                                    `${result.location.coordinates?.latitude}, ${result.location.coordinates?.longitude}`}
-                              </Typography>
+                              <Box sx={{ mt: 2, p: 1.5, bgcolor: 'grey.100', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                  📍 Геолокация:
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {result.location.address?.formatted || result.location.address || 
+                                      `${result.location.coordinates?.latitude}, ${result.location.coordinates?.longitude}`}
+                                </Typography>
+                                
+                                {/* Детальная информация об источниках координат */}
+                                {result.location.sources_details && result.location.sources_details.length > 0 && (
+                                  <Box sx={{ mt: 2 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 1 }}>
+                                      📊 Источники координат:
+                                    </Typography>
+                                    {result.location.sources_details.map((source, idx) => (
+                                      <Box key={idx} sx={{ 
+                                        mt: 1, 
+                                        p: 1, 
+                                        borderLeft: '3px solid',
+                                        borderColor: source.status === 'success' ? 'success.main' : 'grey.400',
+                                        bgcolor: source.status === 'success' ? 'success.lighter' : 'white',
+                                        borderRadius: 0.5
+                                      }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                          <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                                            {source.icon} {source.name}
+                                          </Typography>
+                                          <Chip 
+                                            label={source.status === 'success' ? '✅' : '❌'} 
+                                            size="small" 
+                                            sx={{ height: 16, fontSize: '0.6rem' }}
+                                          />
+                                        </Box>
+                                        
+                                        {source.details && (
+                                          <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                            🔍 {source.details}
+                                          </Typography>
+                                        )}
+                                        
+                                        {source.text && (
+                                          <Typography variant="caption" display="block" sx={{ fontSize: '0.7rem', fontFamily: 'monospace', mt: 0.5 }}>
+                                            📝 "{source.text}"
+                                          </Typography>
+                                        )}
+                                        
+                                        {source.service && (
+                                          <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: '0.7rem', mt: 0.5 }}>
+                                            🔧 {source.service}
+                                          </Typography>
+                                        )}
+                                        
+                                        {source.confidence > 0 && (
+                                          <Typography variant="caption" display="block" color="primary" sx={{ fontSize: '0.7rem', mt: 0.5 }}>
+                                            📊 {Math.round(source.confidence * 100)}%
+                                          </Typography>
+                                        )}
+                                        
+                                        {source.coordinates && source.coordinates.lat && (
+                                          <Typography variant="caption" display="block" color="success.main" sx={{ fontSize: '0.7rem', fontWeight: 'bold', mt: 0.5 }}>
+                                            📍 {source.coordinates.lat.toFixed(6)}, {source.coordinates.lon.toFixed(6)}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    ))}
+                                  </Box>
+                                )}
+                              </Box>
                             )}
                             
                             {/* Метаданные */}
