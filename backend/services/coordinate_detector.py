@@ -42,6 +42,15 @@ except ImportError as e:
     LicensePlateDetector = None
     logger.warning(f"LicensePlateDetector not available: {e}")
 
+# Import Yandex Vision Service
+try:
+    from services.yandex_vision_service import YandexVisionService
+    YANDEX_VISION_AVAILABLE = True
+except ImportError as e:
+    YANDEX_VISION_AVAILABLE = False
+    YandexVisionService = None
+    logger.warning(f"YandexVisionService not available: {e}")
+
 # Import Google services
 try:
     from services.google_vision_service import GoogleVisionService
@@ -135,6 +144,18 @@ class CoordinateDetector:
         else:
             self.license_plate_detector = None
             logger.info("⚠️ License Plate Detector not available")
+        
+        # Initialize Yandex Vision Service
+        if YANDEX_VISION_AVAILABLE:
+            try:
+                self.yandex_vision_service = YandexVisionService()
+                logger.info("✅ Yandex Vision Service initialized (OCR + классификация)")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Yandex Vision Service: {e}")
+                self.yandex_vision_service = None
+        else:
+            self.yandex_vision_service = None
+            logger.info("⚠️ Yandex Vision Service not available")
         
         logger.info("Coordinate Detector initialized")
     
@@ -413,6 +434,47 @@ class CoordinateDetector:
                         'error': str(e)
                     })
                     logger.error(f"License plate detection error: {e}")
+            
+            # ШАГ 5.6: Yandex Vision Analysis (НОВОЕ!)
+            if self.yandex_vision_service:
+                try:
+                    vision_result = self.yandex_vision_service.analyze_image(image_path)
+                    if vision_result.get('success'):
+                        coords = self.yandex_vision_service.get_coordinates_from_analysis(vision_result)
+                        if coords:
+                            detection_log.append({
+                                'method': 'Yandex Vision Analysis',
+                                'success': True,
+                                'details': f"Определено по {coords['detected_by']}: {coords.get('city', 'Неизвестно')}"
+                            })
+                            logger.info(f"🔤 Yandex Vision: coordinates from {coords['detected_by']}")
+                            return {
+                                'success': True,
+                                'coordinates': coords,
+                                'objects': objects,
+                                'detection_log': detection_log,
+                                'total_objects': len(objects),
+                                'vision_analysis': vision_result
+                            }
+                        else:
+                            detection_log.append({
+                                'method': 'Yandex Vision Analysis',
+                                'success': False,
+                                'error': 'OCR completed but no coordinates found'
+                            })
+                    else:
+                        detection_log.append({
+                            'method': 'Yandex Vision Analysis',
+                            'success': False,
+                            'error': vision_result.get('error', 'Unknown error')
+                        })
+                except Exception as e:
+                    detection_log.append({
+                        'method': 'Yandex Vision Analysis',
+                        'success': False,
+                        'error': str(e)
+                    })
+                    logger.error(f"Yandex Vision analysis error: {e}")
             
             # ШАГ 6: Extract text and address info using Google Vision OCR
             google_ocr_coords = None
