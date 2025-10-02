@@ -491,19 +491,33 @@ class CoordinateDetector:
                 
                 if mistral_result.get('success') and mistral_result.get('coordinates'):
                     coords = mistral_result['coordinates']
+                    info_type = mistral_result.get('info_type', 'location')
+                    extracted_info = mistral_result.get('extracted_info', 'адрес/номер')
+                    
                     detection_log.append({
                         'method': 'Mistral AI OCR',
                         'success': True,
-                        'details': f"Извлечено: {mistral_result.get('extracted_info', 'адрес/номер')}"
+                        'details': f"Тип: {info_type}, Найдено: {extracted_info}"
                     })
-                    logger.info(f"🤖 Mistral AI: found {mistral_result.get('info_type', 'location')}")
+                    
+                    logger.info(f"🤖 Mistral AI OCR успешно!")
+                    logger.info(f"   📝 Тип информации: {info_type}")
+                    logger.info(f"   📍 Извлечено: {extracted_info}")
+                    logger.info(f"   🎯 Координаты: {coords.get('latitude')}, {coords.get('longitude')}")
+                    logger.info(f"   ✅ Точность: {coords.get('confidence', 0)*100:.0f}%")
+                    
                     return {
                         'success': True,
                         'coordinates': coords,
                         'objects': objects,
                         'detection_log': detection_log,
                         'total_objects': len(objects),
-                        'mistral_ocr': mistral_result
+                        'mistral_ocr': {
+                            'info_type': info_type,
+                            'extracted_info': extracted_info,
+                            'confidence': coords.get('confidence', 0),
+                            'details': mistral_result.get('details', {})
+                        }
                     }
                 else:
                     detection_log.append({
@@ -713,6 +727,73 @@ class CoordinateDetector:
                 fallback_reason = self._generate_fallback_explanation(detection_log)
                 recommendations = self._generate_recommendations(objects, detection_log, location_hint)
             
+            # Собираем детальную информацию о всех источниках
+            sources_details = []
+            
+            # GPS EXIF - только если успешно
+            if image_coords:
+                sources_details.append({
+                    'name': 'GPS EXIF Metadata',
+                    'status': 'success',
+                    'coordinates': image_coords,
+                    'priority': 1,
+                    'icon': '📍'
+                })
+            
+            # License Plate - только если успешно
+            license_plate_log = next((log for log in detection_log if log['method'] == 'License Plate Detection'), None)
+            if license_plate_log and license_plate_log['success']:
+                sources_details.append({
+                    'name': 'License Plate Detection (EasyOCR)',
+                    'status': 'success',
+                    'details': license_plate_log.get('details', ''),
+                    'priority': 2,
+                    'icon': '🚗'
+                })
+            
+            # Yandex Vision - только если успешно
+            yandex_vision_log = next((log for log in detection_log if log['method'] == 'Yandex Vision Analysis'), None)
+            if yandex_vision_log and yandex_vision_log['success']:
+                sources_details.append({
+                    'name': 'Yandex Vision OCR',
+                    'status': 'success',
+                    'details': yandex_vision_log.get('details', ''),
+                    'priority': 3,
+                    'icon': '🔤'
+                })
+            
+            # Mistral AI - только если успешно
+            mistral_log = next((log for log in detection_log if log['method'] == 'Mistral AI OCR'), None)
+            if mistral_log and mistral_log['success']:
+                sources_details.append({
+                    'name': 'Mistral AI OCR',
+                    'status': 'success',
+                    'details': mistral_log.get('details', ''),
+                    'priority': 4,
+                    'icon': '🤖'
+                })
+            
+            # Geo Aggregator - только если успешно
+            if geo_result and geo_result.get('success'):
+                sources_details.append({
+                    'name': 'Geo Aggregator (Яндекс + 2GIS + OSM)',
+                    'status': 'success',
+                    'details': f"Найдено мест: {geo_result.get('final_location', {}).get('total_found', 0)}",
+                    'confidence': geo_result.get('confidence_score', 0),
+                    'priority': 5,
+                    'icon': '🗺️'
+                })
+            
+            # Archive Photo - только если успешно
+            if archive_coords:
+                sources_details.append({
+                    'name': 'Archive Photo Match',
+                    'status': 'success',
+                    'coordinates': archive_coords,
+                    'priority': 6,
+                    'icon': '🏛️'
+                })
+            
             # Return result with detection_log and recommendations
             result = {
                 'success': True,
@@ -721,9 +802,10 @@ class CoordinateDetector:
                 'total_objects': len(enhanced_objects),
                 'satellite_data': satellite_data,
                 'location_info': location_info,
-                'detection_log': detection_log,  # НОВОЕ!
-                'fallback_reason': fallback_reason,  # НОВОЕ!
-                'recommendations': recommendations,  # НОВОЕ!
+                'detection_log': detection_log,
+                'fallback_reason': fallback_reason,
+                'recommendations': recommendations,
+                'sources_details': sources_details,  # НОВОЕ! Детальная информация о всех источниках
                 'coordinate_sources': {
                     'gps_metadata': image_coords is not None,
                     'geolocation_service': geo_result is not None and geo_result.get('success', False),

@@ -646,9 +646,91 @@ const VideoAnalyzer = () => {
                         Источник: {analysisResults.coordinates.source} • 
                         Кадров: {analysisResults.coordinates.frame_count}
                       </Typography>
+                      
+                      {/* Показываем информацию от Mistral AI OCR */}
+                      {analysisResults.mistral_ocr && (
+                        <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,255,255,0.3)' }}>
+                          <Typography variant="caption" color="success.contrastText" sx={{ display: 'block', fontWeight: 'bold' }}>
+                            🤖 Mistral AI обнаружил:
+                          </Typography>
+                          <Typography variant="body2" color="success.contrastText">
+                            📝 {analysisResults.mistral_ocr.info_type === 'license_plate' ? 'Автомобильный номер' : 
+                                analysisResults.mistral_ocr.info_type === 'address' ? 'Адрес' :
+                                analysisResults.mistral_ocr.info_type === 'street' ? 'Название улицы' :
+                                analysisResults.mistral_ocr.info_type === 'organization' ? 'Вывеска организации' :
+                                analysisResults.mistral_ocr.info_type === 'sign' ? 'Дорожный знак' : 'Информация о местоположении'}
+                          </Typography>
+                          <Typography variant="body2" color="success.contrastText" sx={{ fontWeight: 'bold' }}>
+                            📍 {analysisResults.mistral_ocr.extracted_info}
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                     
-                    <Typography variant="subtitle2" gutterBottom>Открыть на картах:</Typography>
+                    {/* Показываем детали всех источников */}
+                    {analysisResults.sources_details && analysisResults.sources_details.length > 0 && (
+                      <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                          📊 Результаты от всех источников:
+                        </Typography>
+                        {analysisResults.sources_details.map((source, index) => (
+                          <Box key={index} sx={{ 
+                            mt: 1, 
+                            p: 1, 
+                            borderLeft: source.status === 'success' ? '3px solid #4caf50' : 
+                                       source.status === 'failed' ? '3px solid #f44336' : '3px solid #9e9e9e',
+                            bgcolor: 'white',
+                            borderRadius: 1
+                          }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                              {source.icon} {source.name}
+                            </Typography>
+                            <Typography variant="caption" color={
+                              source.status === 'success' ? 'success.main' : 
+                              source.status === 'failed' ? 'error.main' : 'text.secondary'
+                            }>
+                              {source.status === 'success' ? '✅ Успешно' : 
+                               source.status === 'failed' ? '❌ Не удалось' : '⚪ Нет данных'}
+                            </Typography>
+                            {source.details && (
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {source.details}
+                              </Typography>
+                            )}
+                            {source.message && (
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {source.message}
+                              </Typography>
+                            )}
+                            {source.confidence !== undefined && (
+                              <Typography variant="caption" display="block" color="primary">
+                                Точность: {Math.round(source.confidence * 100)}%
+                              </Typography>
+                            )}
+                          </Box>
+                        ))}
+                        
+                        {/* Итоговый результат */}
+                        {analysisResults.coordinates && (
+                          <Box sx={{ mt: 2, p: 1.5, bgcolor: 'primary.light', borderRadius: 1 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'primary.contrastText' }}>
+                              🎯 ИТОГОВЫЙ РЕЗУЛЬТАТ:
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'primary.contrastText' }}>
+                              Источник: <strong>{analysisResults.coordinates.source}</strong>
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'primary.contrastText' }}>
+                              Точность: <strong>{Math.round(analysisResults.coordinates.confidence * 100)}%</strong>
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'primary.contrastText', display: 'block', mt: 0.5 }}>
+                              Координаты: {analysisResults.coordinates.latitude.toFixed(6)}, {analysisResults.coordinates.longitude.toFixed(6)}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                    
+                    <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>Открыть на картах:</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                       <Chip 
                         label="Яндекс Карты"
