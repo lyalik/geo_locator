@@ -4,6 +4,11 @@ from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 import cv2
 from PIL import Image
+
+# Configure logging FIRST before any imports that use it
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # from .yolo_violation_detector import YOLOObjectDetector  # Временно отключено
 # from .google_vision_service import GoogleVisionService  # Временно отключено
 from .geo_aggregator_service import GeoAggregatorService
@@ -59,10 +64,6 @@ try:
 except ImportError as e:
     GOOGLE_SERVICES_AVAILABLE = False
     GoogleVisionService = None
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 class CoordinateDetector:
     """

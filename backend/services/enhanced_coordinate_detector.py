@@ -84,16 +84,17 @@ class EnhancedCoordinateDetector:
                 logger.info(f"✅ GPS from EXIF: {gps_coords}")
             
             # 4. Анализ с панорамами (если есть подсказка местоположения)
+            panorama_coords = None
             if location_hint:
                 panorama_coords = self._analyze_with_panoramas(image_path, location_hint)
-            if mistral_coords:
-                coordinate_candidates.append({
-                    'coordinates': mistral_coords,
-                    'source': 'mistral_ocr',
-                    'confidence': 0.75,
-                    'weight': self.source_weights['mistral_ocr']
-                })
-                logger.info(f"✅ Coordinates from Mistral OCR: {mistral_coords}")
+                if panorama_coords:
+                    coordinate_candidates.append({
+                        'coordinates': panorama_coords,
+                        'source': 'panorama_analysis',
+                        'confidence': 0.75,
+                        'weight': self.source_weights.get('panorama', 0.7)
+                    })
+                    logger.info(f"✅ Coordinates from Panorama: {panorama_coords}")
             
             # 4. Анализ панорам (если есть примерные координаты)
             if coordinate_candidates:
