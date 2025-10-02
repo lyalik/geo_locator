@@ -327,3 +327,116 @@ class MistralAIService:
 }"""
         
         return self.analyze_image(image_path, property_prompt)
+    
+    def extract_location_info(self, image_path: str) -> Dict[str, Any]:
+        """
+        Извлечение информации о местоположении из изображения:
+        - Автомобильные номера с регионами
+        - Названия улиц и адреса
+        - Номера домов
+        - Названия организаций и заведений
+        - Дорожные знаки с названиями
+        """
+        location_prompt = """Проанализируй изображение и извлеки ЛЮБУЮ информацию о местоположении:
+
+1. АВТОМОБИЛЬНЫЕ НОМЕРА:
+   - Российские номера формата А123АА777 (регион в конце)
+   - Укажи регион и город
+
+2. АДРЕСА И УЛИЦЫ:
+   - Названия улиц на табличках
+   - Номера домов
+   - Названия районов
+
+3. ОРГАНИЗАЦИИ:
+   - Вывески магазинов, кафе, офисов
+   - Названия торговых центров
+   - Бренды и компании
+
+4. ДОРОЖНЫЕ ЗНАКИ:
+   - Указатели направлений
+   - Названия населенных пунктов
+   - Расстояния до городов
+
+Верни JSON:
+{
+  "found": true/false,
+  "info_type": "license_plate/street/address/organization/sign",
+  "extracted_text": "точный текст",
+  "location": {
+    "city": "город",
+    "street": "улица",
+    "house_number": "номер дома",
+    "region": "регион/область"
+  },
+  "license_plates": [
+    {"plate": "А123АА777", "region_code": "777", "region_name": "Москва"}
+  ],
+  "confidence": 0.0-1.0
+}
+
+Если ничего не найдено, верни {"found": false}"""
+        
+        result = self.analyze_image(image_path, location_prompt)
+        
+        if not result.get('success'):
+            return {
+                'success': False,
+                'message': 'Mistral AI analysis failed'
+            }
+        
+        analysis = result.get('analysis', {})
+        
+        # Если нашли информацию о местоположении
+        if analysis.get('found'):
+            # Пробуем определить координаты
+            location = analysis.get('location', {})
+            city = location.get('city', '')
+            street = location.get('street', '')
+            region = location.get('region', '')
+            
+            # Проверяем автомобильные номера
+            license_plates = analysis.get('license_plates', [])
+            if license_plates:
+                # Используем регион из номера
+                plate_info = license_plates[0]
+                region_name = plate_info.get('region_name', '')
+                
+                # Базовые координаты регионов (можно расширить)
+                region_coords = {
+                    'Москва': {'lat': 55.7558, 'lon': 37.6176},
+                    'Санкт-Петербург': {'lat': 59.9311, 'lon': 30.3609},
+                    'Московская область': {'lat': 55.7, 'lon': 37.5},
+                }
+                
+                coords = region_coords.get(region_name)
+                if coords:
+                    return {
+                        'success': True,
+                        'coordinates': {
+                            'latitude': coords['lat'],
+                            'longitude': coords['lon'],
+                            'source': 'mistral_ai_ocr',
+                            'confidence': analysis.get('confidence', 0.7)
+                        },
+                        'info_type': 'license_plate',
+                        'extracted_info': f"Номер {plate_info.get('plate')} → {region_name}",
+                        'details': analysis
+                    }
+            
+            # Если есть город и улица, можно попробовать геокодирование
+            if city and street:
+                # Здесь можно добавить вызов Yandex Geocoder
+                return {
+                    'success': True,
+                    'info_type': 'address',
+                    'extracted_info': f"{city}, {street}",
+                    'details': analysis,
+                    'needs_geocoding': True  # Флаг для дальнейшей обработки
+                }
+        
+        return {
+            'success': False,
+            'message': 'No location information found in image',
+            'details': analysis
+        }

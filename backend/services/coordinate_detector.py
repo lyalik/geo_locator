@@ -378,6 +378,7 @@ class CoordinateDetector:
                 }
             
             # Продолжаем даже если объекты не найдены - можем использовать другие источники координат
+            logger.info("🔄 Continuing to additional detection methods (EXIF, License Plate, Yandex Vision)...")
             
             # ШАГ 5: Extract EXIF GPS metadata
             image_coords = self._extract_gps_coordinates(image_path)
@@ -404,7 +405,9 @@ class CoordinateDetector:
                 })
             
             # ШАГ 5.5: License Plate Detection (НОВОЕ!)
+            logger.info(f"🔍 Checking License Plate Detector: {self.license_plate_detector is not None}")
             if self.license_plate_detector:
+                logger.info("🚗 Starting license plate detection...")
                 try:
                     plate_result = self.license_plate_detector.detect_license_plates(image_path)
                     if plate_result.get('success') and plate_result.get('coordinates'):
@@ -477,6 +480,47 @@ class CoordinateDetector:
                         'error': str(e)
                     })
                     logger.error(f"Yandex Vision analysis error: {e}")
+            
+            # ШАГ 5.7: Mistral AI OCR для номеров, адресов, улиц (НОВОЕ!)
+            try:
+                from services.mistral_ai_service import MistralAIService
+                mistral_service = MistralAIService()
+                
+                logger.info("🤖 Starting Mistral AI OCR analysis...")
+                mistral_result = mistral_service.extract_location_info(image_path)
+                
+                if mistral_result.get('success') and mistral_result.get('coordinates'):
+                    coords = mistral_result['coordinates']
+                    detection_log.append({
+                        'method': 'Mistral AI OCR',
+                        'success': True,
+                        'details': f"Извлечено: {mistral_result.get('extracted_info', 'адрес/номер')}"
+                    })
+                    logger.info(f"🤖 Mistral AI: found {mistral_result.get('info_type', 'location')}")
+                    return {
+                        'success': True,
+                        'coordinates': coords,
+                        'objects': objects,
+                        'detection_log': detection_log,
+                        'total_objects': len(objects),
+                        'mistral_ocr': mistral_result
+                    }
+                else:
+                    detection_log.append({
+                        'method': 'Mistral AI OCR',
+                        'success': False,
+                        'error': mistral_result.get('message', 'No location info found')
+                    })
+                    logger.info(f"⚠️ Mistral AI: {mistral_result.get('message', 'no info')}")
+            except ImportError:
+                logger.debug("Mistral AI service not available")
+            except Exception as e:
+                detection_log.append({
+                    'method': 'Mistral AI OCR',
+                    'success': False,
+                    'error': str(e)
+                })
+                logger.error(f"Mistral AI OCR error: {e}")
             
             # ШАГ 6: Extract text and address info using Google Vision OCR
             google_ocr_coords = None

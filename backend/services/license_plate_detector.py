@@ -173,14 +173,19 @@ class LicensePlateDetector:
         
         try:
             # Читаем изображение
+            logger.info(f"📷 Reading image: {image_path}")
             image = cv2.imread(image_path)
             if image is None:
+                logger.warning("❌ Failed to load image")
                 return {'success': False, 'error': 'Failed to load image'}
             
             # Распознаем текст
+            logger.info("🔍 Running EasyOCR text detection...")
             results = self.reader.readtext(image)
+            logger.info(f"📝 EasyOCR found {len(results)} text regions")
             
             if not results:
+                logger.info("⚠️ No text detected on image")
                 return {
                     'success': False,
                     'plates_found': 0,
@@ -190,12 +195,15 @@ class LicensePlateDetector:
             # Ищем автомобильные номера
             detected_plates = []
             for (bbox, text, confidence) in results:
+                logger.debug(f"  Text: '{text}' (confidence: {confidence:.2f})")
                 # Проверяем паттерн российского номера
                 plate_info = self._parse_russian_plate(text, confidence)
                 if plate_info:
+                    logger.info(f"✅ Found plate: {plate_info['plate']}")
                     detected_plates.append(plate_info)
             
             if not detected_plates:
+                logger.info(f"⚠️ No license plates detected among {len(results)} text regions")
                 return {
                     'success': False,
                     'plates_found': 0,
@@ -235,7 +243,7 @@ class LicensePlateDetector:
             }
             
         except Exception as e:
-            logger.error(f"Error detecting license plates: {e}")
+            logger.error(f"❌ Error detecting license plates: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': str(e)

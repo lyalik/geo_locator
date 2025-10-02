@@ -19,3 +19,12 @@
 .env
 backend/.env
 frontend/.env
+logs
+logs/backend.log
+logs/frontend.log
+logs/nginx.log
+logs/nginx_error.log
+logs/nginx_access.log
+logs/nginx_error.log
+logs/nginx_access.log
+logs/nginx_error.log

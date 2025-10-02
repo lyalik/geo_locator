@@ -29,9 +29,25 @@ except ImportError as e:
 # Create blueprint
 bp = Blueprint('coordinate_api', __name__, url_prefix='/api/coordinates')
 
-# Initialize coordinate detectors
-coordinate_detector = CoordinateDetector()
-video_detector = VideoCoordinateDetector()
+# Lazy initialization of detectors (will be created on first use)
+_coordinate_detector = None
+_video_detector = None
+
+def get_coordinate_detector():
+    """Get or create coordinate detector instance."""
+    global _coordinate_detector
+    if _coordinate_detector is None:
+        _coordinate_detector = CoordinateDetector()
+        logger.info("📍 Coordinate detector instance created for API")
+    return _coordinate_detector
+
+def get_video_detector():
+    """Get or create video detector instance."""
+    global _video_detector
+    if _video_detector is None:
+        _video_detector = VideoCoordinateDetector()
+        logger.info("🎥 Video detector instance created for API")
+    return _video_detector
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
@@ -114,7 +130,7 @@ def detect_coordinates():
         
         # Process the image with coordinate detector
         start_time = time.time()
-        result = coordinate_detector.detect_coordinates_from_image(file_path, location_hint)
+        result = get_coordinate_detector().detect_coordinates_from_image(file_path, location_hint)
         processing_time = time.time() - start_time
         logger.info(f"Coordinate detection result: success={result.get('success')}, coordinates={result.get('coordinates') is not None}, processing_time={processing_time:.2f} seconds")
         
@@ -272,7 +288,7 @@ def batch_detect_coordinates():
             }), 400
         
         # Batch detect coordinates
-        results = coordinate_detector.batch_detect_coordinates(file_paths, location_hints)
+        results = get_coordinate_detector().batch_detect_coordinates(file_paths, location_hints)
         
         # Save successful results to database
         saved_count = 0
@@ -344,7 +360,7 @@ def get_detection_statistics():
     JSON response with system information and capabilities
     """
     try:
-        stats = coordinate_detector.get_detection_statistics()
+        stats = get_coordinate_detector().get_detection_statistics()
         
         # Add database statistics
         total_photos = Photo.query.count()
@@ -393,9 +409,9 @@ def get_detected_objects(photo_id):
                 'category': detection.category,
                 'confidence': detection.confidence,
                 'bbox': detection.bbox_data,
-                'description': coordinate_detector.yolo_detector.CATEGORY_DESCRIPTIONS.get(
+                'description': get_coordinate_detector().yolo_detector.CATEGORY_DESCRIPTIONS.get(
                     detection.category, detection.category
-                )
+                ) if get_coordinate_detector().yolo_detector else detection.category
             })
         
         return jsonify({

@@ -48,11 +48,12 @@ except ImportError as e:
     print(f"Warning: ReferenceDatabaseService not available: {e}")
     reference_db_service = None
 
-try:
-    from models.violation_response import ViolationResponseFormatter
-except ImportError as e:
-    print(f"Warning: ViolationResponseFormatter not available: {e}")
-    ViolationResponseFormatter = None
+# ViolationResponseFormatter не используется, закомментировано
+# try:
+#     from models.violation_response import ViolationResponseFormatter
+# except ImportError as e:
+#     print(f"Warning: ViolationResponseFormatter not available: {e}")
+ViolationResponseFormatter = None
 
 # Create blueprint
 bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
@@ -1315,8 +1316,8 @@ def get_analytics():
         }), 500
 
 @bp.route('/user-stats/<int:user_id>', methods=['GET'])
-def get_user_stats(user_id):
-    """Get user-specific statistics."""
+def get_user_statistics(user_id):
+    """Get user-specific statistics (detailed version)."""
     try:
         # Получаем статистику пользователя
         user_violations = Violation.query.filter_by(user_id=user_id).all()

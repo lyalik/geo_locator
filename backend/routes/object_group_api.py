@@ -13,9 +13,23 @@ logger = logging.getLogger(__name__)
 # Create blueprint
 bp = Blueprint('object_group_api', __name__, url_prefix='/api/object-groups')
 
-# Initialize detectors
-coordinate_detector = CoordinateDetector()
-video_detector = VideoCoordinateDetector()
+# Lazy initialization of detectors (will be created on first use)
+_coordinate_detector = None
+_video_detector = None
+
+def get_coordinate_detector():
+    """Get or create coordinate detector instance."""
+    global _coordinate_detector
+    if _coordinate_detector is None:
+        _coordinate_detector = CoordinateDetector()
+    return _coordinate_detector
+
+def get_video_detector():
+    """Get or create video detector instance."""
+    global _video_detector
+    if _video_detector is None:
+        _video_detector = VideoCoordinateDetector()
+    return _video_detector
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
@@ -176,10 +190,10 @@ def analyze_single_object_group(files, object_name, object_description, location
             try:
                 if file_type == 'image':
                     # Analyze image
-                    result = coordinate_detector.detect_coordinates_from_image(file_path, location_hint)
+                    result = get_coordinate_detector().detect_coordinates_from_image(file_path, location_hint)
                 elif file_type == 'video':
                     # Analyze video
-                    result = video_detector.analyze_video(file_path, location_hint)
+                    result = get_video_detector().analyze_video(file_path, location_hint)
                 else:
                     continue
                 
