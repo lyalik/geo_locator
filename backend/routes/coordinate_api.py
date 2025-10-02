@@ -523,6 +523,8 @@ def analyze_video():
         logger.info(f"🎬 Starting video analysis: {filename} (frame_interval={frame_interval}, max_frames={max_frames})")
         start_time = time.time()
         
+        # Get video detector instance
+        video_detector = get_video_detector()
         result = video_detector.analyze_video(
             file_path, location_hint, frame_interval, max_frames
         )
@@ -662,6 +664,7 @@ def estimate_video_processing():
         file.save(file_path)
         
         # Get processing estimate
+        video_detector = get_video_detector()
         estimate = video_detector.estimate_processing_time(file_path, frame_interval, max_frames)
         
         # Clean up temporary file
