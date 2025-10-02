@@ -676,40 +676,76 @@ const VideoAnalyzer = () => {
                         {analysisResults.sources_details.map((source, index) => (
                           <Box key={index} sx={{ 
                             mt: 1, 
-                            p: 1, 
-                            borderLeft: source.status === 'success' ? '3px solid #4caf50' : 
-                                       source.status === 'failed' ? '3px solid #f44336' : '3px solid #9e9e9e',
-                            bgcolor: 'white',
+                            p: 1.5, 
+                            borderLeft: '4px solid',
+                            borderColor: source.status === 'success' ? 'success.main' : 
+                                       source.status === 'failed' ? 'error.main' : 'grey.400',
+                            bgcolor: source.status === 'success' ? 'success.lighter' : 'white',
                             borderRadius: 1
                           }}>
-                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                              {source.icon} {source.name}
-                            </Typography>
-                            <Typography variant="caption" color={
-                              source.status === 'success' ? 'success.main' : 
-                              source.status === 'failed' ? 'error.main' : 'text.secondary'
-                            }>
-                              {source.status === 'success' ? '✅ Успешно' : 
-                               source.status === 'failed' ? '❌ Не удалось' : '⚪ Нет данных'}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {source.icon} {source.name}
+                              </Typography>
+                              <Chip 
+                                label={source.status === 'success' ? '✅ Успешно' : 
+                                       source.status === 'failed' ? '❌ Не удалось' : '⚪ Нет данных'} 
+                                size="small" 
+                                color={source.status === 'success' ? 'success' : 
+                                       source.status === 'failed' ? 'error' : 'default'}
+                                sx={{ height: 18, fontSize: '0.6rem' }}
+                              />
+                            </Box>
+                            
+                            {/* Что нашли */}
                             {source.details && (
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                {source.details}
+                              <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                  🔍 Что нашли:
+                                </Typography>
+                                <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                                  {source.details}
+                                </Typography>
+                              </Box>
+                            )}
+                            
+                            {/* Найденный текст/данные */}
+                            {source.text && (
+                              <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                                  📝 Распознанный текст:
+                                </Typography>
+                                <Typography variant="caption" display="block" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
+                                  "{source.text}"
+                                </Typography>
+                              </Box>
+                            )}
+                            
+                            {/* Через какой сервис */}
+                            {source.service && (
+                              <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                                🔧 Сервис: <strong>{source.service}</strong>
                               </Typography>
                             )}
+                            
+                            {/* Дополнительное сообщение */}
                             {source.message && (
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                {source.message}
+                              <Typography variant="caption" display="block" sx={{ mt: 1, fontStyle: 'italic', color: 'text.secondary' }}>
+                                💬 {source.message}
                               </Typography>
                             )}
+                            
+                            {/* Точность */}
                             {source.confidence !== undefined && source.confidence > 0 && (
-                              <Typography variant="caption" display="block" color="primary">
-                                Точность: {Math.round(source.confidence * 100)}%
+                              <Typography variant="caption" display="block" color="primary" sx={{ mt: 0.5 }}>
+                                📊 Точность: <strong>{Math.round(source.confidence * 100)}%</strong>
                               </Typography>
                             )}
+                            
+                            {/* Координаты */}
                             {source.coordinates && source.coordinates.lat && source.coordinates.lon && (
-                              <Typography variant="caption" display="block" color="success.main" sx={{ fontWeight: 'bold' }}>
-                                📍 {source.coordinates.lat.toFixed(6)}, {source.coordinates.lon.toFixed(6)}
+                              <Typography variant="caption" display="block" color="success.main" sx={{ mt: 0.5, fontWeight: 'bold' }}>
+                                📍 Координаты: {source.coordinates.lat.toFixed(6)}, {source.coordinates.lon.toFixed(6)}
                               </Typography>
                             )}
                           </Box>

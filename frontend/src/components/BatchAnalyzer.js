@@ -671,6 +671,160 @@ const BatchAnalyzer = () => {
                           )}
                         </Box>
                       )}
+                      
+                      {/* Детальная информация (для изображений И видео с результатами) */}
+                      {fileData.status === 'completed' && fileData.result?.data && (
+                        <Accordion sx={{ mt: 2 }}>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="body2">
+                              📊 Детальные результаты анализа
+                              {fileData.type === 'video' && fileData.result?.data?.total_frames_processed && (
+                                <Chip 
+                                  label={`${fileData.result.data.total_frames_processed} кадров`} 
+                                  size="small" 
+                                  sx={{ ml: 1 }} 
+                                />
+                              )}
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            {/* Информация о видео кадрах */}
+                            {fileData.type === 'video' && fileData.result?.data?.frames_analyzed && (
+                              <Box sx={{ mb: 2, p: 1.5, bgcolor: 'info.light', borderRadius: 1 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  🎬 Анализ видео по кадрам:
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  • Всего кадров обработано: {fileData.result.data.total_frames_processed || fileData.result.data.frames_analyzed.length}
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  • Кадров с координатами: {fileData.result.data.frames_with_coordinates || 0}
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  • Итоговая точность: {Math.round((fileData.result.data.coordinates?.confidence || 0) * 100)}%
+                                </Typography>
+                              </Box>
+                            )}
+                            
+                            {/* Источники координат */}
+                            {fileData.result.data.sources_details && fileData.result.data.sources_details.length > 0 && (
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  📍 Источники координат:
+                                </Typography>
+                                {fileData.result.data.sources_details.map((source, idx) => (
+                                  <Box key={idx} sx={{ 
+                                    mt: 1, 
+                                    p: 1.5, 
+                                    borderLeft: '4px solid',
+                                    borderColor: source.status === 'success' ? 'success.main' : 'grey.400',
+                                    bgcolor: source.status === 'success' ? 'success.lighter' : 'grey.50',
+                                    borderRadius: 1
+                                  }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                        {source.icon} {source.name}
+                                      </Typography>
+                                      <Chip 
+                                        label={source.status === 'success' ? '✅ Успешно' : '❌ Не найдено'} 
+                                        size="small" 
+                                        color={source.status === 'success' ? 'success' : 'default'}
+                                        sx={{ height: 18, fontSize: '0.6rem' }}
+                                      />
+                                    </Box>
+                                    
+                                    {/* Что нашли */}
+                                    {source.details && (
+                                      <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 0.5 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                          🔍 Что нашли:
+                                        </Typography>
+                                        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                                          {source.details}
+                                        </Typography>
+                                      </Box>
+                                    )}
+                                    
+                                    {/* Найденный текст/данные */}
+                                    {source.text && (
+                                      <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', borderRadius: 0.5 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                                          📝 Распознанный текст:
+                                        </Typography>
+                                        <Typography variant="caption" display="block" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
+                                          "{source.text}"
+                                        </Typography>
+                                      </Box>
+                                    )}
+                                    
+                                    {/* Через какой сервис */}
+                                    {source.service && (
+                                      <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                                        🔧 Сервис: <strong>{source.service}</strong>
+                                      </Typography>
+                                    )}
+                                    
+                                    {/* Точность */}
+                                    {source.confidence > 0 && (
+                                      <Typography variant="caption" display="block" color="primary" sx={{ mt: 0.5 }}>
+                                        📊 Точность: <strong>{Math.round(source.confidence * 100)}%</strong>
+                                      </Typography>
+                                    )}
+                                    
+                                    {/* Координаты */}
+                                    {source.coordinates && source.coordinates.lat && (
+                                      <Typography variant="caption" display="block" color="success.main" sx={{ mt: 0.5, fontWeight: 'bold' }}>
+                                        📍 Координаты: {source.coordinates.lat.toFixed(6)}, {source.coordinates.lon.toFixed(6)}
+                                      </Typography>
+                                    )}
+                                    
+                                    {/* Дополнительная информация */}
+                                    {source.message && (
+                                      <Typography variant="caption" display="block" sx={{ mt: 1, fontStyle: 'italic', color: 'text.secondary' }}>
+                                        💬 {source.message}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                ))}
+                              </Box>
+                            )}
+                            
+                            {/* Обнаруженные объекты */}
+                            {fileData.result.data.objects && fileData.result.data.objects.length > 0 && (
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  🎯 Обнаруженные объекты ({fileData.result.data.objects.length}):
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                                  {fileData.result.data.objects.slice(0, 10).map((obj, idx) => (
+                                    <Chip
+                                      key={idx}
+                                      label={`${obj.category || obj.label} (${Math.round((obj.confidence || 0) * 100)}%)`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  ))}
+                                  {fileData.result.data.objects.length > 10 && (
+                                    <Chip label={`+${fileData.result.data.objects.length - 10} еще`} size="small" />
+                                  )}
+                                </Box>
+                              </Box>
+                            )}
+                            
+                            {/* Спутниковые снимки */}
+                            {fileData.result.data.satellite_data && (
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                  🛰️ Спутниковые снимки:
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  Источник: {fileData.result.data.satellite_data.source || 'Неизвестно'}
+                                </Typography>
+                              </Box>
+                            )}
+                          </AccordionDetails>
+                        </Accordion>
+                      )}
                     </Box>
                     <IconButton
                       onClick={() => removeFile(fileData.id)}
