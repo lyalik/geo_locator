@@ -510,6 +510,9 @@ curl -X POST http://localhost:5001/api/dataset/reference_db/search \
 - **Python 3.12** + Flask
 - **YOLOv8** для компьютерного зрения
 - **Mistral AI** для анализа изображений
+- **CLIP (ViT-B/32)** для поиска похожих зданий ✨ НОВОЕ!
+- **FAISS** для векторного поиска
+- **EasyOCR** для распознавания номеров
 - **PostgreSQL** для хранения данных
 - **Redis** для кэширования
 

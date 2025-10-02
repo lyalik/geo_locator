@@ -806,7 +806,12 @@ class CoordinateDetector:
                 sources_details.append({
                     'name': 'GPS EXIF Metadata',
                     'status': 'success',
-                    'coordinates': image_coords,
+                    'coordinates': {
+                        'lat': image_coords.get('latitude'),
+                        'lon': image_coords.get('longitude')
+                    },
+                    'confidence': image_coords.get('confidence', 0.95),
+                    'details': 'GPS метаданные из камеры',
                     'priority': 1,
                     'icon': '📍'
                 })
@@ -846,21 +851,37 @@ class CoordinateDetector:
             
             # Geo Aggregator - только если успешно
             if geo_result and geo_result.get('success'):
-                sources_details.append({
-                    'name': 'Geo Aggregator (Яндекс + 2GIS + OSM)',
-                    'status': 'success',
-                    'details': f"Найдено мест: {geo_result.get('final_location', {}).get('total_found', 0)}",
-                    'confidence': geo_result.get('confidence_score', 0),
-                    'priority': 5,
-                    'icon': '🗺️'
-                })
+                final_loc = geo_result.get('final_location', {})
+                if final_loc and final_loc.get('coordinates'):
+                    sources_details.append({
+                        'name': 'Geo Aggregator (Яндекс + 2GIS + OSM)',
+                        'status': 'success',
+                        'coordinates': {
+                            'lat': final_loc['coordinates'].get('latitude') or final_loc['coordinates'].get('lat'),
+                            'lon': final_loc['coordinates'].get('longitude') or final_loc['coordinates'].get('lon')
+                        },
+                        'confidence': geo_result.get('confidence_score', 0),
+                        'details': f"Найдено мест: {final_loc.get('total_found', 0)}",
+                        'priority': 5,
+                        'icon': '🗺️'
+                    })
             
             # CLIP Similarity - только если успешно
             clip_log = next((log for log in detection_log if log['method'] == 'CLIP Image Similarity'), None)
             if clip_log and clip_log['success']:
+                # Пытаемся получить координаты из clip_similarity_coords
+                clip_coords = None
+                if clip_similarity_coords:
+                    clip_coords = {
+                        'lat': clip_similarity_coords.get('latitude'),
+                        'lon': clip_similarity_coords.get('longitude')
+                    }
+                
                 sources_details.append({
                     'name': 'CLIP Image Similarity',
                     'status': 'success',
+                    'coordinates': clip_coords,
+                    'confidence': clip_similarity_coords.get('confidence', 0) if clip_similarity_coords else 0,
                     'details': clip_log.get('details', ''),
                     'priority': 3,
                     'icon': '🖼️'
@@ -871,7 +892,12 @@ class CoordinateDetector:
                 sources_details.append({
                     'name': 'Archive Photo Match',
                     'status': 'success',
-                    'coordinates': archive_coords,
+                    'coordinates': {
+                        'lat': archive_coords.get('latitude'),
+                        'lon': archive_coords.get('longitude')
+                    },
+                    'confidence': archive_coords.get('confidence', 0.8),
+                    'details': 'Найдено в архиве исторических фото',
                     'priority': 6,
                     'icon': '🏛️'
                 })

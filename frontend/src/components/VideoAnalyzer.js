@@ -702,9 +702,14 @@ const VideoAnalyzer = () => {
                                 {source.message}
                               </Typography>
                             )}
-                            {source.confidence !== undefined && (
+                            {source.confidence !== undefined && source.confidence > 0 && (
                               <Typography variant="caption" display="block" color="primary">
                                 Точность: {Math.round(source.confidence * 100)}%
+                              </Typography>
+                            )}
+                            {source.coordinates && source.coordinates.lat && source.coordinates.lon && (
+                              <Typography variant="caption" display="block" color="success.main" sx={{ fontWeight: 'bold' }}>
+                                📍 {source.coordinates.lat.toFixed(6)}, {source.coordinates.lon.toFixed(6)}
                               </Typography>
                             )}
                           </Box>

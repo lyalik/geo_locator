@@ -24,20 +24,23 @@ aiohttp==3.10.11
 
 # Computer Vision and ML
 opencv-python==4.10.0.84
+opencv-python-headless==4.10.0.84
 torch==2.4.0
 torchvision==0.19.0
 transformers==4.44.0
 ultralytics==8.0.196
 pillow==10.4.0
-numpy>=1.26.0
+numpy>=1.26.0,<2.0  # ВАЖНО: faiss-cpu требует numpy<2.0
 scipy==1.14.1
 scikit-image==0.24.0
 matplotlib==3.9.2
 
-# CLIP and Vector Search
+# CLIP and Vector Search (Image Similarity)
 open-clip-torch==2.24.0  # OpenCLIP for image embeddings
-faiss-cpu==1.8.0  # Facebook AI Similarity Search
-sentence-transformers==2.7.0  # For text embeddings (optional)
+faiss-cpu==1.8.0  # Facebook AI Similarity Search (требует numpy<2.0)
+sentence-transformers==2.7.0  # For text embeddings
+scikit-learn>=1.0.0  # Required by sentence-transformers
+timm>=0.9.0  # Required by open-clip-torch
 
 # OCR and text processing
 pytesseract==0.3.10
