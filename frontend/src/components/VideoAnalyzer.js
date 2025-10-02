@@ -677,6 +677,118 @@ const VideoAnalyzer = () => {
             </Card>
           )}
 
+          {/* Координатная диагностика */}
+          {analysisResults && analysisResults.detection_log && analysisResults.detection_log.length > 0 && (
+            <Accordion sx={{ mb: 3 }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <InfoIcon color="primary" />
+                  <Typography variant="h6">
+                    🔍 Диагностика определения координат
+                  </Typography>
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell><strong>Метод</strong></TableCell>
+                        <TableCell><strong>Статус</strong></TableCell>
+                        <TableCell><strong>Детали</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {analysisResults.detection_log.map((log, idx) => (
+                        <TableRow 
+                          key={idx}
+                          sx={{ 
+                            '&:hover': { bgcolor: 'action.hover' },
+                            bgcolor: log.success ? 'success.light' : 'error.light',
+                            opacity: log.success ? 1 : 0.7
+                          }}
+                        >
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="bold">
+                              {log.method}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={log.success ? 'Успешно' : 'Не удалось'}
+                              color={log.success ? 'success' : 'error'}
+                              size="small"
+                              sx={{ fontWeight: 'bold' }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {log.error 
+                                ? log.error 
+                                : log.details 
+                                  ? (typeof log.details === 'string' ? log.details : JSON.stringify(log.details))
+                                  : log.objects_count !== undefined 
+                                    ? `${log.objects_count} объектов` 
+                                    : log.matches_count !== undefined
+                                      ? `${log.matches_count} совпадений`
+                                      : log.similar_count !== undefined
+                                        ? `${log.similar_count} похожих`
+                                        : '-'
+                              }
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                
+                {/* Объяснение fallback */}
+                {analysisResults.fallback_reason && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                      ⚠️ Почему использованы координаты по умолчанию:
+                    </Typography>
+                    <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                      {analysisResults.fallback_reason}
+                    </Typography>
+                  </Alert>
+                )}
+                
+                {/* Рекомендации */}
+                {analysisResults.recommendations && analysisResults.recommendations.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                      💡 Рекомендации для улучшения точности:
+                    </Typography>
+                    {analysisResults.recommendations.map((rec, idx) => {
+                      const severityMap = {
+                        'critical': 'error',
+                        'high': 'warning',
+                        'medium': 'info',
+                        'low': 'success'
+                      };
+                      return (
+                        <Alert 
+                          key={idx} 
+                          severity={severityMap[rec.priority] || 'info'} 
+                          sx={{ mb: 1 }}
+                        >
+                          <Typography variant="body2" fontWeight="bold">
+                            {rec.message}
+                          </Typography>
+                          <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                            {rec.action}
+                          </Typography>
+                        </Alert>
+                      );
+                    })}
+                  </Box>
+                )}
+              </AccordionDetails>
+            </Accordion>
+          )}
+
           {/* No Coordinates Found */}
           {!analysisResults.coordinates && (
             <Card sx={{ mb: 3 }}>

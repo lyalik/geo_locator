@@ -16,6 +16,23 @@ from .roscosmos_satellite_service import RoscosmosService
 from .yandex_satellite_service import YandexSatelliteService
 from .enhanced_coordinate_detector import EnhancedCoordinateDetector
 
+# Import Reference Database and Image Database services
+try:
+    from services.reference_database_service import ReferenceDatabaseService
+    REFERENCE_DB_AVAILABLE = True
+except ImportError as e:
+    REFERENCE_DB_AVAILABLE = False
+    ReferenceDatabaseService = None
+    logger.warning(f"ReferenceDatabaseService not available: {e}")
+
+try:
+    from services.image_database_service import ImageDatabaseService
+    IMAGE_DB_AVAILABLE = True
+except ImportError as e:
+    IMAGE_DB_AVAILABLE = False
+    ImageDatabaseService = None
+    logger.warning(f"ImageDatabaseService not available: {e}")
+
 # Import Google services
 try:
     from services.google_vision_service import GoogleVisionService
@@ -74,6 +91,30 @@ class CoordinateDetector:
         self.enhanced_detector = EnhancedCoordinateDetector()
         logger.info("🎯 Enhanced Coordinate Detector initialized")
         
+        # Initialize Reference Database Service
+        if REFERENCE_DB_AVAILABLE:
+            try:
+                self.reference_db_service = ReferenceDatabaseService()
+                logger.info("✅ Reference Database Service initialized (71,895 records)")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Reference Database Service: {e}")
+                self.reference_db_service = None
+        else:
+            self.reference_db_service = None
+            logger.info("⚠️ Reference Database Service not available")
+        
+        # Initialize Image Database Service
+        if IMAGE_DB_AVAILABLE:
+            try:
+                self.image_db_service = ImageDatabaseService()
+                logger.info("✅ Image Database Service initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Image Database Service: {e}")
+                self.image_db_service = None
+        else:
+            self.image_db_service = None
+            logger.info("⚠️ Image Database Service not available")
+        
         logger.info("Coordinate Detector initialized")
     
     def detect_coordinates_from_image(self, image_path: str, location_hint: Optional[str] = None) -> Dict[str, Any]:
@@ -88,77 +129,267 @@ class CoordinateDetector:
             Dictionary containing detected objects and their coordinates
         """
         try:
-            # Step 1: Detect objects using YOLO first (always run this)
+            detection_log = []  # Лог всех попыток определения координат
+            
+            # ШАГ 1: YOLO Detection (выполняется ОДИН раз!)
             objects = ObjectDetectionCache.get_cached_objects(image_path)
             if objects is None:
                 if self.yolo_detector:
                     yolo_result = self.yolo_detector.detect_objects(image_path)
                     if yolo_result.get('success'):
                         objects = yolo_result.get('objects', [])
-                        # Cache object detection results
                         ObjectDetectionCache.cache_objects(image_path, objects)
+                        detection_log.append({
+                            'method': 'YOLO Detection',
+                            'success': True,
+                            'objects_count': len(objects),
+                            'details': f'Detected {len(objects)} objects'
+                        })
                         logger.info(f"🎯 YOLO detected and cached {len(objects)} objects")
                     else:
                         objects = []
+                        detection_log.append({
+                            'method': 'YOLO Detection',
+                            'success': False,
+                            'error': yolo_result.get('error', 'Detection failed')
+                        })
                         logger.warning(f"YOLO detection failed: {yolo_result.get('error', 'unknown error')}")
                 else:
                     objects = []
+                    detection_log.append({
+                        'method': 'YOLO Detection',
+                        'success': False,
+                        'error': 'Detector not available'
+                    })
                     logger.info("YOLO detector not available, skipping object detection")
             else:
+                detection_log.append({
+                    'method': 'YOLO Detection',
+                    'success': True,
+                    'objects_count': len(objects),
+                    'details': 'Used cached objects'
+                })
                 logger.info(f"🎯 Using cached YOLO objects: {len(objects)} objects")
-
-            # Try enhanced coordinate detection
+            
+            # ШАГ 2: Reference Database Search (НОВОЕ!)
+            reference_coords = None
+            if self.reference_db_service and objects:
+                try:
+                    # Поиск по категориям объектов
+                    for obj in objects[:5]:  # Топ-5 объектов
+                        category = obj.get('category', '')
+                        if category:
+                            matches = self.reference_db_service.search_by_description(
+                                category, limit=10
+                            )
+                            if matches:
+                                best_match = matches[0]
+                                coords = best_match.get('coordinates')
+                                if coords:
+                                    reference_coords = {
+                                        'latitude': coords.get('lat') or coords.get('latitude'),
+                                        'longitude': coords.get('lon') or coords.get('longitude'),
+                                        'source': 'reference_database',
+                                        'confidence': best_match.get('similarity', 0.7),
+                                        'matched_type': best_match.get('type')
+                                    }
+                                    detection_log.append({
+                                        'method': 'Reference Database',
+                                        'success': True,
+                                        'matches_count': len(matches),
+                                        'details': f'Found match for {category}'
+                                    })
+                                    logger.info(f"✅ Reference DB match: {category}")
+                                    break
+                    
+                    if not reference_coords:
+                        detection_log.append({
+                            'method': 'Reference Database',
+                            'success': False,
+                            'error': 'No matches found'
+                        })
+                except Exception as e:
+                    detection_log.append({
+                        'method': 'Reference Database',
+                        'success': False,
+                        'error': str(e)
+                    })
+                    logger.error(f"Reference DB error: {e}")
+            
+            # Возвращаем координаты из Reference DB если найдены
+            if reference_coords:
+                return {
+                    'success': True,
+                    'coordinates': reference_coords,
+                    'objects': objects,
+                    'detection_log': detection_log,
+                    'total_objects': len(objects)
+                }
+            
+            # ШАГ 3: Image Database Similarity Search (НОВОЕ!)
+            similarity_coords = None
+            if self.image_db_service:
+                try:
+                    similar_images = self.image_db_service.search_similar(
+                        image_path, top_k=5
+                    )
+                    if similar_images and similar_images[0].get('score', 0) > 0.8:
+                        sim_img = similar_images[0]
+                        coords = sim_img.get('coordinates')
+                        if coords:
+                            similarity_coords = {
+                                'latitude': coords.get('lat') or coords.get('latitude'),
+                                'longitude': coords.get('lon') or coords.get('longitude'),
+                                'source': 'similar_image',
+                                'confidence': sim_img.get('score', 0.8)
+                            }
+                            detection_log.append({
+                                'method': 'Image Database',
+                                'success': True,
+                                'similar_count': len(similar_images),
+                                'details': f'High similarity: {sim_img.get("score", 0):.2f}'
+                            })
+                            logger.info(f"✅ Image DB similarity match")
+                        else:
+                            detection_log.append({
+                                'method': 'Image Database',
+                                'success': False,
+                                'error': 'Similar image has no coordinates'
+                            })
+                    else:
+                        detection_log.append({
+                            'method': 'Image Database',
+                            'success': False,
+                            'error': 'Low similarity score'
+                        })
+                except Exception as e:
+                    detection_log.append({
+                        'method': 'Image Database',
+                        'success': False,
+                        'error': str(e)
+                    })
+                    logger.error(f"Image DB error: {e}")
+            
+            # Возвращаем координаты из Image DB если найдены
+            if similarity_coords:
+                return {
+                    'success': True,
+                    'coordinates': similarity_coords,
+                    'objects': objects,
+                    'detection_log': detection_log,
+                    'total_objects': len(objects)
+                }
+            
+            # ШАГ 4: Enhanced Detector (включает Mistral AI, панорамы, OCR)
             enhanced_result = self.enhanced_detector.detect_coordinates_enhanced(image_path, location_hint)
+            
+            # Детальное логирование Enhanced Detector
+            if enhanced_result['success']:
+                source = enhanced_result.get('source', 'unknown')
+                details = f"Source: {source}"
+                
+                # Специальное логирование для панорам
+                if source == 'panorama_analysis':
+                    details = f"Panorama analysis (Yandex + 2GIS): найдено совпадение"
+                    detection_log.append({
+                        'method': 'Panorama Analysis (Yandex + 2GIS)',
+                        'success': True,
+                        'details': 'Найдена похожая панорама с объектами'
+                    })
+                elif source == 'mistral_ocr':
+                    detection_log.append({
+                        'method': 'Mistral AI OCR',
+                        'success': True,
+                        'details': 'Извлечен адрес через Mistral AI'
+                    })
+                elif source == 'location_hint':
+                    detection_log.append({
+                        'method': 'Location Hint Processing',
+                        'success': True,
+                        'details': 'Использована подсказка пользователя'
+                    })
+                else:
+                    detection_log.append({
+                        'method': 'Enhanced Detector',
+                        'success': True,
+                        'details': details
+                    })
+            else:
+                detection_log.append({
+                    'method': 'Enhanced Detector',
+                    'success': False,
+                    'error': 'Не удалось определить координаты через Enhanced методы'
+                })
+            
             if enhanced_result['success'] and enhanced_result['coordinates']:
-                logger.info(f"✅ Enhanced detector found coordinates: {enhanced_result['coordinates']}")
+                logger.info(f"✅ Enhanced detector found coordinates via {enhanced_result.get('source')}")
                 return {
                     'success': True,
                     'coordinates': enhanced_result['coordinates'],
                     'source': enhanced_result['source'],
                     'confidence': enhanced_result['confidence'],
-                    'objects': objects,  # Include YOLO objects in response
+                    'objects': objects,
+                    'detection_log': detection_log,
                     'enhanced_detection': True
                 }
             
-            # Check cache for complete coordinate analysis first
-            services_used = ['yolo', 'mistral_ai', 'geo_services']
-            cached_coords = ObjectDetectionCache.get_cached_coordinates(
-                image_path, location_hint or "", services_used
-            )
-            if cached_coords:
-                logger.info(f"Cache hit for complete coordinate analysis: {image_path}")
-                return {
-                    'success': True,
-                    'coordinates': cached_coords,
-                    'objects': ObjectDetectionCache.get_cached_objects(image_path) or [],
-                    'cache_hit': True
-                }
-            
-            # Step 1: Detect objects using YOLO (with caching)
-            objects = ObjectDetectionCache.get_cached_objects(image_path)
-            if objects is None:
-                if self.yolo_detector:
-                    objects = self.yolo_detector.detect_objects(image_path)
-                    # Cache object detection results
-                    ObjectDetectionCache.cache_objects(image_path, objects)
-                    logger.info(f"Detected and cached {len(objects)} objects")
-                else:
-                    objects = []
-                    logger.info("YOLO detector not available, skipping object detection")
-            else:
-                logger.info(f"Using cached objects: {len(objects)} objects")
-            
             # Продолжаем даже если объекты не найдены - можем использовать другие источники координат
             
-            # Step 2: Extract image metadata (EXIF GPS if available)
+            # ШАГ 5: Extract EXIF GPS metadata
             image_coords = self._extract_gps_coordinates(image_path)
+            if image_coords:
+                detection_log.append({
+                    'method': 'EXIF GPS Metadata',
+                    'success': True,
+                    'details': f"GPS coords from camera"
+                })
+                logger.info(f"✅ EXIF GPS found")
+                # Высокий приоритет - возвращаем сразу
+                return {
+                    'success': True,
+                    'coordinates': image_coords,
+                    'objects': objects,
+                    'detection_log': detection_log,
+                    'total_objects': len(objects)
+                }
+            else:
+                detection_log.append({
+                    'method': 'EXIF GPS Metadata',
+                    'success': False,
+                    'error': 'No GPS data in EXIF'
+                })
             
-            # Step 3: Extract text and address info using Google Vision OCR
+            # ШАГ 6: Extract text and address info using Google Vision OCR
             google_ocr_coords = None
             if self.google_vision_service:
                 try:
                     google_ocr_coords = self._extract_coordinates_from_text(image_path)
+                    if google_ocr_coords:
+                        detection_log.append({
+                            'method': 'OCR Address Detection',
+                            'success': True,
+                            'details': google_ocr_coords.get('extracted_address', 'Address found')
+                        })
+                        logger.info(f"✅ OCR address found")
+                        return {
+                            'success': True,
+                            'coordinates': google_ocr_coords,
+                            'objects': objects,
+                            'detection_log': detection_log,
+                            'total_objects': len(objects)
+                        }
+                    else:
+                        detection_log.append({
+                            'method': 'OCR Address Detection',
+                            'success': False,
+                            'error': 'No address found in image'
+                        })
                 except Exception as e:
+                    detection_log.append({
+                        'method': 'OCR Address Detection',
+                        'success': False,
+                        'error': str(e)
+                    })
                     logger.warning(f"Google Vision OCR failed: {e}")
                     google_ocr_coords = None
             
@@ -266,26 +497,37 @@ class CoordinateDetector:
                     logger.info("🗺️ No objects available for geolocation")
                     geo_result = None
             
-            # Step 6: Try archive photo matching for better accuracy
+            # ШАГ 7: Geo Aggregator Services
+            detection_log.append({
+                'method': 'Geo Aggregator',
+                'success': geo_result is not None and geo_result.get('success', False),
+                'details': 'Using Yandex, 2GIS, OSM services'
+            })
+            
+            # ШАГ 8: Archive Photo matching
             archive_coords = self._find_archive_coordinates(image_path)
+            detection_log.append({
+                'method': 'Archive Photo Match',
+                'success': archive_coords is not None,
+                'details': 'Historical image database'
+            })
             
-            # Step 7: Try image similarity matching for better accuracy
-            similarity_coords = self._find_similar_image_coordinates(image_path)
+            # ШАГ 9: Image Similarity (уже проверено выше, но для старой логики)
+            similarity_coords_old = self._find_similar_image_coordinates(image_path)
             
-            # Step 8: Combine all coordinate sources
+            # Combine all coordinate sources
             logger.info(f"📍 Coordinate sources: GPS={image_coords is not None}, Geo={geo_result is not None}, Archive={archive_coords is not None}")
-            # google_geo_coords не используется в текущей версии
             google_geo_coords = None
             final_coordinates = self._combine_coordinate_sources(
-                image_coords, geo_result, similarity_coords, objects, 
+                image_coords, geo_result, similarity_coords_old, objects, 
                 google_ocr_coords, google_geo_coords, archive_coords
             )
             logger.info(f"📍 Final coordinates: {final_coordinates}")
             
-            # Step 6: Enhance objects with geolocation relevance
+            # Enhance objects with geolocation relevance
             enhanced_objects = self._enhance_objects_with_location(objects, final_coordinates)
             
-            # Step 7: Get satellite imagery and additional location data
+            # Get satellite imagery and additional location data
             satellite_data = None
             location_info = None
             if final_coordinates:
@@ -293,13 +535,22 @@ class CoordinateDetector:
                 location_info = self._get_enhanced_location_info(final_coordinates, location_hint)
             
             # Cache the final coordinate result
+            services_used = ['yolo', 'reference_db', 'image_db', 'enhanced', 'geo_services']
             if final_coordinates:
                 ObjectDetectionCache.cache_coordinates(
                     image_path, final_coordinates, location_hint or "", services_used
                 )
                 logger.info("Cached coordinate analysis results")
             
-            # Return success even if no objects or coordinates found, as long as detection process worked
+            # Генерация рекомендаций и fallback объяснения
+            fallback_reason = None
+            recommendations = []
+            
+            if not final_coordinates or final_coordinates.get('source') == 'moscow_fallback':
+                fallback_reason = self._generate_fallback_explanation(detection_log)
+                recommendations = self._generate_recommendations(objects, detection_log, location_hint)
+            
+            # Return result with detection_log and recommendations
             result = {
                 'success': True,
                 'coordinates': final_coordinates,
@@ -307,15 +558,19 @@ class CoordinateDetector:
                 'total_objects': len(enhanced_objects),
                 'satellite_data': satellite_data,
                 'location_info': location_info,
+                'detection_log': detection_log,  # НОВОЕ!
+                'fallback_reason': fallback_reason,  # НОВОЕ!
+                'recommendations': recommendations,  # НОВОЕ!
                 'coordinate_sources': {
                     'gps_metadata': image_coords is not None,
                     'geolocation_service': geo_result is not None and geo_result.get('success', False),
-                    'image_similarity': similarity_coords is not None,
+                    'image_similarity': similarity_coords_old is not None,
                     'google_vision_ocr': google_ocr_coords is not None,
                     'mistral_ai_enhanced': enhanced_result is not None,
-                    'archive_photo_match': archive_coords is not None
+                    'archive_photo_match': archive_coords is not None,
+                    'reference_database': reference_coords is not None
                 },
-                'annotated_image_path': None,  # YOLO detection result not available
+                'annotated_image_path': None,
                 'detection_status': 'no_objects_detected' if len(objects) == 0 else 'objects_detected',
                 'cache_hit': False
             }
@@ -972,3 +1227,104 @@ class CoordinateDetector:
         except Exception as e:
             logger.error(f"Error getting enhanced location info: {e}")
             return {'error': str(e)}
+    
+    def _generate_fallback_explanation(self, detection_log: List[Dict]) -> str:
+        """
+        Генерация объяснения почему использован fallback
+        
+        Args:
+            detection_log: Лог всех попыток определения координат
+            
+        Returns:
+            Строка с объяснением причин
+        """
+        failed_methods = [log for log in detection_log if not log.get('success', False)]
+        
+        if not failed_methods:
+            return "Координаты определены успешно"
+        
+        explanation = "Координаты не определены по следующим причинам:\n\n"
+        
+        for method_log in failed_methods:
+            method = method_log.get('method', 'Unknown')
+            error = method_log.get('error', 'Нет данных')
+            explanation += f"• {method}: {error}\n"
+        
+        explanation += f"\nИспользованы координаты по умолчанию (Москва, центр)."
+        
+        return explanation
+    
+    def _generate_recommendations(self, objects: List[Dict], detection_log: List[Dict], location_hint: Optional[str]) -> List[Dict]:
+        """
+        Генерация рекомендаций для улучшения определения координат
+        
+        Args:
+            objects: Обнаруженные объекты
+            detection_log: Лог попыток определения
+            location_hint: Подсказка местоположения (если была)
+            
+        Returns:
+            Список рекомендаций
+        """
+        recommendations = []
+        
+        # Проверка: мало объектов
+        if len(objects) == 0:
+            recommendations.append({
+                'type': 'no_objects',
+                'priority': 'high',
+                'message': 'На изображении не обнаружено характерных объектов',
+                'action': 'Попробуйте загрузить фото с четкими зданиями, вывесками или ориентирами'
+            })
+        elif len(objects) < 3:
+            recommendations.append({
+                'type': 'few_objects',
+                'priority': 'medium',
+                'message': f'Обнаружено мало объектов ({len(objects)})',
+                'action': 'Для лучшей точности сфотографируйте больше ориентиров'
+            })
+        
+        # Проверка: нет подсказки местоположения
+        if not location_hint or not location_hint.strip():
+            recommendations.append({
+                'type': 'no_location_hint',
+                'priority': 'high',
+                'message': 'Не указана подсказка местоположения',
+                'action': 'Добавьте информацию о городе, районе или названии улицы в поле "Подсказка"'
+            })
+        
+        # Проверка: нет GPS в EXIF
+        exif_failed = any(log.get('method') == 'EXIF GPS Metadata' and not log.get('success') for log in detection_log)
+        if exif_failed:
+            recommendations.append({
+                'type': 'no_exif_gps',
+                'priority': 'low',
+                'message': 'В фотографии отсутствуют GPS метаданные',
+                'action': 'Включите геолокацию в настройках камеры для автоматического определения координат'
+            })
+        
+        # Проверка: нет адресов на фото
+        ocr_failed = any(log.get('method') == 'OCR Address Detection' and not log.get('success') for log in detection_log)
+        if ocr_failed:
+            recommendations.append({
+                'type': 'no_text_addresses',
+                'priority': 'medium',
+                'message': 'Не удалось распознать адреса или названия на фото',
+                'action': 'Сфотографируйте вывески с названиями улиц, номерами домов или названиями организаций'
+            })
+        
+        # Проверка: все методы провалились
+        all_failed = all(not log.get('success', False) for log in detection_log)
+        if all_failed:
+            recommendations.append({
+                'type': 'all_methods_failed',
+                'priority': 'critical',
+                'message': 'Ни один метод определения координат не сработал',
+                'action': 'Попробуйте: 1) Добавить подсказку местоположения, 2) Загрузить более четкое фото с ориентирами, 3) Включить GPS на камере'
+            })
+        
+        # Сортируем по приоритету
+        priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+        recommendations.sort(key=lambda x: priority_order.get(x.get('priority', 'low'), 3))
+        
+        return recommendations
