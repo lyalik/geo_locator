@@ -385,7 +385,30 @@ class MistralAIService:
                 'message': 'Mistral AI analysis failed'
             }
         
-        analysis = result.get('analysis', {})
+        # Парсим JSON из текстового ответа
+        analysis_text = result.get('analysis', '')
+        
+        # Пробуем извлечь JSON из ответа
+        import json
+        import re
+        
+        try:
+            # Ищем JSON в тексте
+            json_match = re.search(r'\{.*\}', analysis_text, re.DOTALL)
+            if json_match:
+                analysis = json.loads(json_match.group())
+            else:
+                logger.warning(f"No JSON found in Mistral AI response: {analysis_text[:200]}")
+                return {
+                    'success': False,
+                    'message': 'No structured data in AI response'
+                }
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Mistral AI JSON: {e}")
+            return {
+                'success': False,
+                'message': 'Invalid JSON in AI response'
+            }
         
         # Если нашли информацию о местоположении
         if analysis.get('found'):
