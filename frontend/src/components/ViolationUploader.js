@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, TextField, Switch, FormControlLabel, Chip } from '@mui/material';
-import { CloudUpload as UploadIcon, Image as ImageIcon, CheckCircle as CheckIcon, Error as ErrorIcon, LocationOn as LocationIcon, Assessment as AnalysisIcon } from '@mui/icons-material';
+import { Box, Button, Typography, Paper, CircularProgress, Grid, Card, CardContent, TextField, Switch, FormControlLabel, Chip, Dialog, DialogContent, IconButton, Divider, Table, TableBody, TableCell, TableHead, TableRow, TableContainer } from '@mui/material';
+import { CloudUpload as UploadIcon, Image as ImageIcon, CheckCircle as CheckIcon, Error as ErrorIcon, LocationOn as LocationIcon, Assessment as AnalysisIcon, Close as CloseIcon, ZoomIn as ZoomInIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { api } from '../services/api';
+import ValidationDisplay from './ValidationDisplay';
+import * as XLSX from 'xlsx';
 
 // ГЛОБАЛЬНОЕ хранилище результатов вне React компонента
 let GLOBAL_SINGLE_RESULTS = [];
@@ -32,6 +34,8 @@ const ViolationUploader = ({ onUploadComplete }) => {
   const [enableSatelliteAnalysis, setEnableSatelliteAnalysis] = useState(true);
   const [enableGeoAnalysis, setEnableGeoAnalysis] = useState(true);
   const [hardcodedResults, setHardcodedResults] = useState([]);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   
   // Функции для работы с глобальным хранилищем
   const addToGlobalStorage = (result) => {
@@ -56,6 +60,101 @@ const ViolationUploader = ({ onUploadComplete }) => {
   
   const getGlobalResults = () => {
     return [...GLOBAL_SINGLE_RESULTS];
+  };
+  
+  // Экспорт результатов в Excel
+  const exportToExcel = () => {
+    const globalResults = getGlobalResults();
+    const sourceData = globalResults.length > 0 ? globalResults :
+                     resultsRef.current.length > 0 ? resultsRef.current :
+                     hardcodedResults.length > 0 ? hardcodedResults : 
+                     displayResults.length > 0 ? displayResults : 
+                     results;
+    
+    if (sourceData.length === 0) {
+      alert('Нет данных для экспорта');
+      return;
+    }
+    
+    // Подготовка данных для Excel
+    const excelData = [];
+    
+    sourceData.forEach((result, index) => {
+      const fileName = result.fileName || `Изображение ${index + 1}`;
+      const violationId = result.violation_id || 'N/A';
+      const uploadTime = result.uploadTime ? new Date(result.uploadTime).toLocaleString('ru-RU') : 'N/A';
+      const coordinates = result.location?.coordinates 
+        ? `${result.location.coordinates.latitude}, ${result.location.coordinates.longitude}`
+        : 'N/A';
+      const address = result.location?.address?.formatted || result.location?.address || 'N/A';
+      
+      if (result.violations && result.violations.length > 0) {
+        result.violations.forEach((violation, vIdx) => {
+          const source = violation.source === 'mistral_ai' ? 'Mistral AI' : 
+                        violation.source === 'yolo' ? 'YOLO' : 'Unknown';
+          const customerType = violation.customer_type || violation.label || '';
+          const customerTypeText = customerType === '18-001' ? 'Строительная площадка' : 
+                                  customerType === '00-022' ? 'Нарушения недвижимости' : '';
+          
+          excelData.push({
+            '№': index + 1,
+            'Файл': fileName,
+            'ID Нарушения': violationId,
+            'Дата/Время': uploadTime,
+            'Источник': source,
+            'Категория': violation.category || violation.type || '',
+            'Уверенность (%)': Math.round((violation.confidence || 0) * 100),
+            'Тип заказчика': customerType,
+            'Описание типа': customerTypeText,
+            'Описание нарушения': violation.description || '',
+            'Координаты': coordinates,
+            'Адрес': address
+          });
+        });
+      } else {
+        excelData.push({
+          '№': index + 1,
+          'Файл': fileName,
+          'ID Нарушения': violationId,
+          'Дата/Время': uploadTime,
+          'Источник': 'Нет нарушений',
+          'Категория': '',
+          'Уверенность (%)': '',
+          'Тип заказчика': '',
+          'Описание типа': '',
+          'Описание нарушения': '',
+          'Координаты': coordinates,
+          'Адрес': address
+        });
+      }
+    });
+    
+    // Создание Excel файла
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Нарушения');
+    
+    // Автоматическая ширина колонок
+    const maxWidth = 50;
+    const wscols = [
+      { wch: 5 },  // №
+      { wch: 30 }, // Файл
+      { wch: 38 }, // ID
+      { wch: 20 }, // Дата
+      { wch: 15 }, // Источник
+      { wch: 20 }, // Категория
+      { wch: 15 }, // Уверенность
+      { wch: 10 }, // Тип заказчика
+      { wch: 25 }, // Описание типа
+      { wch: maxWidth }, // Описание
+      { wch: 25 }, // Координаты
+      { wch: maxWidth }  // Адрес
+    ];
+    ws['!cols'] = wscols;
+    
+    // Сохранение файла
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    XLSX.writeFile(wb, `violations_export_${timestamp}.xlsx`);
   };
   
   // Debug effect to monitor results changes
@@ -607,14 +706,26 @@ const ViolationUploader = ({ onUploadComplete }) => {
             <Typography variant="h6">
               Результаты анализа
             </Typography>
-            <Button 
-              variant="outlined" 
-              size="small" 
-              onClick={clearGlobalStorage}
-              disabled={GLOBAL_SINGLE_RESULTS.length === 0}
-            >
-              Очистить результаты
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
+                variant="contained" 
+                color="success"
+                size="small" 
+                startIcon={<DownloadIcon />}
+                onClick={exportToExcel}
+                disabled={GLOBAL_SINGLE_RESULTS.length === 0}
+              >
+                Экспорт в Excel
+              </Button>
+              <Button 
+                variant="outlined" 
+                size="small" 
+                onClick={clearGlobalStorage}
+                disabled={GLOBAL_SINGLE_RESULTS.length === 0}
+              >
+                Очистить результаты
+              </Button>
+            </Box>
           </Box>
           
           {/* Диагностическая информация */}
@@ -664,16 +775,29 @@ const ViolationUploader = ({ onUploadComplete }) => {
                       <CardContent>
                         <Box sx={{ display: 'flex', gap: 2 }}>
                           {/* Изображение */}
-                          <Box sx={{ flexShrink: 0 }}>
+                          <Box 
+                            sx={{ 
+                              flexShrink: 0,
+                              position: 'relative',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                opacity: 0.8
+                              }
+                            }}
+                            onClick={() => {
+                              setSelectedImage(result.image || result.annotated_image_path || result.image_path);
+                              setImageModalOpen(true);
+                            }}
+                          >
                             <img 
                               src={result.image || result.annotated_image_path || result.image_path}
                               alt={`Результат ${index + 1}`}
                               style={{
-                                width: 120,
-                                height: 90,
+                                width: 150,
+                                height: 150,
                                 objectFit: 'cover',
-                                borderRadius: 4,
-                                border: '1px solid #ddd'
+                                borderRadius: 8,
+                                border: '2px solid #ddd'
                               }}
                               onError={(e) => {
                                 console.log('Image load error:', e.target.src);
@@ -681,6 +805,25 @@ const ViolationUploader = ({ onUploadComplete }) => {
                                 e.target.alt = 'Изображение недоступно';
                               }}
                             />
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                borderRadius: '50%',
+                                padding: '8px',
+                                display: 'flex',
+                                opacity: 0,
+                                transition: 'opacity 0.2s',
+                                '&:hover': {
+                                  opacity: 1
+                                }
+                              }}
+                            >
+                              <ZoomInIcon sx={{ color: 'white' }} />
+                            </Box>
                           </Box>
                           
                           {/* Информация */}
@@ -746,50 +889,112 @@ const ViolationUploader = ({ onUploadComplete }) => {
                               )}
                             </Box>
                             
-                            {/* Детали нарушений */}
-                            {result.violations && result.violations.length > 0 && (
-                              <Box sx={{ mb: 1 }}>
-                                <Typography variant="body2" color="text.secondary" gutterBottom>
-                                  Обнаруженные нарушения:
-                                </Typography>
-                                {result.violations.map((violation, vIndex) => {
-                                  // Определяем источник детекции
-                                  const isGoogleVision = violation.source === 'mistral_ai';
-                                  const isYOLO = violation.source === 'yolo' || !violation.source;
+                            {/* Детали нарушений - сгруппированные по источникам */}
+                            {result.violations && result.violations.length > 0 && (() => {
+                              const mistralViolations = result.violations.filter(v => v.source === 'mistral_ai');
+                              const yoloViolations = result.violations.filter(v => v.source === 'yolo' || !v.source);
+                              
+                              return (
+                                <Box sx={{ mb: 2 }}>
+                                  <Divider sx={{ my: 2 }} />
+                                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                    Обнаруженные нарушения:
+                                  </Typography>
                                   
-                                  return (
-                                    <Box key={vIndex} sx={{ ml: 1, mb: 0.5 }}>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                        <Typography variant="body2">
-                                          • {violation.category || violation.type} ({Math.round(violation.confidence * 100)}%)
-                                        </Typography>
-                                        {isGoogleVision && (
-                                          <Chip 
-                                            label="🤖 Mistral AI" 
-                                            size="small" 
-                                            color="secondary"
-                                            sx={{ fontSize: '0.7rem', height: 18 }}
-                                          />
-                                        )}
-                                        {isYOLO && (
-                                          <Chip 
-                                            label="🎯 YOLO" 
-                                            size="small" 
-                                            color="primary"
-                                            sx={{ fontSize: '0.7rem', height: 18 }}
-                                          />
-                                        )}
-                                      </Box>
-                                      {violation.description && (
-                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 2, display: 'block' }}>
-                                          {violation.description}
-                                        </Typography>
-                                      )}
+                                  {/* YOLO Results */}
+                                  {yoloViolations.length > 0 && (
+                                    <Box sx={{ mb: 2, p: 1.5, bgcolor: '#e3f2fd', borderRadius: 2 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: '#1976d2' }}>
+                                        🎯 YOLO ({yoloViolations.length})
+                                      </Typography>
+                                      <TableContainer>
+                                        <Table size="small">
+                                          <TableHead>
+                                            <TableRow>
+                                              <TableCell><strong>Категория</strong></TableCell>
+                                              <TableCell><strong>Уверенность</strong></TableCell>
+                                              <TableCell><strong>Тип</strong></TableCell>
+                                            </TableRow>
+                                          </TableHead>
+                                          <TableBody>
+                                            {yoloViolations.map((violation, idx) => {
+                                              const customerType = violation.customer_type || violation.label;
+                                              const customerTypeText = customerType === '18-001' ? 'Строительная площадка' : 
+                                                                      customerType === '00-022' ? 'Нарушения недвижимости' : '';
+                                              return (
+                                                <TableRow key={idx} sx={{ '&:hover': { bgcolor: '#bbdefb' } }}>
+                                                  <TableCell>{violation.category || violation.type}</TableCell>
+                                                  <TableCell>
+                                                    <Chip 
+                                                      label={`${Math.round(violation.confidence * 100)}%`}
+                                                      size="small"
+                                                      color={violation.confidence > 0.7 ? 'success' : 'warning'}
+                                                      sx={{ fontSize: '0.75rem' }}
+                                                    />
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {customerType && (
+                                                      <Chip 
+                                                        label={`${customerType}: ${customerTypeText}`}
+                                                        size="small" 
+                                                        color={customerType === '18-001' ? 'warning' : 'info'}
+                                                        sx={{ fontSize: '0.7rem' }}
+                                                      />
+                                                    )}
+                                                  </TableCell>
+                                                </TableRow>
+                                              );
+                                            })}
+                                          </TableBody>
+                                        </Table>
+                                      </TableContainer>
                                     </Box>
-                                  );
-                                })}
-                              </Box>
-                            )}
+                                  )}
+                                  
+                                  {/* Mistral AI Results */}
+                                  {mistralViolations.length > 0 && (
+                                    <Box sx={{ p: 1.5, bgcolor: '#f3e5f5', borderRadius: 2 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: '#9c27b0' }}>
+                                        🤖 Mistral AI ({mistralViolations.length})
+                                      </Typography>
+                                      {mistralViolations.map((violation, idx) => {
+                                        const customerType = violation.customer_type || violation.label;
+                                        const customerTypeText = customerType === '18-001' ? 'Строительная площадка' : 
+                                                                customerType === '00-022' ? 'Нарушения недвижимости' : '';
+                                        return (
+                                          <Box key={idx} sx={{ mb: 1.5, p: 1, bgcolor: 'white', borderRadius: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                {violation.category || violation.type}
+                                              </Typography>
+                                              <Chip 
+                                                label={`${Math.round(violation.confidence * 100)}%`}
+                                                size="small"
+                                                color={violation.confidence > 0.7 ? 'success' : 'warning'}
+                                                sx={{ fontSize: '0.7rem' }}
+                                              />
+                                              {customerType && (
+                                                <Chip 
+                                                  label={`${customerType}: ${customerTypeText}`}
+                                                  size="small" 
+                                                  color={customerType === '18-001' ? 'warning' : 'info'}
+                                                  sx={{ fontSize: '0.7rem' }}
+                                                />
+                                              )}
+                                            </Box>
+                                            {violation.description && (
+                                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontStyle: 'italic' }}>
+                                                {violation.description}
+                                              </Typography>
+                                            )}
+                                          </Box>
+                                        );
+                                      })}
+                                    </Box>
+                                  )}
+                                </Box>
+                              );
+                            })()}
                             
                             {/* Местоположение */}
                             {hasLocation && (
@@ -811,6 +1016,14 @@ const ViolationUploader = ({ onUploadComplete }) => {
                             )}
                           </Box>
                         </Box>
+                        
+                        {/* Валидация по готовой базе заказчика */}
+                        {(result.validation || result.reference_matches) && (
+                          <ValidationDisplay 
+                            validation={result.validation}
+                            referenceMatches={result.reference_matches}
+                          />
+                        )}
                       </CardContent>
                     </Card>
                   );
@@ -821,6 +1034,43 @@ const ViolationUploader = ({ onUploadComplete }) => {
           
         </Grid>
       </Grid>
+      
+      {/* Modal для увеличенного изображения */}
+      <Dialog 
+        open={imageModalOpen} 
+        onClose={() => setImageModalOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <IconButton
+          onClick={() => setImageModalOpen(false)}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            color: 'white',
+            bgcolor: 'rgba(0,0,0,0.5)',
+            '&:hover': {
+              bgcolor: 'rgba(0,0,0,0.7)'
+            }
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+        <DialogContent sx={{ p: 0, bgcolor: 'black', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {selectedImage && (
+            <img 
+              src={selectedImage}
+              alt="Увеличенное изображение"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                objectFit: 'contain'
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

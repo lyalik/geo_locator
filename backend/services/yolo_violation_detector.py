@@ -47,6 +47,25 @@ class YOLOObjectDetector:
     # Confidence threshold for detection (lowered for better detection)
     CONFIDENCE_THRESHOLD = 0.25
     
+    # Mapping to customer violation types (fivegen dataset)
+    VIOLATION_TYPE_MAPPING = {
+        # Construction violations -> 18-001
+        'construction': '18-001',
+        'building_under_construction': '18-001',
+        'scaffolding': '18-001',
+        'crane': '18-001',
+        'building_work': '18-001',
+        'truck': '18-001',
+        'excavator': '18-001',
+        
+        # Property violations -> 00-022
+        'building': '00-022',
+        'facade': '00-022',
+        'house': '00-022',
+        'car': '00-022',
+        'person': '00-022'
+    }
+    
     def __init__(self, model_path: Optional[str] = None):
         """
         Initialize the YOLOv8 object detector for geolocation.
@@ -59,6 +78,22 @@ class YOLOObjectDetector:
         self.dataset_search = DatasetSearchService()
         self.reference_db = ReferenceDatabaseService()
         logger.info(f"YOLOv8 Object Detector initialized on {self.device}")
+    
+    def map_to_customer_type(self, our_category: str) -> str:
+        """
+        Map our category to customer violation type (18-001 or 00-022)
+        
+        Args:
+            our_category: Our internal category name
+            
+        Returns:
+            Customer violation type code
+        """
+        category_lower = our_category.lower()
+        for key, value in self.VIOLATION_TYPE_MAPPING.items():
+            if key in category_lower:
+                return value
+        return '00-022'  # Default to property violations
     
     def _load_model(self, model_path: Optional[str] = None):
         """Load the YOLOv8 model."""
@@ -195,8 +230,14 @@ class YOLOObjectDetector:
                 detected_object = {
                     'id': i + 1,
                     'category': object_category,
+                    'customer_type': self.map_to_customer_type(object_category),
                     'confidence': float(conf),
                     'bbox': {
+                        'x': int(x1),
+                        'y': int(y1),
+                        'w': int(x2 - x1),
+                        'h': int(y2 - y1),
+                        # Сохраняем также старые поля для совместимости
                         'x1': float(x1),
                         'y1': float(y1),
                         'x2': float(x2),

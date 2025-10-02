@@ -7,6 +7,9 @@ from services.coordinate_detector import CoordinateDetector
 from services.video_coordinate_detector import VideoCoordinateDetector
 from models import db, Photo, Violation, DetectedObject
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 # Import Image Database Service
 try:
     from services.image_database_service import ImageDatabaseService
@@ -15,8 +18,13 @@ except ImportError as e:
     logger.warning(f"ImageDatabaseService not available: {e}")
     image_db_service = None
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Import Reference Database Service
+try:
+    from services.reference_database_service import ReferenceDatabaseService
+    reference_db_service = ReferenceDatabaseService()
+except ImportError as e:
+    logger.warning(f"ReferenceDatabaseService not available: {e}")
+    reference_db_service = None
 
 # Create blueprint
 bp = Blueprint('coordinate_api', __name__, url_prefix='/api/coordinates')
@@ -140,6 +148,24 @@ def detect_coordinates():
                 except Exception as e:
                     logger.error(f"Error saving to database: {str(e)}")
                     db.session.rollback()
+        
+        # Search reference database if coordinates found
+        if result['success'] and result.get('coordinates') and reference_db_service:
+            try:
+                coords = result['coordinates']
+                lat = coords.get('latitude')
+                lon = coords.get('longitude')
+                
+                if lat and lon:
+                    logger.info(f"🔍 Searching reference database for coordinates: ({lat}, {lon})")
+                    reference_matches = reference_db_service.search_by_coordinates(
+                        lat, lon, radius_km=0.1
+                    )
+                    result['reference_matches'] = reference_matches
+                    result['reference_count'] = len(reference_matches)
+                    logger.info(f"✅ Found {len(reference_matches)} reference matches")
+            except Exception as e:
+                logger.error(f"❌ Reference database search error: {e}")
         
         # Clean result data for JSON serialization
         def clean_data(obj):

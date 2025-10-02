@@ -41,6 +41,19 @@ except ImportError as e:
     print(f"Warning: ImageDatabaseService not available: {e}")
     image_db_service = None
 
+try:
+    from services.reference_database_service import ReferenceDatabaseService
+    reference_db_service = ReferenceDatabaseService()
+except ImportError as e:
+    print(f"Warning: ReferenceDatabaseService not available: {e}")
+    reference_db_service = None
+
+try:
+    from models.violation_response import ViolationResponseFormatter
+except ImportError as e:
+    print(f"Warning: ViolationResponseFormatter not available: {e}")
+    ViolationResponseFormatter = None
+
 # Create blueprint
 bp = Blueprint('violation_api', __name__, url_prefix='/api/violations')
 
@@ -611,6 +624,26 @@ def detect_violations():
                 current_app.logger.info(f"🔍 YOLO Detection - Using real YOLO detector")
                 detection_result = violation_detector.detect_objects(filepath)
                 current_app.logger.info(f"🔍 YOLO Detection - Result: {detection_result}")
+                
+                # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: YOLO возвращает 'objects', преобразуем в 'violations'
+                if detection_result.get('success') and 'objects' in detection_result:
+                    yolo_objects = detection_result.get('objects', [])
+                    # Преобразуем objects в violations с добавлением source
+                    yolo_violations = []
+                    for obj in yolo_objects:
+                        violation = {
+                            'category': obj.get('category'),
+                            'confidence': obj.get('confidence'),
+                            'bbox': obj.get('bbox'),
+                            'source': 'yolo',  # Маркируем как YOLO
+                            'customer_type': obj.get('customer_type'),
+                            'description': obj.get('description', '')
+                        }
+                        yolo_violations.append(violation)
+                    
+                    detection_result['violations'] = yolo_violations
+                    current_app.logger.info(f"🎯 YOLO - Converted {len(yolo_violations)} objects to violations format")
+                    current_app.logger.info(f"🎯 YOLO - Violations: {yolo_violations}")
             else:
                 current_app.logger.warning(f"🔍 YOLO Detection - Using MOCK detector (service unavailable)")
                 detection_result = {
@@ -776,22 +809,72 @@ def detect_violations():
                 db.session.rollback()
                 # Continue with response even if DB save fails
             
-            # Prepare response data
+            # Prepare response data with validation against reference database
             violation_id = str(uuid.uuid4())
-            response_data = {
-                'violation_id': violation_id,
-                'image_path': f"/uploads/violations/{filename}",
-                'annotated_image_path': f"/uploads/violations/{Path(detection_result['annotated_image_path']).name}" if detection_result.get('annotated_image_path') else None,
-                'violations': detection_result.get('violations', []),
-                'location': location_data,
-                'metadata': {
-                    'timestamp': datetime.utcnow().isoformat() + 'Z',
-                    'user_id': user_id,
-                    'location_notes': location_notes,
-                    'location_hint': location_hint,
-                    'image_size': detection_result.get('image_size')
+            violations_data = detection_result.get('violations', [])
+            
+            # Step 3: Search reference database and validate
+            reference_matches = []
+            validation_result = None
+            
+            if reference_db_service and location_data.get('coordinates'):
+                try:
+                    lat = location_data['coordinates']['latitude']
+                    lon = location_data['coordinates']['longitude']
+                    
+                    # Search reference database within 50m radius
+                    current_app.logger.info(f"🔍 Searching reference database at ({lat}, {lon})")
+                    reference_matches = reference_db_service.search_by_coordinates(
+                        lat, lon, radius_km=0.05
+                    )
+                    current_app.logger.info(f"✅ Found {len(reference_matches)} matches in reference database")
+                    
+                    # Validate our result
+                    validation_result = reference_db_service.validate_detection({
+                        'coordinates': location_data['coordinates'],
+                        'violations': violations_data
+                    })
+                    current_app.logger.info(f"✅ Validation score: {validation_result.get('validation_score', 0)}")
+                    
+                except Exception as e:
+                    current_app.logger.error(f"❌ Reference database error: {str(e)}")
+            
+            # Format response using unified format
+            if ViolationResponseFormatter:
+                response_data = ViolationResponseFormatter.format_response(
+                    violation_id=violation_id,
+                    image_path=f"http://192.168.1.67:5001/uploads/violations/{filename}",
+                    violations=violations_data,
+                    location=location_data,
+                    reference_matches=reference_matches,
+                    validation=validation_result,
+                    metadata={
+                        'timestamp': datetime.utcnow().isoformat() + 'Z',
+                        'user_id': user_id,
+                        'location_notes': location_notes,
+                        'location_hint': location_hint,
+                        'image_size': detection_result.get('image_size'),
+                        'annotated_image': f"/uploads/violations/{Path(detection_result['annotated_image_path']).name}" if detection_result.get('annotated_image_path') else None
+                    }
+                )
+            else:
+                # Fallback to old format
+                response_data = {
+                    'violation_id': violation_id,
+                    'image_path': f"/uploads/violations/{filename}",
+                    'annotated_image_path': f"/uploads/violations/{Path(detection_result['annotated_image_path']).name}" if detection_result.get('annotated_image_path') else None,
+                    'violations': violations_data,
+                    'location': location_data,
+                    'reference_matches': reference_matches,
+                    'validation': validation_result,
+                    'metadata': {
+                        'timestamp': datetime.utcnow().isoformat() + 'Z',
+                        'user_id': user_id,
+                        'location_notes': location_notes,
+                        'location_hint': location_hint,
+                        'image_size': detection_result.get('image_size')
+                    }
                 }
-            }
             
             # Send notification if violations were detected
             violations = detection_result.get('violations', [])
@@ -934,9 +1017,20 @@ def batch_detect_violations():
             # YOLO Detection
             yolo_violations = []
             if violation_detector:
-                yolo_result = violation_detector.detect_violations(path)
+                yolo_result = violation_detector.detect_objects(path)
                 if yolo_result.get('success'):
-                    yolo_violations = yolo_result.get('violations', [])
+                    # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: YOLO возвращает 'objects', преобразуем в 'violations'
+                    yolo_objects = yolo_result.get('objects', [])
+                    for obj in yolo_objects:
+                        violation = {
+                            'category': obj.get('category'),
+                            'confidence': obj.get('confidence'),
+                            'bbox': obj.get('bbox'),
+                            'source': 'yolo',
+                            'customer_type': obj.get('customer_type'),
+                            'description': obj.get('description', '')
+                        }
+                        yolo_violations.append(violation)
                     current_app.logger.info(f"🎯 YOLO - Found {len(yolo_violations)} violations")
             
             # Mistral AI Detection
@@ -989,18 +1083,66 @@ def batch_detect_violations():
                             'has_gps': False
                         }
                     
-                    # Combine results
-                    combined_result = {
-                        'file_info': {
-                            'original_name': file_info['original_name'],
-                            'unique_name': file_info['unique_name'],
-                            'file_size': os.path.getsize(file_info['saved_path'])
-                        },
-                        'detection': detection_result,
-                        'location': location_result,
-                        'processing_time': datetime.utcnow().isoformat(),
-                        'user_id': user_id
-                    }
+                    # Search reference database and validate
+                    reference_matches = []
+                    validation_result = None
+                    
+                    if reference_db_service and location_result.get('coordinates'):
+                        try:
+                            lat = location_result['coordinates']['latitude']
+                            lon = location_result['coordinates']['longitude']
+                            
+                            # Search reference database
+                            reference_matches = reference_db_service.search_by_coordinates(
+                                lat, lon, radius_km=0.05
+                            )
+                            
+                            # Validate result
+                            validation_result = reference_db_service.validate_detection({
+                                'coordinates': location_result.get('coordinates'),
+                                'violations': detection_result.get('violations', [])
+                            })
+                            
+                            current_app.logger.info(f"🔍 Batch: Found {len(reference_matches)} reference matches")
+                        except Exception as e:
+                            current_app.logger.error(f"❌ Batch reference error: {e}")
+                    
+                    # Format using unified formatter if available
+                    violations_data = detection_result.get('violations', [])
+                    violation_id = str(uuid.uuid4())
+                    
+                    if ViolationResponseFormatter:
+                        formatted_response = ViolationResponseFormatter.format_response(
+                            violation_id=violation_id,
+                            image_path=f"http://192.168.1.67:5001/uploads/{file_info['unique_name']}",
+                            violations=violations_data,
+                            location=location_result,
+                            reference_matches=reference_matches,
+                            validation=validation_result,
+                            metadata={
+                                'original_name': file_info['original_name'],
+                                'file_size': os.path.getsize(file_info['saved_path']),
+                                'processing_time': datetime.utcnow().isoformat()
+                            }
+                        )
+                        combined_result = formatted_response
+                    else:
+                        # Fallback format
+                        combined_result = {
+                            'violation_id': violation_id,
+                            'file_info': {
+                                'original_name': file_info['original_name'],
+                                'unique_name': file_info['unique_name'],
+                                'file_size': os.path.getsize(file_info['saved_path'])
+                            },
+                            'detection': detection_result,
+                            'violations': violations_data,
+                            'location': location_result,
+                            'reference_matches': reference_matches,
+                            'validation': validation_result,
+                            'processing_time': datetime.utcnow().isoformat(),
+                            'user_id': user_id
+                        }
                     
                     # Send notification for batch violations if detected
                     violations = detection_result.get('violations', [])

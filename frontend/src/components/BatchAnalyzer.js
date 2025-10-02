@@ -49,6 +49,7 @@ import { useDropzone } from 'react-dropzone';
 import { useSnackbar } from 'notistack';
 import { videoAnalysis, imageAnalysis } from '../services/api';
 import InteractiveResultsMap from './InteractiveResultsMap';
+import ValidationDisplay from './ValidationDisplay';
 
 const BatchAnalyzer = () => {
   const { enqueueSnackbar } = useSnackbar();
@@ -472,6 +473,58 @@ const BatchAnalyzer = () => {
                           📍 Координаты найдены: {fileData.result.data.coordinates.latitude.toFixed(4)}, {fileData.result.data.coordinates.longitude.toFixed(4)}
                         </Box>
                       )}
+                      {/* Отображение нарушений с типами заказчика */}
+                      {fileData.result?.violations && fileData.result.violations.length > 0 && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Нарушения:
+                          </Typography>
+                          {fileData.result.violations.slice(0, 3).map((violation, idx) => {
+                            const customerType = violation.customer_type || violation.label;
+                            const customerTypeText = customerType === '18-001' ? 'Строительная площадка' : 
+                                                     customerType === '00-022' ? 'Нарушения недвижимости' : '';
+                            return (
+                              <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1, mt: 0.5 }}>
+                                <Typography variant="caption">
+                                  • {violation.category} ({Math.round(violation.confidence * 100)}%)
+                                </Typography>
+                                {customerType && (
+                                  <Chip
+                                    label={customerType}
+                                    size="small"
+                                    color={customerType === '18-001' ? 'warning' : 'info'}
+                                    sx={{ height: 16, fontSize: '0.6rem' }}
+                                  />
+                                )}
+                              </Box>
+                            );
+                          })}
+                          {fileData.result.violations.length > 3 && (
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1, display: 'block', mt: 0.5 }}>
+                              ... и ещё {fileData.result.violations.length - 3}
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+                      {/* Краткая информация о валидации */}
+                      {fileData.result?.validation && (
+                        <Box sx={{ mt: 1, ml: 1 }}>
+                          <Chip
+                            label={fileData.result.validation.validated ? '✅ Валидировано' : '⚠️ Не валидировано'}
+                            size="small"
+                            color={fileData.result.validation.validated ? 'success' : 'warning'}
+                            sx={{ height: 18, fontSize: '0.65rem' }}
+                          />
+                          {fileData.result.reference_matches && fileData.result.reference_matches.length > 0 && (
+                            <Chip
+                              label={`📋 ${fileData.result.reference_matches.length} совпадений`}
+                              size="small"
+                              color="info"
+                              sx={{ height: 18, fontSize: '0.65rem', ml: 0.5 }}
+                            />
+                          )}
+                        </Box>
+                      )}
                     </Box>
                     <IconButton
                       onClick={() => removeFile(fileData.id)}
@@ -573,6 +626,29 @@ const BatchAnalyzer = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+            
+            {/* Детальная валидация для каждого файла */}
+            {files.filter(f => f.result?.validation || f.result?.reference_matches).length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  🔍 Валидация по готовой базе заказчика
+                </Typography>
+                {files
+                  .filter(f => f.result?.validation || f.result?.reference_matches)
+                  .map((fileData, idx) => (
+                    <Box key={fileData.id} sx={{ mb: 3 }}>
+                      <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                        📄 {fileData.name}
+                      </Typography>
+                      <ValidationDisplay
+                        validation={fileData.result.validation}
+                        referenceMatches={fileData.result.reference_matches}
+                      />
+                    </Box>
+                  ))
+                }
+              </Box>
+            )}
           </AccordionDetails>
         </Accordion>
       )}
