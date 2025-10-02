@@ -30,7 +30,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import {
   CloudUpload as UploadIcon,
@@ -43,10 +44,12 @@ import {
   Analytics as AnalyticsIcon,
   ExpandMore as ExpandMoreIcon,
   Download as DownloadIcon,
-  Map as MapIcon
+  Map as MapIcon,
+  FolderZip as ZipIcon
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import { useSnackbar } from 'notistack';
+import JSZip from 'jszip';
 import { videoAnalysis, imageAnalysis } from '../services/api';
 import InteractiveResultsMap from './InteractiveResultsMap';
 import ValidationDisplay from './ValidationDisplay';
@@ -61,10 +64,70 @@ const BatchAnalyzer = () => {
   const [analysisResults, setAnalysisResults] = useState([]);
   const [currentAnalyzing, setCurrentAnalyzing] = useState(null);
   const [overallProgress, setOverallProgress] = useState(0);
+  const [isExtractingZip, setIsExtractingZip] = useState(false);
+
+  // Распаковка ZIP архива
+  const extractZipFile = async (zipFile) => {
+    try {
+      setIsExtractingZip(true);
+      enqueueSnackbar(`Распаковка архива ${zipFile.name}...`, { variant: 'info' });
+      
+      const zip = new JSZip();
+      const zipData = await zip.loadAsync(zipFile);
+      
+      const imageFiles = [];
+      const supportedExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp'];
+      
+      // Извлекаем все изображения из архива
+      for (const [filename, file] of Object.entries(zipData.files)) {
+        if (!file.dir) {
+          const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+          if (supportedExtensions.includes(ext)) {
+            try {
+              const blob = await file.async('blob');
+              const imageFile = new File([blob], filename, { type: `image/${ext.substring(1)}` });
+              imageFiles.push(imageFile);
+            } catch (err) {
+              console.error(`Error extracting ${filename}:`, err);
+            }
+          }
+        }
+      }
+      
+      setIsExtractingZip(false);
+      
+      if (imageFiles.length === 0) {
+        enqueueSnackbar('В архиве не найдено изображений', { variant: 'warning' });
+        return [];
+      }
+      
+      enqueueSnackbar(`Извлечено ${imageFiles.length} изображений из архива`, { variant: 'success' });
+      return imageFiles;
+      
+    } catch (error) {
+      setIsExtractingZip(false);
+      enqueueSnackbar(`Ошибка распаковки архива: ${error.message}`, { variant: 'error' });
+      console.error('ZIP extraction error:', error);
+      return [];
+    }
+  };
 
   // Обработка загрузки файлов
-  const onDrop = useCallback((acceptedFiles) => {
-    const newFiles = acceptedFiles.map((file, index) => ({
+  const onDrop = useCallback(async (acceptedFiles) => {
+    let allFiles = [];
+    
+    // Обрабатываем каждый файл
+    for (const file of acceptedFiles) {
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        // Распаковываем ZIP архив
+        const extractedFiles = await extractZipFile(file);
+        allFiles = [...allFiles, ...extractedFiles];
+      } else {
+        allFiles.push(file);
+      }
+    }
+    
+    const newFiles = allFiles.map((file, index) => ({
       id: Date.now() + index,
       file,
       name: file.name,
@@ -84,7 +147,9 @@ const BatchAnalyzer = () => {
     onDrop,
     accept: {
       'video/*': ['.mp4', '.avi', '.mov', '.mkv'],
-      'image/*': ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']
+      'image/*': ['.jpg', '.jpeg', '.png', '.bmp', '.tiff'],
+      'application/zip': ['.zip'],
+      'application/x-zip-compressed': ['.zip']
     },
     multiple: true
   });
@@ -359,13 +424,29 @@ const BatchAnalyzer = () => {
             }}
           >
             <input {...getInputProps()} />
-            <UploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              {isDragActive ? 'Отпустите файлы здесь' : 'Перетащите файлы сюда или нажмите для выбора'}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Поддерживаются видео (MP4, AVI, MOV) и изображения (JPG, PNG, BMP, TIFF)
-            </Typography>
+            {isExtractingZip ? (
+              <>
+                <CircularProgress sx={{ mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Распаковка ZIP архива...
+                </Typography>
+              </>
+            ) : (
+              <>
+                <UploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  {isDragActive ? 'Отпустите файлы здесь' : 'Перетащите файлы сюда или нажмите для выбора'}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Поддерживаются видео (MP4, AVI, MOV), изображения (JPG, PNG, BMP, TIFF) и ZIP архивы
+                </Typography>
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Chip icon={<ImageIcon />} label="Изображения" size="small" />
+                  <Chip icon={<VideoIcon />} label="Видео" size="small" />
+                  <Chip icon={<ZipIcon />} label="ZIP архивы" size="small" color="primary" />
+                </Box>
+              </>
+            )}
           </Box>
         </CardContent>
       </Card>
