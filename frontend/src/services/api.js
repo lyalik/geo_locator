@@ -241,9 +241,18 @@ export const coordinateAnalysis = {
       method: 'POST',
       body: formData,
       credentials: 'include' // Включаем cookies для сессионной авторизации
-    }).then(response => {
+    }).then(async response => {
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Пытаемся получить детальное сообщение об ошибке
+        try {
+          const errorData = await response.json();
+          if (errorData.error === 'VIDEO_TOO_LONG') {
+            throw new Error(errorData.message || `Видео слишком длинное (${errorData.duration} сек). Максимум: ${errorData.max_duration} сек`);
+          }
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        } catch (e) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
       return response.json();
     }).then(data => ({ data }));

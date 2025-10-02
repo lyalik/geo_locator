@@ -502,16 +502,17 @@ def analyze_video():
             duration = frame_count / fps if fps > 0 else 0
             cap.release()
             
-            logger.info(f"📹 Video duration: {duration:.1f}s (fps: {fps:.1f}, frames: {frame_count})")
+            logger.info(f"📹 Video info: duration={duration:.1f}s, fps={fps:.1f}, frames={frame_count}")
             
             if duration > 10.0:
                 logger.warning(f"⚠️ Video too long: {duration:.1f}s > 10s limit")
                 os.remove(file_path)  # Clean up uploaded file
                 return jsonify({
                     'success': False,
-                    'message': f'Видео слишком длинное ({duration:.1f}с). Максимальная длительность: 10 секунд',
+                    'message': f'Видео слишком длинное ({duration:.1f} сек). Максимальная длительность: 10 секунд. Пожалуйста, обрежьте видео или используйте более короткий фрагмент для анализа объекта.',
                     'error': 'VIDEO_TOO_LONG',
-                    'duration': duration
+                    'duration': round(duration, 1),
+                    'max_duration': 10
                 }), 400
                 
         except Exception as e:

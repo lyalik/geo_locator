@@ -198,8 +198,9 @@ const BatchAnalyzer = () => {
         const analysisPromise = imageAnalysis.detectFromPhoto(file, locationHint || '');
         result = await Promise.race([analysisPromise, timeoutPromise]);
       } else if (isVideo) {
-        // Для видео используем более консервативные параметры
-        const analysisPromise = videoAnalysis.analyzeVideo(file, locationHint || '', 60, 5);
+        // Используем настройки пользователя для видео
+        console.log(`🎥 Video analysis with frameInterval=${frameInterval}, maxFrames=${maxFrames}`);
+        const analysisPromise = videoAnalysis.analyzeVideo(file, locationHint || '', frameInterval, maxFrames);
         result = await Promise.race([analysisPromise, timeoutPromise]);
       } else {
         throw new Error(`Неподдерживаемый тип файла: ${fileName}. Поддерживаются изображения (jpg, png, gif, bmp, webp) и видео (mp4, avi, mov, mkv, webm, flv)`);
@@ -363,7 +364,10 @@ const BatchAnalyzer = () => {
       {/* Настройки анализа */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Настройки анализа</Typography>
+          <Typography variant="h6" gutterBottom>
+            Настройки анализа
+          </Typography>
+          
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -371,39 +375,80 @@ const BatchAnalyzer = () => {
                 label="Подсказка местоположения"
                 value={locationHint}
                 onChange={(e) => setLocationHint(e.target.value)}
-                placeholder="Например: Краснодар, Россия"
+                placeholder="Например: Москва, Россия"
                 helperText="Поможет улучшить точность определения координат"
               />
             </Grid>
+            
             <Grid item xs={12} md={3}>
               <FormControl fullWidth>
-                <InputLabel>Интервал кадров</InputLabel>
+                <InputLabel>Интервал кадров (видео)</InputLabel>
                 <Select
                   value={frameInterval}
                   onChange={(e) => setFrameInterval(e.target.value)}
-                  label="Интервал кадров"
+                  label="Интервал кадров (видео)"
                 >
-                  <MenuItem value={15}>Каждый 15-й кадр</MenuItem>
-                  <MenuItem value={30}>Каждый 30-й кадр</MenuItem>
-                  <MenuItem value={60}>Каждый 60-й кадр</MenuItem>
+                  <MenuItem value={15}>Каждый 15-й кадр (быстро)</MenuItem>
+                  <MenuItem value={30}>Каждый 30-й кадр (оптимально)</MenuItem>
+                  <MenuItem value={60}>Каждый 60-й кадр (экономно)</MenuItem>
+                  <MenuItem value={90}>Каждый 90-й кадр (очень быстро)</MenuItem>
                 </Select>
               </FormControl>
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+                Меньше интервал = больше кадров = точнее, но дольше
+              </Typography>
             </Grid>
+            
             <Grid item xs={12} md={3}>
               <FormControl fullWidth>
-                <InputLabel>Макс. кадров</InputLabel>
+                <InputLabel>Макс. кадров (видео)</InputLabel>
                 <Select
                   value={maxFrames}
                   onChange={(e) => setMaxFrames(e.target.value)}
-                  label="Макс. кадров"
+                  label="Макс. кадров (видео)"
                 >
-                  <MenuItem value={5}>5 кадров</MenuItem>
-                  <MenuItem value={10}>10 кадров</MenuItem>
-                  <MenuItem value={20}>20 кадров</MenuItem>
+                  <MenuItem value={5}>5 кадров (~10-15 сек)</MenuItem>
+                  <MenuItem value={10}>10 кадров (~20-30 сек)</MenuItem>
+                  <MenuItem value={20}>20 кадров (~40-60 сек)</MenuItem>
+                  <MenuItem value={30}>30 кадров (~1-1.5 мин)</MenuItem>
                 </Select>
               </FormControl>
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+                Примерное время обработки видео
+              </Typography>
             </Grid>
           </Grid>
+          
+          {/* Информация о настройках видео */}
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>⚠️ Важно: Ограничение длительности видео</strong>
+            </Typography>
+            <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+              • Максимальная длительность видео: <strong>10 секунд</strong>
+            </Typography>
+            <Typography variant="caption" component="div">
+              • Этого достаточно для качественного анализа объекта
+            </Typography>
+            <Typography variant="caption" component="div">
+              • Для длинных видео используйте обрезку или несколько коротких фрагментов
+            </Typography>
+          </Alert>
+          
+          <Alert severity="info" sx={{ mt: 1 }}>
+            <Typography variant="body2">
+              <strong>💡 Рекомендации для видео:</strong>
+            </Typography>
+            <Typography variant="caption" component="div">
+              • Для быстрого анализа: интервал 60, макс. 5 кадров
+            </Typography>
+            <Typography variant="caption" component="div">
+              • Для точного анализа: интервал 30, макс. 10 кадров
+            </Typography>
+            <Typography variant="caption" component="div">
+              • Изображения обрабатываются сразу, настройки не влияют
+            </Typography>
+          </Alert>
         </CardContent>
       </Card>
 
@@ -540,9 +585,23 @@ const BatchAnalyzer = () => {
                       </Box>
                       <Box sx={{ color: 'text.secondary', fontSize: '0.875rem', mb: 1 }}>
                         {(fileData.size / 1024 / 1024).toFixed(1)} MB • {fileData.type}
+                        {fileData.type === 'video' && (
+                          <Chip 
+                            label={`${frameInterval} кадр, макс ${maxFrames}`} 
+                            size="small" 
+                            sx={{ ml: 1 }} 
+                          />
+                        )}
                       </Box>
                       {fileData.status === 'analyzing' && (
-                        <LinearProgress sx={{ mb: 1 }} />
+                        <Box>
+                          <LinearProgress sx={{ mb: 1 }} />
+                          {fileData.type === 'video' && (
+                            <Typography variant="caption" color="primary">
+                              🎥 Обработка видео... Извлечение и анализ кадров
+                            </Typography>
+                          )}
+                        </Box>
                       )}
                       {fileData.status === 'error' && (
                         <Alert severity="error" sx={{ mb: 1 }}>
@@ -552,6 +611,12 @@ const BatchAnalyzer = () => {
                       {fileData.result?.data?.coordinates && (
                         <Box sx={{ color: 'success.main', fontSize: '0.875rem' }}>
                           📍 Координаты найдены: {fileData.result.data.coordinates.latitude.toFixed(4)}, {fileData.result.data.coordinates.longitude.toFixed(4)}
+                          {fileData.type === 'video' && fileData.result?.data?.total_frames_processed && (
+                            <Typography variant="caption" display="block" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                              🎬 Обработано кадров: {fileData.result.data.total_frames_processed} • 
+                              Точность: {Math.round(fileData.result.data.coordinates.confidence * 100)}%
+                            </Typography>
+                          )}
                         </Box>
                       )}
                       {/* Отображение нарушений с типами заказчика */}
