@@ -5,10 +5,16 @@ echo "=================================================="
 
 # Остановка существующих процессов
 echo "🧹 Останавливаем существующие процессы..."
-pkill -f "react-scripts" 2>/dev/null
-pkill -f "npm start" 2>/dev/null
-pkill -f "python.*app.py" 2>/dev/null
+pkill -9 -f "react-scripts" 2>/dev/null
+pkill -9 -f "npm start" 2>/dev/null
+pkill -9 -f "python.*app.py" 2>/dev/null
 sleep 2
+
+# Очистка Python кэша для гарантии загрузки нового кода
+echo "🧹 Очищаем Python кэш..."
+find backend -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+find backend -name "*.pyc" -delete 2>/dev/null
+echo "✅ Python кэш очищен"
 
 # Проверяем PostgreSQL
 echo "🔍 Проверяем PostgreSQL..."
@@ -22,13 +28,28 @@ fi
 echo "🔧 Запускаем Backend..."
 cd backend
 source venv/bin/activate
-python app.py &
+
+# Запускаем с выводом в лог
+echo "📝 Логи backend будут в: logs/backend.log"
+mkdir -p ../logs
+python app.py > ../logs/backend.log 2>&1 &
 BACKEND_PID=$!
 echo "Backend запущен с PID: $BACKEND_PID"
+
+# Ждем запуска и показываем логи инициализации
+echo "⏳ Ожидаем инициализацию сервисов..."
+sleep 3
+
+# Показываем логи инициализации новых сервисов
+echo ""
+echo "📋 ПРОВЕРКА ИНИЦИАЛИЗАЦИИ:"
+tail -50 ../logs/backend.log | grep -E "License Plate|Yandex Vision|EasyOCR" || echo "⚠️ Новые сервисы не инициализированы"
+echo ""
+
 cd ..
 
 # Ждем запуска backend
-sleep 5
+sleep 2
 
 # Проверяем backend
 echo "🔍 Проверяем Backend..."
