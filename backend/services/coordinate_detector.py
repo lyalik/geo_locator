@@ -33,6 +33,15 @@ except ImportError as e:
     ImageDatabaseService = None
     logger.warning(f"ImageDatabaseService not available: {e}")
 
+# Import License Plate Detector
+try:
+    from services.license_plate_detector import LicensePlateDetector
+    LICENSE_PLATE_AVAILABLE = True
+except ImportError as e:
+    LICENSE_PLATE_AVAILABLE = False
+    LicensePlateDetector = None
+    logger.warning(f"LicensePlateDetector not available: {e}")
+
 # Import Google services
 try:
     from services.google_vision_service import GoogleVisionService
@@ -114,6 +123,18 @@ class CoordinateDetector:
         else:
             self.image_db_service = None
             logger.info("⚠️ Image Database Service not available")
+        
+        # Initialize License Plate Detector
+        if LICENSE_PLATE_AVAILABLE:
+            try:
+                self.license_plate_detector = LicensePlateDetector()
+                logger.info("✅ License Plate Detector initialized (автономера РФ)")
+            except Exception as e:
+                logger.warning(f"Failed to initialize License Plate Detector: {e}")
+                self.license_plate_detector = None
+        else:
+            self.license_plate_detector = None
+            logger.info("⚠️ License Plate Detector not available")
         
         logger.info("Coordinate Detector initialized")
     
@@ -358,6 +379,40 @@ class CoordinateDetector:
                     'success': False,
                     'error': 'No GPS data in EXIF'
                 })
+            
+            # ШАГ 5.5: License Plate Detection (НОВОЕ!)
+            if self.license_plate_detector:
+                try:
+                    plate_result = self.license_plate_detector.detect_license_plates(image_path)
+                    if plate_result.get('success') and plate_result.get('coordinates'):
+                        coords = plate_result['coordinates']
+                        detection_log.append({
+                            'method': 'License Plate Detection',
+                            'success': True,
+                            'details': f"Регион {plate_result['region_code']}: {plate_result['region_name']}, номер: {plate_result['plate']}"
+                        })
+                        logger.info(f"🚗 License plate detected: {plate_result['plate']} → {plate_result['region_name']}")
+                        return {
+                            'success': True,
+                            'coordinates': coords,
+                            'objects': objects,
+                            'detection_log': detection_log,
+                            'total_objects': len(objects),
+                            'license_plate_info': plate_result
+                        }
+                    else:
+                        detection_log.append({
+                            'method': 'License Plate Detection',
+                            'success': False,
+                            'error': plate_result.get('message', 'No plates detected')
+                        })
+                except Exception as e:
+                    detection_log.append({
+                        'method': 'License Plate Detection',
+                        'success': False,
+                        'error': str(e)
+                    })
+                    logger.error(f"License plate detection error: {e}")
             
             # ШАГ 6: Extract text and address info using Google Vision OCR
             google_ocr_coords = None

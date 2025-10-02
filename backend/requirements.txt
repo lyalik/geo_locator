@@ -36,6 +36,7 @@ matplotlib==3.9.2
 
 # OCR and text processing
 pytesseract==0.3.10
+easyocr==1.7.1
 
 # Geospatial and mapping
 geopy==2.4.1
