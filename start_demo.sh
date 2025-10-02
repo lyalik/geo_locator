@@ -1,13 +1,13 @@
 #!/bin/bash
 
 echo "🚀 ЗАПУСК GEO LOCATOR ДЛЯ ДЕМОНСТРАЦИИ"
-echo "=" * 50
+echo "=================================================="
 
 # Остановка существующих процессов
 echo "🧹 Останавливаем существующие процессы..."
 pkill -f "react-scripts" 2>/dev/null
 pkill -f "npm start" 2>/dev/null
-pkill -f "flask" 2>/dev/null
+pkill -f "python.*app.py" 2>/dev/null
 sleep 2
 
 # Проверяем PostgreSQL
@@ -41,24 +41,48 @@ fi
 # Запускаем Frontend
 echo "🌐 Запускаем Frontend..."
 cd frontend
-HOST=0.0.0.0 npm start &
+# Очищаем кэш перед запуском
+rm -rf .cache node_modules/.cache 2>/dev/null
+# Запускаем с HOST=0.0.0.0 для доступа из сети
+HOST=0.0.0.0 PORT=3000 npm start &
 FRONTEND_PID=$!
 echo "Frontend запущен с PID: $FRONTEND_PID"
 cd ..
 
 # Ждем запуска frontend
+echo "⏳ Ожидаем запуск Frontend (10 сек)..."
 sleep 10
 
+# Проверяем frontend
+echo "🔍 Проверяем Frontend..."
+if curl -s http://localhost:3000 > /dev/null; then
+    echo "✅ Frontend работает"
+else
+    echo "⚠️ Frontend еще загружается..."
+fi
+
 echo ""
+echo "=================================================="
 echo "🎉 GEO LOCATOR ЗАПУЩЕН!"
-echo "=" * 50
-echo "📍 Frontend (localhost): http://localhost:3000"
-echo "📍 Frontend (external): http://192.168.1.67:3000"
-echo "📍 Backend API: http://localhost:5001"
-echo "📍 Health Check: http://localhost:5001/health"
-echo "=" * 50
+echo "=================================================="
 echo ""
+echo "📱 ДОСТУП К ПРИЛОЖЕНИЮ:"
+echo "  • Локально:      http://localhost:3000"
+echo "  • Локальная сеть: http://192.168.1.67:3000"
+echo "  • Внешний доступ: http://45.130.189.36 (через nginx)"
+echo ""
+echo "🔧 BACKEND API:"
+echo "  • Health Check:  http://192.168.1.67:5001/health"
+echo "  • API Direct:    http://192.168.1.67:5001/api/"
+echo "  • Auth:          http://192.168.1.67:5001/auth/"
+echo ""
+echo "👤 ТЕСТОВЫЕ АККАУНТЫ:"
+echo "  • Email: test@test.com | Password: test123"
+echo "  • Email: admin@test.com | Password: admin123"
+echo ""
+echo "=================================================="
 echo "💡 Для остановки нажмите Ctrl+C"
+echo "=================================================="
 echo ""
 
 # Функция для корректного завершения
@@ -69,6 +93,8 @@ cleanup() {
     kill $FRONTEND_PID 2>/dev/null
     pkill -f "react-scripts" 2>/dev/null
     pkill -f "npm start" 2>/dev/null
+    pkill -f "python.*app.py" 2>/dev/null
+    sleep 1
     echo "✅ Сервисы остановлены"
     exit 0
 }

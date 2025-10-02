@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost' : `http://${window.location.hostname}`);
+const API_URL = 'http://192.168.1.67:5001';
 
 function TabPanel({ children, value, index, ...other }) {
   return (

@@ -1,26 +1,23 @@
 import axios from 'axios';
 
-// Base URL for API calls - автоматическое определение хоста
+// Base URL for API calls - УМНОЕ определение с поддержкой nginx
 const getApiUrl = () => {
-  // Если задана переменная окружения - используем её
-  if (process.env.REACT_APP_API_URL) {
-    return process.env.REACT_APP_API_URL;
-  }
-  
-  // Автоматически используем текущий хост с портом 5001
   const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
   
-  console.log(`🌐 Detected hostname: ${hostname}`);
+  console.log(`🌐 Current hostname: ${hostname}`);
   
-  // Если localhost или 127.0.0.1 - используем localhost через nginx
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log('🏠 Using localhost API through nginx');
-    return 'http://localhost';  // Используем nginx на порту 80
+  // Если заход через локальную сеть - прямое обращение к backend на порту 5001
+  if (hostname === '192.168.1.67' || hostname === 'localhost' || hostname === '127.0.0.1') {
+    const apiUrl = 'http://192.168.1.67:5001';
+    console.log(`🏠 Local network API (direct): ${apiUrl}`);
+    return apiUrl;
   }
   
-  // Для любого другого IP - используем nginx на порту 80
-  const apiUrl = `http://${hostname}`;  // nginx слушает на порту 80
-  console.log(`🌍 Using network API through nginx: ${apiUrl}`);
+  // Для внешнего доступа через nginx - пустой baseURL, будем использовать абсолютные пути
+  // nginx проксирует /api/* на backend:5001/api/*
+  const apiUrl = '';
+  console.log(`🌍 External API through nginx (relative paths)`);
   return apiUrl;
 };
 

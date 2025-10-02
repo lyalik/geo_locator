@@ -9,8 +9,16 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname}/auth/login`, {
+      // УМНОЕ определение API URL
+      const hostname = window.location.hostname;
+      const apiUrl = (hostname === '192.168.1.67' || hostname === 'localhost' || hostname === '127.0.0.1')
+        ? 'http://192.168.1.67:5001'  // Локальная сеть - прямое обращение
+        : '';  // Внешний доступ - через nginx
+      console.log(`🔐 Login API URL: ${apiUrl || 'nginx proxy'}`);
+      
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
+        credentials: 'include', // Важно для сессионной авторизации
         headers: {
           'Content-Type': 'application/json',
         },

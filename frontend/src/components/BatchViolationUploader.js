@@ -321,7 +321,7 @@ const BatchViolationUploader = ({ onUploadComplete, maxFiles = 20 }) => {
         }
       });
 
-      xhr.open('POST', `${process.env.REACT_APP_API_URL || window.location.protocol + '//' + window.location.hostname}/api/violations/detect`);
+      xhr.open('POST', 'http://192.168.1.67:5001/api/violations/detect');
       xhr.send(formData);
     });
   };
