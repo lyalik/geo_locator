@@ -270,7 +270,78 @@ class CoordinateDetector:
                     'total_objects': len(objects)
                 }
             
-            # ШАГ 3: Image Database Similarity Search (НОВОЕ!)
+            # ШАГ 3: CLIP Image Similarity Search (НОВОЕ!)
+            clip_similarity_coords = None
+            try:
+                from services.clip_similarity_service import CLIPSimilarityService
+                clip_service = CLIPSimilarityService()
+                
+                logger.info("🔍 Starting CLIP similarity search...")
+                similar_images = clip_service.find_similar_images(
+                    image_path, 
+                    top_k=3, 
+                    similarity_threshold=0.75
+                )
+                
+                if similar_images:
+                    best_match = similar_images[0]
+                    metadata = best_match.get('metadata', {})
+                    
+                    if metadata.get('lat') and metadata.get('lon'):
+                        clip_similarity_coords = {
+                            'latitude': metadata['lat'],
+                            'longitude': metadata['lon'],
+                            'source': 'clip_similarity',
+                            'confidence': best_match['similarity'],
+                            'similarity_score': best_match['similarity'],
+                            'matched_image': best_match['image_path']
+                        }
+                        
+                        detection_log.append({
+                            'method': 'CLIP Image Similarity',
+                            'success': True,
+                            'details': f"Найдено похожее здание (similarity: {best_match['similarity']:.2f})"
+                        })
+                        
+                        logger.info(f"🖼️ CLIP: Found similar image with {best_match['similarity']:.2f} similarity")
+                        
+                        return {
+                            'success': True,
+                            'coordinates': clip_similarity_coords,
+                            'objects': objects,
+                            'detection_log': detection_log,
+                            'total_objects': len(objects),
+                            'clip_similarity': {
+                                'matched_image': best_match['image_path'],
+                                'similarity': best_match['similarity'],
+                                'all_matches': similar_images
+                            }
+                        }
+                    else:
+                        detection_log.append({
+                            'method': 'CLIP Image Similarity',
+                            'success': False,
+                            'error': 'Similar image found but no coordinates'
+                        })
+                else:
+                    detection_log.append({
+                        'method': 'CLIP Image Similarity',
+                        'success': False,
+                        'error': 'No similar images found'
+                    })
+                    logger.info("⚠️ CLIP: No similar images found")
+                    
+            except ImportError:
+                logger.debug("CLIP service not available")
+            except Exception as e:
+                detection_log.append({
+                    'method': 'CLIP Image Similarity',
+                    'success': False,
+                    'error': str(e)
+                })
+                logger.error(f"CLIP similarity error: {e}")
+            
+            # ШАГ 3.5: Image Database Similarity Search (старый метод)
             similarity_coords = None
             if self.image_db_service:
                 try:
@@ -782,6 +853,17 @@ class CoordinateDetector:
                     'confidence': geo_result.get('confidence_score', 0),
                     'priority': 5,
                     'icon': '🗺️'
+                })
+            
+            # CLIP Similarity - только если успешно
+            clip_log = next((log for log in detection_log if log['method'] == 'CLIP Image Similarity'), None)
+            if clip_log and clip_log['success']:
+                sources_details.append({
+                    'name': 'CLIP Image Similarity',
+                    'status': 'success',
+                    'details': clip_log.get('details', ''),
+                    'priority': 3,
+                    'icon': '🖼️'
                 })
             
             # Archive Photo - только если успешно

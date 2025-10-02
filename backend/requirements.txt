@@ -34,6 +34,11 @@ scipy==1.14.1
 scikit-image==0.24.0
 matplotlib==3.9.2
 
+# CLIP and Vector Search
+open-clip-torch==2.24.0  # OpenCLIP for image embeddings
+faiss-cpu==1.8.0  # Facebook AI Similarity Search
+sentence-transformers==2.7.0  # For text embeddings (optional)
+
 # OCR and text processing
 pytesseract==0.3.10
 easyocr==1.7.1
