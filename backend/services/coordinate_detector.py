@@ -341,6 +341,46 @@ class CoordinateDetector:
                 })
                 logger.error(f"CLIP similarity error: {e}")
             
+            # ШАГ 3.2: Building Segmentation + Satellite Comparison (НОВОЕ!)
+            try:
+                from services.building_segmentation_service import BuildingSegmentationService
+                segmentation_service = BuildingSegmentationService()
+                
+                logger.info("🏗️ Starting building segmentation...")
+                segmentation_result = segmentation_service.segment_buildings(image_path)
+                
+                if segmentation_result and segmentation_result.get('success'):
+                    num_buildings = segmentation_result.get('num_buildings', 0)
+                    building_ratio = segmentation_result.get('building_area_ratio', 0)
+                    
+                    logger.info(f"🏗️ Segmentation: {num_buildings} buildings, area ratio: {building_ratio:.2%}")
+                    
+                    # Попытка сравнения со спутниковыми снимками
+                    # TODO: Получить спутниковый снимок для текущих координат
+                    # satellite_comparison = segmentation_service.compare_with_satellite(...)
+                    
+                    detection_log.append({
+                        'method': 'Building Segmentation',
+                        'success': True,
+                        'details': f"Найдено зданий: {num_buildings}, площадь: {building_ratio:.1%}"
+                    })
+                else:
+                    detection_log.append({
+                        'method': 'Building Segmentation',
+                        'success': False,
+                        'error': 'Segmentation failed'
+                    })
+                    
+            except ImportError:
+                logger.debug("Building segmentation service not available")
+            except Exception as e:
+                detection_log.append({
+                    'method': 'Building Segmentation',
+                    'success': False,
+                    'error': str(e)
+                })
+                logger.error(f"Building segmentation error: {e}")
+            
             # ШАГ 3.5: Image Database Similarity Search (старый метод)
             similarity_coords = None
             if self.image_db_service:
@@ -885,6 +925,17 @@ class CoordinateDetector:
                     'details': clip_log.get('details', ''),
                     'priority': 3,
                     'icon': '🖼️'
+                })
+            
+            # Building Segmentation - только если успешно
+            segmentation_log = next((log for log in detection_log if log['method'] == 'Building Segmentation'), None)
+            if segmentation_log and segmentation_log['success']:
+                sources_details.append({
+                    'name': 'Building Segmentation',
+                    'status': 'success',
+                    'details': segmentation_log.get('details', ''),
+                    'priority': 4,
+                    'icon': '🏗️'
                 })
             
             # Archive Photo - только если успешно

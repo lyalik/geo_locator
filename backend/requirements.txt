@@ -42,6 +42,10 @@ sentence-transformers==2.7.0  # For text embeddings
 scikit-learn>=1.0.0  # Required by sentence-transformers
 timm>=0.9.0  # Required by open-clip-torch
 
+# Semantic Segmentation (Building Detection)
+segmentation-models-pytorch==0.3.3  # Pre-trained segmentation models
+albumentations==1.4.0  # Image augmentation for segmentation
+
 # OCR and text processing
 pytesseract==0.3.10
 easyocr==1.7.1
