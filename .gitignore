@@ -13,12 +13,6 @@
 /backend/tests
 /backend/routes/__pycache__
 /backend/services/__pycache__
-.env.example
-.env.local
-backend/.env.example
-frontend/.env.example
-backend/.env.local
-frontend/.env.local
 /backend/routes/__pycache__
 /backend/services/__pycache__
 /projekt-471007-e99c64ddf4c6.json

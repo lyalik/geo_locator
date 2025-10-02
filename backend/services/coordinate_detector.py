@@ -3,6 +3,7 @@ import logging
 from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 import cv2
+from PIL import Image
 # from .yolo_violation_detector import YOLOObjectDetector  # Временно отключено
 # from .google_vision_service import GoogleVisionService  # Временно отключено
 from .geo_aggregator_service import GeoAggregatorService
