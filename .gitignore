@@ -23,3 +23,5 @@ frontend/.env.local
 /backend/services/__pycache__
 /projekt-471007-e99c64ddf4c6.json
 .env
+backend/.env
+frontend/.env
