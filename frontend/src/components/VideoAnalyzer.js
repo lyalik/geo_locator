@@ -28,7 +28,9 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  Divider
+  Divider,
+  Dialog,
+  DialogContent
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -72,6 +74,9 @@ const VideoAnalyzer = () => {
   const [processingEstimate, setProcessingEstimate] = useState(null);
   const [progress, setProgress] = useState(0);
   const [fileType, setFileType] = useState(null); // 'image' or 'video'
+  const [previewImage, setPreviewImage] = useState(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedModalImage, setSelectedModalImage] = useState(null);
 
   // Handle file drop
   const onDrop = useCallback((acceptedFiles) => {
@@ -87,10 +92,18 @@ const VideoAnalyzer = () => {
       
       if (isImage) {
         setFileType('image');
+        // Create preview for image
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewImage(reader.result);
+        };
+        reader.readAsDataURL(file);
       } else if (isVideo) {
         setFileType('video');
+        setPreviewImage(null);
       } else {
         setFileType(null);
+        setPreviewImage(null);
       }
       
       enqueueSnackbar(`Выбран ${isImage ? 'изображение' : 'видео'}: ${file.name}`, { variant: 'info' });
@@ -481,6 +494,45 @@ const VideoAnalyzer = () => {
         </CardContent>
       </Card>
 
+      {/* Image Preview */}
+      {previewImage && fileType === 'image' && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              📸 Превью изображения
+            </Typography>
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'center',
+                cursor: 'pointer',
+                '&:hover': {
+                  opacity: 0.8
+                }
+              }}
+              onClick={() => {
+                setSelectedModalImage(previewImage);
+                setImageModalOpen(true);
+              }}
+            >
+              <img 
+                src={previewImage} 
+                alt="Preview" 
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '400px',
+                  borderRadius: '8px',
+                  border: '2px solid #ddd'
+                }} 
+              />
+            </Box>
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+              Кликните для увеличения
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Processing Estimate */}
       {processingEstimate && (
         <Card sx={{ mb: 3 }}>
@@ -775,10 +827,10 @@ const VideoAnalyzer = () => {
                           sx={{ mb: 1 }}
                         >
                           <Typography variant="body2" fontWeight="bold">
-                            {rec.message}
+                            {typeof rec.message === 'string' ? rec.message : JSON.stringify(rec.message)}
                           </Typography>
                           <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                            {rec.action}
+                            {typeof rec.action === 'string' ? rec.action : JSON.stringify(rec.action)}
                           </Typography>
                         </Alert>
                       );
@@ -1273,7 +1325,11 @@ const VideoAnalyzer = () => {
                   <Box key={index} sx={{ mb: 1, display: 'flex', alignItems: 'flex-start' }}>
                     <InfoIcon sx={{ mr: 1, mt: 0.5, fontSize: 16, color: 'info.main' }} />
                     <Typography variant="body2">
-                      {recommendation}
+                      {typeof recommendation === 'string' 
+                        ? recommendation 
+                        : typeof recommendation === 'object' && recommendation.message 
+                          ? recommendation.message 
+                          : JSON.stringify(recommendation)}
                     </Typography>
                   </Box>
                 ))}
@@ -1319,6 +1375,44 @@ const VideoAnalyzer = () => {
           )}
         </Box>
       )}
+
+      {/* Image Modal for Zoom */}
+      <Dialog
+        open={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <Box sx={{ bgcolor: 'black', position: 'relative' }}>
+          <IconButton
+            onClick={() => setImageModalOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'white',
+              bgcolor: 'rgba(0,0,0,0.5)',
+              '&:hover': {
+                bgcolor: 'rgba(0,0,0,0.7)',
+              },
+              zIndex: 1
+            }}
+          >
+            <InfoIcon />
+          </IconButton>
+          {selectedModalImage && (
+            <img
+              src={selectedModalImage}
+              alt="Увеличенное изображение"
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          )}
+        </Box>
+      </Dialog>
     </Box>
   );
 };
